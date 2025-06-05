@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}上传文件{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-lg">
+    <h2 class="text-2xl font-bold mb-6 text-center text-blue-600">上传 Excel 文件</h2>
+    <form method="POST" enctype="multipart/form-data" class="space-y-6">
+        <div>
+            <label for="file" class="block text-sm font-medium text-gray-700">选择 Excel 文件</label>
+            <input type="file" name="file" id="file" accept=".xlsx" required
+                   class="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <button type="submit"
+                class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition duration-300">
+            上传
+        </button>
+    </form>
+    {% if tables %}
+    <div class="mt-8">
+        <h3 class="text-xl font-bold mb-4 text-gray-700">上传文件内容预览</h3>
+        {% for table in tables %}
+        <div class="overflow-x-auto">
+            {{ table | safe }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %} - Flask 项目</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Serif SC', serif; }
+        .flash-success { @apply bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4; }
+        .flash-error { @apply bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <nav class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="{{ url_for('index') }}" class="text-2xl font-bold">Flask 项目</a>
+            <div>
+                {% if 'username' in session %}
+                    <span class="mr-4">欢迎, {{ session['username'] }}</span>
+                    <a href="{{ url_for('upload') }}" class="mr-4 hover:underline">上传文件</a>
+                    <a href="{{ url_for('logout') }}" class="hover:underline">登出</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="mr-4 hover:underline">登录</a>
+                    <a href="{{ url_for('register') }}" class="hover:underline">注册</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+    <div class="container mx-auto p-6">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>
