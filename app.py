@@ -3,7 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import pandas as pd
 from datetime import datetime
-from database import init_db, get_user, create_user
+from database import init_db, get_user, create_user, get_db, get_authority_agency_dict, add_authority_agency, update_authority_agency, delete_authority_agency
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key'  # 请替换为安全的密钥
@@ -80,6 +80,51 @@ def upload():
         else:
             flash('请上传Excel文件（.xlsx）', 'error')
     return render_template('upload.html')
+
+@app.route('/authority_agency')
+def authority_agency():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    records = get_authority_agency_dict()
+    return render_template('authority_agency.html', records=records)
+
+@app.route('/authority_agency/add', methods=['GET', 'POST'])
+def add_authority_agency_route():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        authority = request.form['authority']
+        category = request.form['category']
+        agency = request.form['agency']
+        add_authority_agency(authority, category, agency)
+        flash('新增成功！', 'success')
+        return redirect(url_for('authority_agency'))
+    return render_template('add_authority_agency.html')
+
+@app.route('/authority_agency/update/<int:id>', methods=['GET', 'POST'])
+def update_authority_agency_route(id):
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM authority_agency_dict WHERE id = ?', (id,))
+        record = cursor.fetchone()
+    if request.method == 'POST':
+        authority = request.form['authority']
+        category = request.form['category']
+        agency = request.form['agency']
+        update_authority_agency(id, authority, category, agency)
+        flash('更新成功！', 'success')
+        return redirect(url_for('authority_agency'))
+    return render_template('update_authority_agency.html', record=record)
+
+@app.route('/authority_agency/delete/<int:id>')
+def delete_authority_agency_route(id):
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    delete_authority_agency(id)
+    flash('删除成功！', 'success')
+    return redirect(url_for('authority_agency'))
 
 if __name__ == '__main__':
     init_db()  # 初始化数据库

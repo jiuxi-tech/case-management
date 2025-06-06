@@ -13,7 +13,7 @@ def init_db():
                 password TEXT NOT NULL
             )
         ''')
-        # 创建 authority_agency_dict 表，添加 category 字段
+        # 创建 authority_agency_dict 表，包含 category 字段
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS authority_agency_dict (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -106,4 +106,30 @@ def create_user(username, hashed_password):
         cursor = conn.cursor()
         cursor.execute('INSERT INTO users (username, password) VALUES (?, ?)', 
                       (username, hashed_password))
+        conn.commit()
+
+def get_authority_agency_dict():
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM authority_agency_dict')
+        return cursor.fetchall()
+
+def add_authority_agency(authority, category, agency):
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('INSERT INTO authority_agency_dict (authority, category, agency) VALUES (?, ?, ?)',
+                      (authority, category, agency))
+        conn.commit()
+
+def update_authority_agency(id, authority, category, agency):
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('UPDATE authority_agency_dict SET authority = ?, category = ?, agency = ? WHERE id = ?',
+                      (authority, category, agency, id))
+        conn.commit()
+
+def delete_authority_agency(id):
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM authority_agency_dict WHERE id = ?', (id,))
         conn.commit()

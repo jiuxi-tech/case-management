@@ -19,6 +19,7 @@
                 {% if 'username' in session %}
                     <span class="mr-4">欢迎, {{ session['username'] }}</span>
                     <a href="{{ url_for('upload') }}" class="mr-4 hover:underline">上传文件</a>
+                    <a href="{{ url_for('authority_agency') }}" class="mr-4 hover:underline">机关单位关系</a>
                     <a href="{{ url_for('logout') }}" class="hover:underline">登出</a>
                 {% else %}
                     <a href="{{ url_for('login') }}" class="mr-4 hover:underline">登录</a>

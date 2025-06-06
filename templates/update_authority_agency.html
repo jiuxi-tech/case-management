@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}修改机关单位关系{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto bg-white p-8 rounded-lg shadow-lg">
+    <h2 class="text-2xl font-bold mb-6 text-center text-blue-600">修改机关单位关系</h2>
+    <form method="POST" class="space-y-6">
+        <input type="hidden" name="id" value="{{ record.id }}">
+        <div>
+            <label for="authority" class="block text-sm font-medium text-gray-700">机关</label>
+            <input type="text" name="authority" id="authority" value="{{ record.authority }}" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+            <label for="category" class="block text-sm font-medium text-gray-700">类别</label>
+            <select name="category" id="category" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="NSL" {% if record.category == 'NSL' %}selected{% endif %}>NSL</option>
+                <option value="SL" {% if record.category == 'SL' %}selected{% endif %}>SL</option>
+            </select>
+        </div>
+        <div>
+            <label for="agency" class="block text-sm font-medium text-gray-700">单位</label>
+            <input type="text" name="agency" id="agency" value="{{ record.agency }}" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition duration-300">提交</button>
+    </form>
+    <p class="mt-4 text-center">
+        <a href="{{ url_for('authority_agency') }}" class="text-blue-600 hover:underline">返回列表</a>
+    </p>
+</div>
+{% endblock %}
