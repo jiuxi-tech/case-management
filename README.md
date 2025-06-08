@@ -12,8 +12,8 @@ upload.html：文件上传页面，显示上传的Excel内容。
 uploads/：存储上传的Excel文件。
 
 ## 2. 项目依赖
-Python库：flask, werkzeug, pandas
-安装命令：pip install flask werkzeug pandas openpyxl
+Python库：flask, werkzeug, pandas, xlsxwriter
+安装命令：pip install flask werkzeug pandas openpyxl xlsxwriter pandas
 
 ## 3. 功能：
 登录/注册：简单的用户认证系统，使用哈希存储密码（werkzeug.security），通过session管理登录状态。

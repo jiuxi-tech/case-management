@@ -4,6 +4,7 @@ import os
 import pandas as pd
 from datetime import datetime
 from database import init_db, get_user, create_user, get_db, get_authority_agency_dict, add_authority_agency, update_authority_agency, delete_authority_agency
+import xlsxwriter
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key'  # 请替换为安全的密钥
@@ -18,7 +19,7 @@ if not os.path.exists(UPLOAD_FOLDER):
 def index():
     if 'username' in session:
         return render_template('index.html', title='首页')
-    return redirect(url_for('login'), title='登录')
+    return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -46,7 +47,7 @@ def register():
             hashed_password = generate_password_hash(password)
             create_user(username, hashed_password)
             flash('注册成功，请登录', 'success')
-            return redirect(url_for('login'), title='登录')
+            return redirect(url_for('login'))
     return render_template('register.html', title='注册')
 
 @app.route('/logout')
@@ -67,18 +68,69 @@ def upload():
         if file.filename == '':
             flash('未选择文件', 'error')
             return redirect(request.url)
-        if file and file.filename.endswith('.xlsx'):
-            filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}"
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
-            try:
-                df = pd.read_excel(file_path)
-                flash('文件上传成功！', 'success')
-                return render_template('upload.html', tables=[df.to_html(classes='table-auto w-full border-collapse')], titles=df.columns.values)
-            except Exception as e:
-                flash(f'文件处理失败: {str(e)}', 'error')
-        else:
-            flash('请上传Excel文件（.xlsx）', 'error')
+        if not (file.filename.endswith('.xlsx') or file.filename.endswith('.xls')):
+            flash('请上传Excel文件（.xlsx 或 .xls）', 'error')
+            return redirect(request.url)
+        if '线索登记表' not in file.filename:
+            flash('文件名必须包含“线索登记表”', 'error')
+            return redirect(request.url)
+
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+        file.save(file_path)
+        try:
+            df = pd.read_excel(file_path)
+            # Check required headers
+            required_headers = ["填报单位名称", "办理机关"]
+            if not all(header in df.columns for header in required_headers):
+                flash('Excel文件缺少必要的表头“填报单位名称”或“办理机关”', 'error')
+                return redirect(request.url)
+
+            # Compare with database
+            with get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT authority, agency FROM authority_agency_dict WHERE category = ?', ('NSL',))
+                db_records = cursor.fetchall()
+                db_dict = {(row['authority'], row['agency']) for row in db_records}
+
+            mismatches = []
+            mismatch_indices = []
+            for index, row in df.iterrows():
+                agency = row["填报单位名称"]
+                authority = row["办理机关"]
+                if pd.isna(authority) or pd.isna(agency) or (authority, agency) not in db_dict:
+                    mismatches.append(f"行 {index + 1}")
+                    mismatch_indices.append(index)
+
+            # Generate first Excel file with mismatches
+            if mismatches:
+                issues_df = pd.DataFrame(columns=['序号', '问题'])
+                for i, _ in enumerate(mismatches, 1):
+                    issues_df = pd.concat([issues_df, pd.DataFrame({'序号': [i], '问题': ['C2填报单位名称与H2办理机关不一致']})], ignore_index=True)
+                issue_filename = f"线索编号{datetime.now().strftime('%Y%m%d')}.xlsx"
+                issue_path = os.path.join(app.config['UPLOAD_FOLDER'], issue_filename)
+                issues_df.to_excel(issue_path, index=False)
+
+            # Generate second Excel file with original data and color marking
+            original_filename = file.filename.replace('.xlsx', '_副本.xlsx').replace('.xls', '_副本.xlsx')
+            original_path = os.path.join(app.config['UPLOAD_FOLDER'], original_filename)
+            with pd.ExcelWriter(original_path, engine='xlsxwriter') as writer:
+                df.to_excel(writer, sheet_name='Sheet1', index=False)
+                workbook = writer.book
+                worksheet = writer.sheets['Sheet1']
+                cell_format = workbook.add_format({'bg_color': '#FF0000'})  # Red background for mismatches
+                for idx in mismatch_indices:
+                    worksheet.write(f'C{idx + 2}', df.at[idx, '填报单位名称'], cell_format)
+                    worksheet.write(f'H{idx + 2}', df.at[idx, '办理机关'], cell_format)
+
+            if mismatches:
+                flash('文件上传但发现以下问题: ' + '; '.join(mismatches), 'error')
+            else:
+                flash('文件上传并验证成功！', 'success')
+
+            return redirect(request.url)
+        except Exception as e:
+            flash(f'文件处理失败: {str(e)}', 'error')
+            return redirect(request.url)
     return render_template('upload.html', title='上传')
 
 @app.route('/authority_agency')
