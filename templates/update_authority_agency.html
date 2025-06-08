@@ -12,8 +12,8 @@
         <div>
             <label for="category" class="block text-sm font-medium text-gray-700">类别</label>
             <select name="category" id="category" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="NSL" {% if record.category == 'NSL' %}selected{% endif %}>NSL</option>
-                <option value="SL" {% if record.category == 'SL' %}selected{% endif %}>SL</option>
+                <option value="NSL" {% if record.category == 'NSL' %}selected{% endif %}>办理机关/纪委立案机关/监委立案机关</option>
+                <option value="SL" {% if record.category == 'SL' %}selected{% endif %}>审理机关</option>
             </select>
         </div>
         <div>

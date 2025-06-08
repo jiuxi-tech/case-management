@@ -21,7 +21,11 @@
             <tr class="hover:bg-gray-100">
                 <td class="p-2 border">{{ record.id }}</td>
                 <td class="p-2 border">{{ record.authority }}</td>
-                <td class="p-2 border">{{ record.category }}</td>
+                <td class="p-2 border">
+                    {% if record.category == 'NSL' %}办理机关/纪委立案机关/监委立案机关
+                    {% elif record.category == 'SL' %}审理机关
+                    {% endif %}
+                </td>
                 <td class="p-2 border">{{ record.agency }}</td>
                 <td class="p-2 border">
                     <a href="{{ url_for('update_authority_agency_route', id=record.id) }}" class="text-blue-600 hover:underline mr-2">修改</a>
