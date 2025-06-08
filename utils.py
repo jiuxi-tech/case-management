@@ -82,10 +82,10 @@ def process_upload(request, app):
     try:
         df = pd.read_excel(file_path)
         # Check required headers
-        required_headers = Config.REQUIRED_HEADERS + ["被反映人", "处置情况报告"]
+        required_headers = Config.REQUIRED_HEADERS + ["被反映人", "处置情况报告", "受理时间"]
         if not all(header in df.columns for header in required_headers):
             logger.error(f"缺少必要表头: {required_headers}")
-            flash('Excel文件缺少必要的表头“填报单位名称”、“办理机关”、“被反映人”或“处置情况报告”', 'error')
+            flash('Excel文件缺少必要的表头“填报单位名称”、“办理机关”、“被反映人”、“处置情况报告”或“受理时间”', 'error')
             return redirect(request.url)
 
         # Compare with database (original rule)
@@ -122,6 +122,12 @@ def process_upload(request, app):
                 issues_list.append((index, "E2被反映人与AB2处置情况报告姓名不一致"))
                 logger.info(f"行 {index + 1} - 被反映人与处置情况报告姓名不一致")
 
+            # New rule: 受理时间标记
+            if pd.notna(row["受理时间"]):
+                mismatch_indices.add(index)
+                issues_list.append((index, "AF2受理时间请再次确认"))
+                logger.info(f"行 {index + 1} - 受理时间需确认")
+
         if issues_list:
             issues_df = pd.DataFrame(columns=['序号', '问题'])
             for i, (index, issue) in enumerate(issues_list, 1):
@@ -138,13 +144,13 @@ def process_upload(request, app):
             workbook = writer.book
             worksheet = writer.sheets['Sheet1']
             red_format = workbook.add_format({'bg_color': '#FF0000'})  # Red for mismatches
-            yellow_format = workbook.add_format({'bg_color': '#FFFF00'})  # Yellow for empty report
+            yellow_format = workbook.add_format({'bg_color': '#FFFF00'})  # Yellow for empty report and 受理时间
             for idx in mismatch_indices:
                 row = df.iloc[idx]
                 # Original rule marking
                 worksheet.write(f'C{idx + 2}', row["填报单位名称"], red_format)
                 worksheet.write(f'H{idx + 2}', row["办理机关"], red_format)
-                # New rule marking
+                # New rule marking for 被反映人 vs 处置情况报告
                 if "处置情况报告" in df.columns:
                     report_text = row["处置情况报告"]
                     if pd.isna(report_text):
@@ -154,7 +160,9 @@ def process_upload(request, app):
                         report_name = extract_name_from_report(report_text)
                         if reported_person and report_name and reported_person != report_name:
                             worksheet.write(f'E{idx + 2}', row["被反映人"], red_format)
-                            # 仅标红被反映人字段，处置情况报告不标红
+                # New rule marking for 受理时间
+                if "受理时间" in df.columns and pd.notna(row["受理时间"]):
+                    worksheet.write(f'AF{idx + 2}', row["受理时间"], yellow_format)
             logger.info(f"生成副本文件: {original_path}")
 
         # 仅在校验失败或程序异常时显示错误，成功生成文件时显示成功
