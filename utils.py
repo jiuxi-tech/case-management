@@ -7,11 +7,11 @@ from config import Config
 from db_utils import get_db
 from flask import flash, redirect, url_for
 
-# 配置日志，输出到控制台
+# 配置日志，输出到控制台和文件
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler()]
+    handlers=[logging.StreamHandler(), logging.FileHandler('app.log', encoding='utf-8')]
 )
 logger = logging.getLogger(__name__)
 
@@ -82,10 +82,10 @@ def process_upload(request, app):
     try:
         df = pd.read_excel(file_path)
         # Check required headers
-        required_headers = Config.REQUIRED_HEADERS + ["被反映人", "处置情况报告", "受理时间"]
+        required_headers = Config.REQUIRED_HEADERS + ["被反映人", "处置情况报告", "受理时间", "组织措施"]
         if not all(header in df.columns for header in required_headers):
             logger.error(f"缺少必要表头: {required_headers}")
-            flash('Excel文件缺少必要的表头“填报单位名称”、“办理机关”、“被反映人”、“处置情况报告”或“受理时间”', 'error')
+            flash('Excel文件缺少必要的表头“填报单位名称”、“办理机关”、“被反映人”、“处置情况报告”、“受理时间”或“组织措施”', 'error')
             return redirect(request.url)
 
         # Compare with database (original rule)
@@ -97,6 +97,11 @@ def process_upload(request, app):
 
         mismatch_indices = set()  # 去重索引
         issues_list = []  # 存储每种不匹配类型的记录
+        # 定义组织措施的关键词列表
+        organization_measures_list = [
+            "谈话提醒", "提醒谈话", "批评教育", "责令检查", "责令其做出书面检查", "责令其做出检查",
+            "诫勉", "警示谈话", "通报批评", "责令公开道歉（检查）", "责令具结悔过"
+        ]
         for index, row in df.iterrows():
             logger.debug(f"处理行 {index + 1}")
             # Original rule: 填报单位名称 vs 办理机关
@@ -122,11 +127,20 @@ def process_upload(request, app):
                 issues_list.append((index, "E2被反映人与AB2处置情况报告姓名不一致"))
                 logger.info(f"行 {index + 1} - 被反映人与处置情况报告姓名不一致")
 
-            # New rule: 受理时间标记
-            if pd.notna(row["受理时间"]):
+            # New rule: 受理时间标记 (仅限 AF 列)
+            if "受理时间" in df.columns and pd.notna(row["受理时间"]):
                 mismatch_indices.add(index)
                 issues_list.append((index, "AF2受理时间请再次确认"))
                 logger.info(f"行 {index + 1} - 受理时间需确认")
+
+            # New rule: 组织措施 vs 处置情况报告 (严格匹配)
+            organization_measure = str(row["组织措施"]).strip() if pd.notna(row["组织措施"]) else ''
+            report_text = str(report_text).strip() if pd.notna(report_text) else ''
+            logger.debug(f"行 {index + 1} - 组织措施: {organization_measure}, 处置情况报告: {report_text[:500]}...")
+            if not organization_measure or organization_measure not in organization_measures_list or (organization_measure and organization_measure not in report_text):
+                mismatch_indices.add(index)
+                issues_list.append((index, "CC2组织措施内容请再次确认"))
+                logger.info(f"行 {index + 1} - 组织措施与处置情况报告不一致: {organization_measure}, 原因: 为空或不在关键词列表或未在报告中找到")
 
         if issues_list:
             issues_df = pd.DataFrame(columns=['序号', '问题'])
@@ -139,7 +153,7 @@ def process_upload(request, app):
 
         original_filename = file.filename.replace('.xlsx', '_副本.xlsx').replace('.xls', '_副本.xlsx')
         original_path = os.path.join(Config.UPLOAD_FOLDER, original_filename)
-        with pd.ExcelWriter(original_path, engine='xlsxwriter') as writer:
+        with pd.ExcelWriter(original_path, engine='xlsxwriter', engine_kwargs={'options': {'nan_inf_to_errors': True}}) as writer:
             df.to_excel(writer, sheet_name='Sheet1', index=False)
             workbook = writer.book
             worksheet = writer.sheets['Sheet1']
@@ -148,21 +162,27 @@ def process_upload(request, app):
             for idx in mismatch_indices:
                 row = df.iloc[idx]
                 # Original rule marking
-                worksheet.write(f'C{idx + 2}', row["填报单位名称"], red_format)
-                worksheet.write(f'H{idx + 2}', row["办理机关"], red_format)
+                worksheet.write(f'C{idx + 2}', str(row["填报单位名称"]) if pd.notna(row["填报单位名称"]) else '', red_format)
+                worksheet.write(f'H{idx + 2}', str(row["办理机关"]) if pd.notna(row["办理机关"]) else '', red_format)
                 # New rule marking for 被反映人 vs 处置情况报告
                 if "处置情况报告" in df.columns:
                     report_text = row["处置情况报告"]
                     if pd.isna(report_text):
-                        worksheet.write(f'AB{idx + 2}', row["处置情况报告"], yellow_format)
+                        worksheet.write(f'AB{idx + 2}', str(report_text) if pd.notna(report_text) else '', yellow_format)
                     if "被反映人" in df.columns:
                         reported_person = str(row["被反映人"]).strip() if pd.notna(row["被反映人"]) else ''
                         report_name = extract_name_from_report(report_text)
                         if reported_person and report_name and reported_person != report_name:
-                            worksheet.write(f'E{idx + 2}', row["被反映人"], red_format)
-                # New rule marking for 受理时间
+                            worksheet.write(f'E{idx + 2}', str(row["被反映人"]) if pd.notna(row["被反映人"]) else '', red_format)
+                # New rule marking for 受理时间 (仅限 AF 列)
                 if "受理时间" in df.columns and pd.notna(row["受理时间"]):
-                    worksheet.write(f'AF{idx + 2}', row["受理时间"], yellow_format)
+                    worksheet.write(f'AF{idx + 2}', str(row["受理时间"]) if pd.notna(row["受理时间"]) else '', yellow_format)
+                # New rule marking for 组织措施 (仅限 CC 列)
+                if "组织措施" in df.columns:
+                    col_idx = df.columns.get_loc("组织措施") + 1
+                    col_letter = xlsxwriter.utility.xl_col_to_name(col_idx - 1)  # 转换为 Excel 列字母（如 CC）
+                    if not organization_measure or organization_measure not in organization_measures_list or (organization_measure and organization_measure not in report_text):
+                        worksheet.write(f'{col_letter}{idx + 2}', str(row["组织措施"]) if pd.notna(row["组织措施"]) else '', red_format)
             logger.info(f"生成副本文件: {original_path}")
 
         # 仅在校验失败或程序异常时显示错误，成功生成文件时显示成功
