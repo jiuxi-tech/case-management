@@ -85,8 +85,8 @@
         <h1 class="text-2xl font-bold mb-6 text-center">案管系统</h1>
         <ul class="space-y-4">
             {% if 'username' in session %}
-                <li><a href="{{ url_for('upload') }}" class="block hover:bg-blue-700 p-2 rounded-md">上传文件</a></li>
-                <li><a href="{{ url_for('authority_agency') }}" class="block hover:bg-blue-700 p-2 rounded-md">机关单位关系</a></li>
+                <li><a href="{{ url_for('upload') }}" class="block hover:bg-blue-700 p-2 rounded-md">线索表上传</a></li>
+                <li><a href="{{ url_for('authority_agency') }}" class="block hover:bg-blue-700 p-2 rounded-md">机关单位管理</a></li>
             {% else %}
                 <li><a href="{{ url_for('login') }}" class="block hover:bg-blue-700 p-2 rounded-md">登录</a></li>
                 <li><a href="{{ url_for('register') }}" class="block hover:bg-blue-700 p-2 rounded-md">注册</a></li>
