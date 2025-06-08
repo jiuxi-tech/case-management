@@ -3,72 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{% endblock %} - Flask 项目</title>
+    <title>{% block title %}{% endblock %} - 案管系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Serif SC', serif; }
+        .sidebar {
+            transition: width 0.3s ease;
+            resize: horizontal;
+            min-width: 64px;
+            max-width: 300px;
+            overflow: auto;
+        }
+        .sidebar.hidden {
+            width: 0;
+            min-width: 0;
+            padding: 0;
+        }
+        .content {
+            transition: margin-left 0.3s ease;
+            margin-left: 256px; /* 默认左侧导航宽度 64px + padding 6*2 */
+            flex: 1; /* 填满剩余空间 */
+        }
+        .content.no-sidebar {
+            margin-left: 0;
+        }
+        .toggle-btn {
+            position: absolute;
+            top: 10px;
+            left: 260px;
+            z-index: 10;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 0 5px 5px 0;
+            cursor: pointer;
+            transition: left 0.3s ease;
+        }
+        .toggle-btn.hidden {
+            left: 10px;
+        }
     </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.querySelector('.sidebar');
+            const toggleBtn = document.querySelector('.toggle-btn');
+            const content = document.querySelector('.content');
+            let isHidden = false;
+
+            toggleBtn.addEventListener('click', function() {
+                isHidden = !isHidden;
+                sidebar.classList.toggle('hidden', isHidden);
+                toggleBtn.classList.toggle('hidden', !isHidden);
+                toggleBtn.textContent = isHidden ? '>' : '<';
+                content.classList.toggle('no-sidebar', isHidden);
+            });
+        });
+    </script>
 </head>
-<body class="bg-gray-100">
-    <nav class="bg-blue-600 text-white p-4">
-        <div class="container mx-auto flex justify-between items-center">
-            <a href="{{ url_for('index') }}" class="text-2xl font-bold">Flask 项目</a>
+<body class="bg-gray-100 flex h-screen">
+    <!-- 左侧导航 -->
+    <nav class="sidebar w-64 bg-blue-600 text-white p-6 h-full fixed">
+        <h1 class="text-2xl font-bold mb-6 text-center">案管系统</h1>
+        <ul class="space-y-4">
+            {% if 'username' in session %}
+                <li><a href="{{ url_for('upload') }}" class="block hover:bg-blue-700 p-2 rounded-md">上传文件</a></li>
+                <li><a href="{{ url_for('authority_agency') }}" class="block hover:bg-blue-700 p-2 rounded-md">机关单位关系</a></li>
+            {% else %}
+                <li><a href="{{ url_for('login') }}" class="block hover:bg-blue-700 p-2 rounded-md">登录</a></li>
+                <li><a href="{{ url_for('register') }}" class="block hover:bg-blue-700 p-2 rounded-md">注册</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    <!-- 隐藏/显示按钮 -->
+    <button class="toggle-btn">></button>
+    <!-- 顶部表头和右侧内容 -->
+    <div class="content flex flex-col flex-1">
+        <header class="bg-gray-200 text-gray-800 p-4 flex justify-between items-center">
+            <div></div>
             <div>
                 {% if 'username' in session %}
                     <span class="mr-4">欢迎, {{ session['username'] }}</span>
-                    <a href="{{ url_for('upload') }}" class="mr-4 hover:underline">上传文件</a>
-                    <a href="{{ url_for('authority_agency') }}" class="mr-4 hover:underline">机关单位关系</a>
                     <a href="{{ url_for('logout') }}" class="hover:underline">登出</a>
-                {% else %}
-                    <a href="{{ url_for('login') }}" class="mr-4 hover:underline">登录</a>
-                    <a href="{{ url_for('register') }}" class="hover:underline">注册</a>
                 {% endif %}
             </div>
+        </header>
+        <div class="p-6 flex-1 overflow-auto">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            {% for category, message in messages %}
+                                Swal.fire({
+                                    icon: '{{ category }}',
+                                    title: '{{ '成功' if category == "success" else '错误' }}',
+                                    text: '{{ message }}',
+                                    timer: 3000,
+                                    timerProgressBar: true,
+                                    showConfirmButton: false,
+                                    position: 'top-end',
+                                    toast: true,
+                                    background: '{{ '#d1fae5' if category == "success" else '#fee2e2' }}',
+                                    iconColor: '{{ '#10b981' if category == "success" else '#ef4444' }}',
+                                    customClass: {
+                                        popup: 'swal2-custom'
+                                    }
+                                });
+                            {% endfor %}
+                        });
+                    </script>
+                    <style>
+                        .swal2-custom {
+                            border-radius: 12px;
+                            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                            font-family: 'Noto Serif SC', serif;
+                        }
+                        .swal2-title {
+                            font-size: 1.5rem;
+                            font-weight: 700;
+                        }
+                        .swal2-content {
+                            font-size: 1rem;
+                        }
+                    </style>
+                {% endif %}
+            {% endwith %}
+            {% block content %}{% endblock %}
         </div>
-    </nav>
-    <div class="container mx-auto p-6">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <script>
-                    document.addEventListener('DOMContentLoaded', function() {
-                        {% for category, message in messages %}
-                            Swal.fire({
-                                icon: '{{ category }}',
-                                title: '{{ '成功' if category == "success" else '错误' }}',
-                                text: '{{ message }}',
-                                timer: 3000,
-                                timerProgressBar: true,
-                                showConfirmButton: false,
-                                position: 'top-end',
-                                toast: true,
-                                background: '{{ '#d1fae5' if category == "success" else '#fee2e2' }}',
-                                iconColor: '{{ '#10b981' if category == "success" else '#ef4444' }}',
-                                customClass: {
-                                    popup: 'swal2-custom'
-                                }
-                            });
-                        {% endfor %}
-                    });
-                </script>
-                <style>
-                    .swal2-custom {
-                        border-radius: 12px;
-                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                        font-family: 'Noto Serif SC', serif;
-                    }
-                    .swal2-title {
-                        font-size: 1.5rem;
-                        font-weight: 700;
-                    }
-                    .swal2-content {
-                        font-size: 1rem;
-                    }
-                </style>
-            {% endif %}
-        {% endwith %}
-        {% block content %}{% endblock %}
     </div>
 </body>
 </html>

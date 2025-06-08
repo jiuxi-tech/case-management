@@ -1,39 +1,41 @@
 {% extends "base.html" %}
 {% block title %}机关单位关系{% endblock %}
 {% block content %}
-<div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-lg">
+<div class="max-w-6xl mx-auto bg-white p-8 rounded-lg shadow-lg">
     <h2 class="text-2xl font-bold mb-6 text-center text-blue-600">机关单位关系</h2>
     <div class="mb-6 text-right">
         <a href="{{ url_for('add_authority_agency_route') }}" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition duration-300">新增</a>
     </div>
-    <table class="w-full text-left border-collapse">
-        <thead>
-            <tr class="bg-gray-200">
-                <th class="p-2 border">ID</th>
-                <th class="p-2 border">机关</th>
-                <th class="p-2 border">类别</th>
-                <th class="p-2 border">单位</th>
-                <th class="p-2 border">操作</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for record in records %}
-            <tr class="hover:bg-gray-100">
-                <td class="p-2 border">{{ record.id }}</td>
-                <td class="p-2 border">{{ record.authority }}</td>
-                <td class="p-2 border">
-                    {% if record.category == 'NSL' %}办理机关/纪委立案机关/监委立案机关
-                    {% elif record.category == 'SL' %}审理机关
-                    {% endif %}
-                </td>
-                <td class="p-2 border">{{ record.agency }}</td>
-                <td class="p-2 border">
-                    <a href="{{ url_for('update_authority_agency_route', id=record.id) }}" class="text-blue-600 hover:underline mr-2">修改</a>
-                    <a href="{{ url_for('delete_authority_agency_route', id=record.id) }}" class="text-red-600 hover:underline" onclick="return confirm('确定删除？')">删除</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-gray-200">
+                    <th class="p-4 border-b-2 border-gray-300">ID</th>
+                    <th class="p-4 border-b-2 border-gray-300">机关</th>
+                    <th class="p-4 border-b-2 border-gray-300">类别</th>
+                    <th class="p-4 border-b-2 border-gray-300">单位</th>
+                    <th class="p-4 border-b-2 border-gray-300">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr class="hover:bg-gray-50">
+                    <td class="p-4 border-b border-gray-200">{{ record.id }}</td>
+                    <td class="p-4 border-b border-gray-200">{{ record.authority }}</td>
+                    <td class="p-4 border-b border-gray-200">
+                        {% if record.category == 'NSL' %}办理机关/纪委立案机关/监委立案机关
+                        {% elif record.category == 'SL' %}审理机关
+                        {% endif %}
+                    </td>
+                    <td class="p-4 border-b border-gray-200">{{ record.agency }}</td>
+                    <td class="p-4 border-b border-gray-200">
+                        <a href="{{ url_for('update_authority_agency_route', id=record.id) }}" class="text-blue-600 hover:underline mr-4">修改</a>
+                        <a href="{{ url_for('delete_authority_agency_route', id=record.id) }}" class="text-red-600 hover:underline" onclick="return confirm('确定删除？')">删除</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endblock %}
