@@ -1,6 +1,6 @@
 from flask import render_template, request, redirect, url_for, flash, session
 from db_utils import get_user, create_user, get_authority_agency_dict, add_authority_agency, update_authority_agency, delete_authority_agency, get_db
-from utils import process_upload
+from file_processor import process_upload
 from werkzeug.security import generate_password_hash, check_password_hash
 
 def init_routes(app):

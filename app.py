@@ -1,7 +1,7 @@
-import os
 from flask import Flask
 from config import Config
 from routes import init_routes
+import os
 
 def create_app():
     app = Flask(__name__)
