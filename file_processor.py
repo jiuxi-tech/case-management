@@ -53,7 +53,7 @@ def process_upload(request, app):
 
         original_filename = file.filename.replace('.xlsx', '_副本.xlsx').replace('.xls', '_副本.xlsx')
         original_path = os.path.join(Config.UPLOAD_FOLDER, original_filename)
-        format_excel(df, mismatch_indices, original_path)
+        format_excel(df, mismatch_indices, original_path, issues_list)
 
         if not all(header in df.columns for header in required_headers) or \
            not any(file.filename.lower().endswith(ext) for ext in Config.ALLOWED_EXTENSIONS) or \

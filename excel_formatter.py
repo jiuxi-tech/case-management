@@ -7,11 +7,17 @@ def get_column_letter(df, column_name):
     col_idx = df.columns.get_loc(column_name) + 1
     return xlsxwriter.utility.xl_col_to_name(col_idx - 1)
 
-def format_excel(df, mismatch_indices, output_path):
+def format_excel(df, mismatch_indices, output_path, issues_list):
     with pd.ExcelWriter(output_path, engine='xlsxwriter', engine_kwargs={'options': {'nan_inf_to_errors': True}}) as writer:
-        df.to_excel(writer, sheet_name='Sheet1', index=False)
+        # 转换为字符串，空值替换为 ''
+        df_str = df.fillna('').astype(str)
+        # 显式设置所有单元格为文本格式，避免日期解析
+        df_str.to_excel(writer, sheet_name='Sheet1', index=False)
         workbook = writer.book
         worksheet = writer.sheets['Sheet1']
+        # 设置所有列为文本格式
+        for col in range(df_str.shape[1]):
+            worksheet.set_column(col, col, None, workbook.add_format({'num_format': '@'}))
         red_format = workbook.add_format({'bg_color': Config.FORMATS["red"]})
         yellow_format = workbook.add_format({'bg_color': Config.FORMATS["yellow"]})
 
@@ -40,3 +46,12 @@ def format_excel(df, mismatch_indices, output_path):
                 report_text = str(row["处置情况报告"]).strip() if pd.notna(row["处置情况报告"]) else ''
                 if not organization_measure or organization_measure not in Config.ORGANIZATION_MEASURES or (organization_measure and organization_measure not in report_text):
                     worksheet.write(f'{col_letter}{idx + 2}', str(row[Config.COLUMN_MAPPINGS["organization_measure"]]) if pd.notna(row[Config.COLUMN_MAPPINGS["organization_measure"]]) else '', red_format)
+            # 入党时间，仅在不一致时标红
+            if Config.COLUMN_MAPPINGS["joining_party_time"] in df.columns:
+                col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["joining_party_time"])
+                joining_party_time = str(row[Config.COLUMN_MAPPINGS["joining_party_time"]]).strip() if pd.notna(row[Config.COLUMN_MAPPINGS["joining_party_time"]]) else ''
+                # 仅在 mismatch_indices 中且对应问题为不一致时标红
+                if idx in mismatch_indices and any(issue == Config.VALIDATION_RULES["inconsistent_joining_party_time"] for _, issue in issues_list if _ == idx):
+                    worksheet.write(f'{col_letter}{idx + 2}', joining_party_time, red_format)
+                else:
+                    worksheet.write(f'{col_letter}{idx + 2}', joining_party_time)

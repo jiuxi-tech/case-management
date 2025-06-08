@@ -5,12 +5,13 @@ class Config:
     UPLOAD_FOLDER = 'uploads'
     ALLOWED_EXTENSIONS = {'.xlsx', '.xls'}
     REQUIRED_FILENAME_PATTERN = '线索登记表'
-    REQUIRED_HEADERS = ["填报单位名称", "办理机关", "被反映人", "处置情况报告", "受理时间"]
+    REQUIRED_HEADERS = ["填报单位名称", "办理机关", "被反映人", "处置情况报告", "受理时间", "入党时间"]
     
     # 列配置
     COLUMN_MAPPINGS = {
         "organization_measure": "组织措施",
-        "acceptance_time": "受理时间"
+        "acceptance_time": "受理时间",
+        "joining_party_time": "入党时间"
     }
     
     # Excel 格式
@@ -25,7 +26,8 @@ class Config:
         "inconsistent_name": "E2被反映人与AB2处置情况报告姓名不一致",
         "empty_report": "E2被反映人与AB2处置情况报告姓名不一致 (报告为空)",
         "confirm_acceptance_time": "AF2受理时间请再次确认",
-        "confirm_organization_measure": "CC2组织措施内容请再次确认"
+        "confirm_organization_measure": "CC2组织措施内容请再次确认",
+        "inconsistent_joining_party_time": "AG2入党时间与处置情况报告不一致"
     }
     
     # 组织措施关键词
