@@ -90,16 +90,18 @@ def upload():
                 cursor = conn.cursor()
                 cursor.execute('SELECT authority, agency FROM authority_agency_dict WHERE category = ?', ('NSL',))
                 db_records = cursor.fetchall()
-                db_dict = {(row['authority'], row['agency']) for row in db_records}
+                db_dict = {(str(row['authority']).strip().lower(), str(row['agency']).strip().lower()) for row in db_records}
 
             mismatches = []
             mismatch_indices = []
             for index, row in df.iterrows():
-                agency = row["填报单位名称"]
-                authority = row["办理机关"]
-                if pd.isna(authority) or pd.isna(agency) or (authority, agency) not in db_dict:
+                agency = str(row["填报单位名称"]).strip().lower() if pd.notna(row["填报单位名称"]) else ''
+                authority = str(row["办理机关"]).strip().lower() if pd.notna(row["办理机关"]) else ''
+                if not authority or not agency or (authority, agency) not in db_dict:
                     mismatches.append(f"行 {index + 1}")
                     mismatch_indices.append(index)
+                    if app.debug:
+                        print(f"Debug - Row {index + 1}: authority='{authority}', agency='{agency}', db_match={((authority, agency) in db_dict)}")
 
             # Generate first Excel file with mismatches
             if mismatches:
@@ -123,7 +125,7 @@ def upload():
                     worksheet.write(f'H{idx + 2}', df.at[idx, '办理机关'], cell_format)
 
             if mismatches:
-                flash('文件上传但发现以下问题: ' + '; '.join(mismatches), 'error')
+                flash('线索对比有异常，请查看生成的问题表', 'error')
             else:
                 flash('文件上传并验证成功！', 'success')
 
