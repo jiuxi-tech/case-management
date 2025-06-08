@@ -17,8 +17,8 @@ if not os.path.exists(UPLOAD_FOLDER):
 @app.route('/')
 def index():
     if 'username' in session:
-        return render_template('index.html')
-    return redirect(url_for('login'))
+        return render_template('index.html', title='首页')
+    return redirect(url_for('login'), title='登录')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -32,7 +32,7 @@ def login():
             return redirect(url_for('index'))
         else:
             flash('用户名或密码错误', 'error')
-    return render_template('login.html')
+    return render_template('login.html', title='登录')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -46,8 +46,8 @@ def register():
             hashed_password = generate_password_hash(password)
             create_user(username, hashed_password)
             flash('注册成功，请登录', 'success')
-            return redirect(url_for('login'))
-    return render_template('register.html')
+            return redirect(url_for('login'), title='登录')
+    return render_template('register.html', title='注册')
 
 @app.route('/logout')
 def logout():
@@ -79,14 +79,14 @@ def upload():
                 flash(f'文件处理失败: {str(e)}', 'error')
         else:
             flash('请上传Excel文件（.xlsx）', 'error')
-    return render_template('upload.html')
+    return render_template('upload.html', title='上传')
 
 @app.route('/authority_agency')
 def authority_agency():
     if 'username' not in session:
         return redirect(url_for('login'))
     records = get_authority_agency_dict()
-    return render_template('authority_agency.html', records=records)
+    return render_template('authority_agency.html', records=records, title='机关单位')
 
 @app.route('/authority_agency/add', methods=['GET', 'POST'])
 def add_authority_agency_route():
@@ -99,7 +99,7 @@ def add_authority_agency_route():
         add_authority_agency(authority, category, agency)
         flash('新增成功！', 'success')
         return redirect(url_for('authority_agency'))
-    return render_template('add_authority_agency.html')
+    return render_template('add_authority_agency.html', title='机关单位')
 
 @app.route('/authority_agency/update/<int:id>', methods=['GET', 'POST'])
 def update_authority_agency_route(id):
@@ -116,7 +116,7 @@ def update_authority_agency_route(id):
         update_authority_agency(id, authority, category, agency)
         flash('更新成功！', 'success')
         return redirect(url_for('authority_agency'))
-    return render_template('update_authority_agency.html', record=record)
+    return render_template('update_authority_agency.html', record=record, title='机关单位')
 
 @app.route('/authority_agency/delete/<int:id>')
 def delete_authority_agency_route(id):

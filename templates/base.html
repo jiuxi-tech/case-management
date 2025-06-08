@@ -24,8 +24,22 @@
         }
         .content {
             transition: margin-left 0.3s ease;
-            margin-left: 256px; /* 默认左侧导航宽度 64px + padding 6*2 */
-            flex: 1; /* 填满剩余空间 */
+            margin-left: 256px;
+            flex: 1;
+        }
+        .content.login-content {
+            margin-left: 0 !important;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            width: 100%;
+            background-color: #f3f4f6;
+        }
+        .content.login-content .content-inner {
+            max-width: 400px;
+            width: 100%;
+            padding: 20px;
         }
         .content.no-sidebar {
             margin-left: 0;
@@ -35,7 +49,7 @@
             top: 15px;
             left: 260px;
             z-index: 10;
-            background-color: #60a5fa; /* bg-blue-400 */
+            background-color: #60a5fa;
             color: white;
             border: none;
             width: 30px;
@@ -49,7 +63,7 @@
             transition: left 0.3s ease, background-color 0.3s ease;
         }
         .toggle-btn:hover {
-            background-color: #3b82f6; /* bg-blue-500 */
+            background-color: #3b82f6;
         }
         .toggle-btn.left {
             left: 15px;
@@ -67,46 +81,54 @@
             const content = document.querySelector('.content');
             let isHidden = false;
 
-            toggleBtn.addEventListener('click', function() {
-                isHidden = !isHidden;
-                sidebar.classList.toggle('hidden', isHidden);
-                content.classList.toggle('no-sidebar', isHidden);
-                toggleBtn.classList.toggle('left', isHidden);
-                const icon = toggleBtn.querySelector('i');
-                icon.classList.toggle('fa-angle-right', !isHidden);
-                icon.classList.toggle('fa-angle-left', isHidden);
-            });
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function() {
+                    isHidden = !isHidden;
+                    if (sidebar) sidebar.classList.toggle('hidden', isHidden);
+                    if (content) content.classList.toggle('no-sidebar', isHidden);
+                    if (toggleBtn) toggleBtn.classList.toggle('left', isHidden);
+                    const icon = toggleBtn.querySelector('i');
+                    if (icon) {
+                        icon.classList.toggle('fa-angle-right', !isHidden);
+                        icon.classList.toggle('fa-angle-left', isHidden);
+                    }
+                });
+            }
         });
     </script>
 </head>
 <body class="bg-gray-100 flex h-screen">
-    <!-- 左侧导航 -->
-    <nav class="sidebar w-64 bg-blue-600 text-white p-6 h-full fixed">
-        <h1 class="text-2xl font-bold mb-6 text-center">案管系统</h1>
-        <ul class="space-y-4">
-            {% if 'username' in session %}
-                <li><a href="{{ url_for('upload') }}" class="block hover:bg-blue-700 p-2 rounded-md">线索表上传</a></li>
-                <li><a href="{{ url_for('authority_agency') }}" class="block hover:bg-blue-700 p-2 rounded-md">机关单位管理</a></li>
-            {% else %}
-                <li><a href="{{ url_for('login') }}" class="block hover:bg-blue-700 p-2 rounded-md">登录</a></li>
-                <li><a href="{{ url_for('register') }}" class="block hover:bg-blue-700 p-2 rounded-md">注册</a></li>
-            {% endif %}
-        </ul>
-    </nav>
-    <!-- 隐藏/显示按钮 -->
-    <button class="toggle-btn"><i class="fas fa-angle-right"></i></button>
-    <!-- 顶部表头和右侧内容 -->
-    <div class="content flex flex-col flex-1">
-        <header class="bg-gray-200 text-gray-800 p-4 flex justify-between items-center">
-            <div></div>
-            <div>
+    {% if title is defined and title and title != '登录' and title != '注册' %}
+        <!-- 左侧导航 -->
+        <nav class="sidebar w-64 bg-blue-600 text-white p-6 h-full fixed">
+            <h1 class="text-2xl font-bold mb-6 text-center">案管系统</h1>
+            <ul class="space-y-4">
                 {% if 'username' in session %}
-                    <span class="mr-4">欢迎, {{ session['username'] }}</span>
-                    <a href="{{ url_for('logout') }}" class="hover:underline">登出</a>
+                    <li><a href="{{ url_for('upload') }}" class="block hover:bg-blue-700 p-2 rounded-md">上传文件</a></li>
+                    <li><a href="{{ url_for('authority_agency') }}" class="block hover:bg-blue-700 p-2 rounded-md">机关单位关系</a></li>
+                {% else %}
+                    <li><a href="{{ url_for('login') }}" class="block hover:bg-blue-700 p-2 rounded-md">登录</a></li>
+                    <li><a href="{{ url_for('register') }}" class="block hover:bg-blue-700 p-2 rounded-md">注册</a></li>
                 {% endif %}
-            </div>
-        </header>
-        <div class="p-6 flex-1 overflow-auto">
+            </ul>
+        </nav>
+        <!-- 隐藏/显示按钮 -->
+        <button class="toggle-btn"><i class="fas fa-angle-right"></i></button>
+    {% endif %}
+    <!-- 顶部表头和右侧内容 -->
+    <div class="content flex flex-col flex-1 {% if title is defined and (title == '登录' or title == '注册') %}login-content{% endif %}">
+        {% if title is defined and title and title != '登录' and title != '注册' %}
+            <header class="bg-gray-200 text-gray-800 p-4 flex justify-between items-center">
+                <div></div>
+                <div>
+                    {% if 'username' in session %}
+                        <span class="mr-4">欢迎, {{ session['username'] }}</span>
+                        <a href="{{ url_for('logout') }}" class="hover:underline">登出</a>
+                    {% endif %}
+                </div>
+            </header>
+        {% endif %}
+        <div class="p-6 {% if title is defined and (title == '登录' or title == '注册') %}content-inner{% endif %}">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     <script>
