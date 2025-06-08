@@ -6,6 +6,7 @@
     <title>{% block title %}{% endblock %} - 案管系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrZj/k7ujTnHg4CGR2D7kSs0v4LLanw2qksYuRlEzO+tcaEPQogQ0KaoGN26/zrn20ImR1DfuLWnOo7aBA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Serif SC', serif; }
@@ -31,19 +32,32 @@
         }
         .toggle-btn {
             position: absolute;
-            top: 10px;
+            top: 15px;
             left: 260px;
             z-index: 10;
-            background-color: #2563eb;
+            background-color: #60a5fa; /* bg-blue-400 */
             color: white;
             border: none;
-            padding: 5px 10px;
-            border-radius: 0 5px 5px 0;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
-            transition: left 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: left 0.3s ease, background-color 0.3s ease;
         }
-        .toggle-btn.hidden {
-            left: 10px;
+        .toggle-btn:hover {
+            background-color: #3b82f6; /* bg-blue-500 */
+        }
+        .toggle-btn.left {
+            left: 15px;
+            transform: rotate(180deg);
+        }
+        .toggle-btn i {
+            font-size: 14px;
+            transition: transform 0.3s ease;
         }
     </style>
     <script>
@@ -56,9 +70,11 @@
             toggleBtn.addEventListener('click', function() {
                 isHidden = !isHidden;
                 sidebar.classList.toggle('hidden', isHidden);
-                toggleBtn.classList.toggle('hidden', !isHidden);
-                toggleBtn.textContent = isHidden ? '>' : '<';
                 content.classList.toggle('no-sidebar', isHidden);
+                toggleBtn.classList.toggle('left', isHidden);
+                const icon = toggleBtn.querySelector('i');
+                icon.classList.toggle('fa-angle-right', !isHidden);
+                icon.classList.toggle('fa-angle-left', isHidden);
             });
         });
     </script>
@@ -78,7 +94,7 @@
         </ul>
     </nav>
     <!-- 隐藏/显示按钮 -->
-    <button class="toggle-btn">></button>
+    <button class="toggle-btn"><i class="fas fa-angle-right"></i></button>
     <!-- 顶部表头和右侧内容 -->
     <div class="content flex flex-col flex-1">
         <header class="bg-gray-200 text-gray-800 p-4 flex justify-between items-center">
