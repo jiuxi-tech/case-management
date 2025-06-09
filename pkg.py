@@ -24,7 +24,9 @@ def create_app():
 def open_browser():
     # 延迟 2 秒确保服务器启动
     time.sleep(2)
-    webbrowser.open('http://localhost:5000')
+    if not hasattr(open_browser, 'opened'):
+        webbrowser.open('http://localhost:5000')
+        open_browser.opened = True
 
 def run_app():
     # 获取 .exe 所在目录
@@ -47,7 +49,7 @@ def run_app():
     # 显式创建应用实例
     app = create_app()
     app.config['UPLOAD_FOLDER'] = upload_folder
-    app.template_folder = template_folder  # 确保模板路径
+    app.template_folder = template_folder
     
     # 设置日志
     log_file = os.path.join(log_folder, 'app.log')
@@ -61,11 +63,11 @@ def run_app():
     with app.app_context():
         init_db()
     
-    # 自动打开浏览器
+    # 自动打开浏览器，仅首次执行
     Timer(1, open_browser).start()
     
-    # 启用 development mode
-    app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=True)
+    # 启用 development mode，无重载
+    app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False)
 
 if __name__ == '__main__':
     run_app()
