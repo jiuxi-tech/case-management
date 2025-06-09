@@ -32,3 +32,6 @@ Python库：flask, werkzeug, pandas, xlsxwriter
 当前用户数据存储在内存中（users字典），生产环境建议使用数据库（如SQLite或MySQL）。
 上传文件保存在uploads/目录，确保有写权限。
 界面支持响应式设计，适配移动端和桌面端。
+
+## 6. 创建打包程序
+pyinstaller --onefile --add-data "templates;templates" --add-data "uploads;uploads" package_app.py
