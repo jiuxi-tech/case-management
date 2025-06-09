@@ -47,14 +47,15 @@ def run_app():
     # 显式创建应用实例
     app = create_app()
     app.config['UPLOAD_FOLDER'] = upload_folder
-    app.template_folder = template_folder  # 动态设置模板路径
+    app.template_folder = template_folder
     
-    # 设置日志
+    # 设置日志，指定 UTF-8 编码
     log_file = os.path.join(log_folder, 'app.log')
     if not os.access(base_path, os.W_OK):
         log_file = os.path.join(os.getenv('TEMP'), 'app.log')  # 回退到临时目录
     logging.basicConfig(filename=log_file, level=logging.INFO,
-                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                        encoding='utf-8')
     logger = logging.getLogger(__name__)
     logger.info("Application started in %s", base_path)
     logger.info("Log file set to: %s", log_file)
