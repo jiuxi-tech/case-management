@@ -36,11 +36,9 @@ def run_app():
     log_folder = os.path.join(base_path, 'logs')
     
     if getattr(sys, 'frozen', False):
-        # PyInstaller 打包环境
-        base_path = sys._MEIPASS
-        template_folder = os.path.join(base_path, 'templates')
-        upload_folder = os.path.join(base_path, 'uploads')
-        log_folder = os.path.join(base_path, 'logs')
+        # PyInstaller 打包环境，调整模板和上传路径
+        template_folder = os.path.join(sys._MEIPASS, 'templates')
+        upload_folder = os.path.join(sys._MEIPASS, 'uploads')
         if not os.path.exists(upload_folder):
             os.makedirs(upload_folder)
         if not os.path.exists(log_folder):
@@ -49,14 +47,17 @@ def run_app():
     # 显式创建应用实例
     app = create_app()
     app.config['UPLOAD_FOLDER'] = upload_folder
-    app.template_folder = template_folder
+    app.template_folder = template_folder  # 动态设置模板路径
     
     # 设置日志
     log_file = os.path.join(log_folder, 'app.log')
+    if not os.access(base_path, os.W_OK):
+        log_file = os.path.join(os.getenv('TEMP'), 'app.log')  # 回退到临时目录
     logging.basicConfig(filename=log_file, level=logging.INFO,
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
     logger.info("Application started in %s", base_path)
+    logger.info("Log file set to: %s", log_file)
     logger.info("Template folder set to: %s", template_folder)
 
     # 数据库初始化

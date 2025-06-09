@@ -34,4 +34,4 @@ Python库：flask, werkzeug, pandas, xlsxwriter
 界面支持响应式设计，适配移动端和桌面端。
 
 ## 6. 创建打包程序
-pyinstaller --onefile --add-data "templates;templates" --add-data "uploads;uploads" package_app.py
+pyinstaller --onefile --add-data "templates;templates" --add-data "uploads;uploads" --add-data "case_management.db;." pkg.py
