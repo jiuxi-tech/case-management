@@ -238,21 +238,21 @@ def get_validation_issues(df):
             logger.info(msg)
             print(msg)
 
-        organization_measure = str(row[Config.COLUMN_MAPPINGS["organization_measure"]]).strip() if pd.notna(row[Config.COLUMN_MAPPINGS["organization_measure"]]) else ''
+        organization_measure = str(row[Config.COLUMN_MAPPINGS["organization_measure"]].strip()) if pd.notna(row[Config.COLUMN_MAPPINGS["organization_measure"]]) else ''
         report_text = str(report_text).strip() if pd.notna(report_text) else ''
         msg = f"行 {index + 1} - 组织措施: {organization_measure}, 处置情况报告: {report_text[:500]}..."
         logger.debug(msg)
         print(msg)
         if validate_organization_measure(organization_measure, report_text, Config.ORGANIZATION_MEASURES):
-            issues_list.append((index, "组织措施跟处置报告不一致"))
-            msg = f"行 {index + 1} - 组织措施与处置情况报告不一致: {organization_measure}"
+            issues_list.append((index, Config.VALIDATION_RULES["inconsistent_organization_measure"]))
+            msg = f"行 {index + 1} - {Config.VALIDATION_RULES['inconsistent_organization_measure']}: {organization_measure}"
             logger.info(msg)
             print(msg)
 
-        joining_party_time = str(row[Config.COLUMN_MAPPINGS["joining_party_time"]]).strip() if pd.notna(row[Config.COLUMN_MAPPINGS["joining_party_time"]]) else ''
+        joining_party_time = str(row[Config.COLUMN_MAPPINGS["joining_party_time"]].strip()) if pd.notna(row[Config.COLUMN_MAPPINGS["joining_party_time"]]) else ''
         if not pd.isna(report_text) and not validate_joining_party_time(joining_party_time, report_text):
             issues_list.append((index, Config.VALIDATION_RULES["inconsistent_joining_party_time"]))
-            msg = f"行 {index + 1} - 入党时间与处置情况报告不一致: {joining_party_time}"
+            msg = f"行 {index + 1} - {Config.VALIDATION_RULES['inconsistent_joining_party_time']}: {joining_party_time}"
             logger.info(msg)
             print(msg)
 

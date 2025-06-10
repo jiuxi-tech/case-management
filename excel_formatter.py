@@ -31,7 +31,7 @@ def format_excel(df, mismatch_indices, output_path, issues_list):
             if Config.COLUMN_MAPPINGS["organization_measure"] in df.columns:
                 col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["organization_measure"])
                 organization_measure = str(row[Config.COLUMN_MAPPINGS["organization_measure"]]).strip() if pd.notna(row[Config.COLUMN_MAPPINGS["organization_measure"]]) else ''
-                if any(issue == "组织措施跟处置报告不一致" for i, issue in issues_list if i == idx):
+                if any(issue == "组织措施跟处置情况报告不一致" for i, issue in issues_list if i == idx):
                     worksheet.write(f'{col_letter}{idx + 2}', organization_measure, red_format)
                 else:
                     worksheet.write(f'{col_letter}{idx + 2}', organization_measure)
