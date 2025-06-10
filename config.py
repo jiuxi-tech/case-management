@@ -26,13 +26,12 @@ class Config:
         "inconsistent_name": "E2被反映人与AB2处置情况报告姓名不一致",
         "empty_report": "E2被反映人与AB2处置情况报告姓名不一致 (报告为空)",
         "confirm_acceptance_time": "AF2受理时间请再次确认",
-        "confirm_organization_measure": "CC2组织措施内容请再次确认",
-        "inconsistent_joining_party_time": "AC2入党时间与处置情况报告不一致",
-        "inconsistent_organization_measure": "CC2组织措施与处置情况报告不一致"  # 新增规则
+        "inconsistent_organization_measure": "CC2组织措施与处置情况报告不一致",
+        "inconsistent_joining_party_time": "AC2入党时间与处置情况报告不一致"
     }
     
-    # 组织措施关键词
-    ORGANIZATION_MEASURES = [
+    # 组织措施关键词（恢复此部分）
+    ORGANIZATION_MEASURE_KEYWORDS = [
         "谈话提醒", "提醒谈话", "批评教育", "责令检查", "责令其做出书面检查", 
         "责令其做出检查", "诫勉", "警示谈话", "通报批评", "责令公开道歉（检查）", 
         "责令具结悔过"

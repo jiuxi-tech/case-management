@@ -1,6 +1,8 @@
 from flask import Flask
 from config import Config
 from routes import init_routes
+from validation_rules.validation_core import get_validation_issues
+from validation_rules.name_extraction import extract_name_from_report
 import os
 
 def create_app():

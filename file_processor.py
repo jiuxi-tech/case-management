@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from flask import flash, redirect, url_for
 from config import Config
-from validation_rules import get_validation_issues
+from validation_rules.validation_core import get_validation_issues
 from excel_formatter import format_excel
 
 logger = logging.getLogger(__name__)
