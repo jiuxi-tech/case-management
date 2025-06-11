@@ -26,8 +26,8 @@ class Config:
         "inconsistent_name": "E2被反映人与AB2处置情况报告姓名不一致",
         "empty_report": "E2被反映人与AB2处置情况报告姓名不一致 (报告为空)",
         "confirm_acceptance_time": "AF2受理时间请再次确认",
-        "inconsistent_organization_measure": "CC2组织措施与处置情况报告不一致",
-        "inconsistent_joining_party_time": "AC2入党时间与处置情况报告不一致"
+        "inconsistent_organization_measure": "CC2组织措施与AB2处置情况报告不一致",
+        "inconsistent_joining_party_time": "AC2入党时间与AB2处置情况报告不一致"
     }
     
     # 组织措施关键词（恢复此部分）

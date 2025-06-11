@@ -4,10 +4,11 @@ import logging
 from datetime import datetime
 from flask import flash, redirect, url_for
 from config import Config
-from validation_rules.validation_core import get_validation_issues
-from excel_formatter import format_excel
 
 logger = logging.getLogger(__name__)
+
+from validation_rules.validation_core import get_validation_issues
+from excel_formatter import format_excel
 
 def process_upload(request, app):
     logger.info("开始处理文件上传请求")
@@ -29,8 +30,13 @@ def process_upload(request, app):
         flash('文件名必须包含“线索登记表”', 'error')
         return redirect(request.url)
 
-    file_path = os.path.join(Config.UPLOAD_FOLDER, file.filename)
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+    logger.info(f"文件保存路径: {file_path}")  # 记录保存路径
     file.save(file_path)
+    if not os.path.exists(file_path):
+        logger.error(f"文件保存失败: {file_path} 不存在")
+        flash(f'文件保存失败: {file_path} 不存在', 'error')
+        return redirect(request.url)
     logger.info(f"文件保存成功: {file_path}")
     try:
         df = pd.read_excel(file_path)
@@ -47,12 +53,12 @@ def process_upload(request, app):
             for i, (index, issue) in enumerate(issues_list, 1):
                 issues_df = pd.concat([issues_df, pd.DataFrame({'序号': [i], '问题': [issue]})], ignore_index=True)
             issue_filename = f"线索编号{datetime.now().strftime('%Y%m%d')}.xlsx"
-            issue_path = os.path.join(Config.UPLOAD_FOLDER, issue_filename)
+            issue_path = os.path.join(app.config['UPLOAD_FOLDER'], issue_filename)
             issues_df.to_excel(issue_path, index=False)
             logger.info(f"生成线索编号文件: {issue_path}")
 
         original_filename = file.filename.replace('.xlsx', '_副本.xlsx').replace('.xls', '_副本.xlsx')
-        original_path = os.path.join(Config.UPLOAD_FOLDER, original_filename)
+        original_path = os.path.join(app.config['UPLOAD_FOLDER'], original_filename)
         format_excel(df, mismatch_indices, original_path, issues_list)
 
         if not all(header in df.columns for header in required_headers) or \
