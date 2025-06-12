@@ -25,7 +25,6 @@ def format_excel(df, mismatch_indices, output_path, issues_list):
         red_format = workbook.add_format({'bg_color': Config.FORMATS["red"]})
         yellow_format = workbook.add_format({'bg_color': Config.FORMATS["yellow"]})
 
-        # 独立处理每行样式
         for idx in range(len(df)):
             row = df.iloc[idx]
             # 受理时间
@@ -37,69 +36,40 @@ def format_excel(df, mismatch_indices, output_path, issues_list):
             if pd.isna(report_text):
                 apply_format(worksheet, idx, 'AB', report_text, any(issue == Config.VALIDATION_RULES["empty_report"] for i, issue in issues_list if i == idx), yellow_format)
 
-            # 检查“收缴金额（万元）”字段
-            if "收缴金额（万元）" in df.columns:
-                col_letter = get_column_letter(df, "收缴金额（万元）")
-                value = row["收缴金额（万元）"]
-                if any(issue == Config.VALIDATION_RULES["highlight_collection_amount"] for i, issue in issues_list if i == idx):
-                    apply_format(worksheet, idx, col_letter, value, True, yellow_format)
+            # 检查金额字段
+            for field, rule in [("收缴金额（万元）", Config.VALIDATION_RULES["highlight_collection_amount"]),
+                              ("没收金额", Config.VALIDATION_RULES["highlight_confiscation_amount"]),
+                              ("责令退赔金额", Config.VALIDATION_RULES["highlight_compensation_amount"]),
+                              ("登记上交金额", Config.VALIDATION_RULES["highlight_registration_amount"]),
+                              ("追缴失职渎职滥用职权造成的损失金额", Config.VALIDATION_RULES["highlight_recovery_amount"])]:
+                if field in df.columns:
+                    col_letter = get_column_letter(df, field)
+                    value = row[field]
+                    apply_format(worksheet, idx, col_letter, value, any(issue == rule for i, issue in issues_list if i == idx), yellow_format)
 
-            # 检查“没收金额”字段
-            if "没收金额" in df.columns:
-                col_letter = get_column_letter(df, "没收金额")
-                value = row["没收金额"]
-                if any(issue == Config.VALIDATION_RULES["highlight_confiscation_amount"] for i, issue in issues_list if i == idx):
-                    apply_format(worksheet, idx, col_letter, value, True, yellow_format)
-
-            # 检查“责令退赔金额”字段
-            if "责令退赔金额" in df.columns:
-                col_letter = get_column_letter(df, "责令退赔金额")
-                value = row["责令退赔金额"]
-                if any(issue == Config.VALIDATION_RULES["highlight_compensation_amount"] for i, issue in issues_list if i == idx):
-                    apply_format(worksheet, idx, col_letter, value, True, yellow_format)
-
-            # 检查“登记上交金额”字段
-            if "登记上交金额" in df.columns:
-                col_letter = get_column_letter(df, "登记上交金额")
-                value = row["登记上交金额"]
-                if any(issue == Config.VALIDATION_RULES["highlight_registration_amount"] for i, issue in issues_list if i == idx):
-                    apply_format(worksheet, idx, col_letter, value, True, yellow_format)
-
-            # 检查“追缴失职渎职滥用职权造成的损失金额”字段
-            if "追缴失职渎职滥用职权造成的损失金额" in df.columns:
-                col_letter = get_column_letter(df, "追缴失职渎职滥用职权造成的损失金额")
-                value = row["追缴失职渎职滥用职权造成的损失金额"]
-                if any(issue == Config.VALIDATION_RULES["highlight_recovery_amount"] for i, issue in issues_list if i == idx):
-                    apply_format(worksheet, idx, col_letter, value, True, yellow_format)
-
-        # 基于 mismatch_indices 和 issues_list 标红
-        for idx in range(len(df)):
-            row = df.iloc[idx]
-            # agency
-            if idx in mismatch_indices and any(issue == Config.VALIDATION_RULES["inconsistent_agency"] for _, issue in issues_list if _ == idx):
-                apply_format(worksheet, idx, 'C', row["填报单位名称"], True, red_format)
-                apply_format(worksheet, idx, 'H', row["办理机关"], True, red_format)
-            # 被反映人
-            if "被反映人" in df.columns:
-                reported_person = str(row["被反映人"]).strip() if pd.notna(row["被反映人"]) else ''
-                report_name = extract_name_from_report(report_text)
-                if any(issue == Config.VALIDATION_RULES["inconsistent_name"] for _, issue in issues_list if _ == idx):
+            # 基于 mismatch_indices 和 issues_list 标红
+            for idx in range(len(df)):
+                row = df.iloc[idx]
+                # agency
+                if idx in mismatch_indices and any(issue == Config.VALIDATION_RULES["inconsistent_agency"] for _, issue in issues_list if _ == idx):
+                    apply_format(worksheet, idx, 'C', row["填报单位名称"], True, red_format)
+                    apply_format(worksheet, idx, 'H', row["办理机关"], True, red_format)
+                # 被反映人
+                if "被反映人" in df.columns and any(issue == Config.VALIDATION_RULES["inconsistent_name"] for _, issue in issues_list if _ == idx):
                     apply_format(worksheet, idx, 'E', row["被反映人"], True, red_format)
-            # 组织措施
-            if Config.COLUMN_MAPPINGS["organization_measure"] in df.columns:
-                col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["organization_measure"])
-                organization_measure = str(row[Config.COLUMN_MAPPINGS["organization_measure"]].strip()) if pd.notna(row[Config.COLUMN_MAPPINGS["organization_measure"]]) else ''
-                if any(issue == Config.VALIDATION_RULES["inconsistent_organization_measure"] for _, issue in issues_list if _ == idx):
-                    apply_format(worksheet, idx, col_letter, organization_measure, True, red_format)
-            # 入党时间
-            if Config.COLUMN_MAPPINGS["joining_party_time"] in df.columns:
-                col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["joining_party_time"])
-                joining_party_time = str(row[Config.COLUMN_MAPPINGS["joining_party_time"]].strip()) if pd.notna(row[Config.COLUMN_MAPPINGS["joining_party_time"]]) else ''
-                if any(issue == Config.VALIDATION_RULES["inconsistent_joining_party_time"] for _, issue in issues_list if _ == idx):
-                    apply_format(worksheet, idx, col_letter, joining_party_time, True, red_format)
-            # 民族
-            if Config.COLUMN_MAPPINGS["ethnicity"] in df.columns:
-                col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["ethnicity"])
-                ethnicity = row[Config.COLUMN_MAPPINGS["ethnicity"]]
-                if any(issue == Config.VALIDATION_RULES["inconsistent_ethnicity"] for i, issue in issues_list if i == idx):
-                    apply_format(worksheet, idx, col_letter, ethnicity, True, red_format)
+                # 组织措施
+                if Config.COLUMN_MAPPINGS["organization_measure"] in df.columns and any(issue == Config.VALIDATION_RULES["inconsistent_organization_measure"] for _, issue in issues_list if _ == idx):
+                    col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["organization_measure"])
+                    apply_format(worksheet, idx, col_letter, row[Config.COLUMN_MAPPINGS["organization_measure"]], True, red_format)
+                # 入党时间
+                if Config.COLUMN_MAPPINGS["joining_party_time"] in df.columns and any(issue == Config.VALIDATION_RULES["inconsistent_joining_party_time"] for _, issue in issues_list if _ == idx):
+                    col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["joining_party_time"])
+                    apply_format(worksheet, idx, col_letter, row[Config.COLUMN_MAPPINGS["joining_party_time"]], True, red_format)
+                # 民族
+                if Config.COLUMN_MAPPINGS["ethnicity"] in df.columns and any(issue == Config.VALIDATION_RULES["inconsistent_ethnicity"] for i, issue in issues_list if i == idx):
+                    col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["ethnicity"])
+                    apply_format(worksheet, idx, col_letter, row[Config.COLUMN_MAPPINGS["ethnicity"]], True, red_format)
+                # 出生年月
+                if Config.COLUMN_MAPPINGS["birth_date"] in df.columns and any(issue == Config.VALIDATION_RULES["highlight_birth_date"] for i, issue in issues_list if i == idx):
+                    col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["birth_date"])
+                    apply_format(worksheet, idx, col_letter, row[Config.COLUMN_MAPPINGS["birth_date"]], True, red_format)

@@ -12,7 +12,8 @@ class Config:
         "organization_measure": "组织措施",
         "acceptance_time": "受理时间",
         "joining_party_time": "入党时间",
-        "ethnicity": "民族"
+        "ethnicity": "民族",
+        "birth_date": "出生年月"
     }
     
     # Excel 格式
@@ -34,10 +35,11 @@ class Config:
         "highlight_compensation_amount": "S2责令退赔金额请再次确认",
         "highlight_registration_amount": "T2登记上交金额请再次确认",
         "highlight_recovery_amount": "U2追缴失职渎职滥用职权造成的损失金额请再次确认",
-        "inconsistent_ethnicity": "W2民族与AB2处置情况报告民族不一致"
+        "inconsistent_ethnicity": "W2民族与AB2处置情况报告民族不一致",
+        "highlight_birth_date": "X2出生年月与AB2处置情况报告出生年月不一致"  # 新增规则
     }
     
-    # 组织措施关键词（恢复此部分）
+    # 组织措施关键词
     ORGANIZATION_MEASURE_KEYWORDS = [
         "谈话提醒", "提醒谈话", "批评教育", "责令检查", "责令其做出书面检查", 
         "责令其做出检查", "诫勉", "警示谈话", "通报批评", "责令公开道歉（检查）", 
