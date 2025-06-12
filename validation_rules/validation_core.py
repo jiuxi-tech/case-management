@@ -82,6 +82,12 @@ def validate_registration_amount(report_text):
         return False
     return "登记上交金额" in str(report_text)
 
+def validate_recovery_amount(report_text):
+    """检查处置情况报告是否包含'追缴'，返回是否需要高亮追缴失职渎职滥用职权造成的损失金额"""
+    if pd.isna(report_text):
+        return False
+    return "追缴" in str(report_text)
+
 def get_validation_issues(df):
     mismatch_indices = set()
     issues_list = []
@@ -157,8 +163,12 @@ def get_validation_issues(df):
         if "责令退赔金额" in df.columns and validate_compensation_amount(report_text):
             issues_list.append((index, Config.VALIDATION_RULES["highlight_compensation_amount"]))
 
-        # 新增：检查“登记上交金额”相关逻辑
+        # 检查“登记上交金额”相关逻辑
         if "登记上交金额" in df.columns and validate_registration_amount(report_text):
             issues_list.append((index, Config.VALIDATION_RULES["highlight_registration_amount"]))
+
+        # 新增：检查“追缴失职渎职滥用职权造成的损失金额”相关逻辑
+        if "追缴失职渎职滥用职权造成的损失金额" in df.columns and validate_recovery_amount(report_text):
+            issues_list.append((index, Config.VALIDATION_RULES["highlight_recovery_amount"]))
 
     return mismatch_indices, issues_list

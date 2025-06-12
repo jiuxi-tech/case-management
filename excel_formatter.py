@@ -65,6 +65,13 @@ def format_excel(df, mismatch_indices, output_path, issues_list):
                 if any(issue == Config.VALIDATION_RULES["highlight_registration_amount"] for i, issue in issues_list if i == idx):
                     apply_format(worksheet, idx, col_letter, value, True, yellow_format)
 
+            # 新增：检查“追缴失职渎职滥用职权造成的损失金额”字段
+            if "追缴失职渎职滥用职权造成的损失金额" in df.columns:
+                col_letter = get_column_letter(df, "追缴失职渎职滥用职权造成的损失金额")
+                value = row["追缴失职渎职滥用职权造成的损失金额"]
+                if any(issue == Config.VALIDATION_RULES["highlight_recovery_amount"] for i, issue in issues_list if i == idx):
+                    apply_format(worksheet, idx, col_letter, value, True, yellow_format)
+
         # 基于 mismatch_indices 和 issues_list 标红
         for idx in range(len(df)):
             row = df.iloc[idx]

@@ -31,7 +31,8 @@ class Config:
         "highlight_collection_amount": "Q2收缴金额请再次确认",
         "highlight_confiscation_amount": "R2没收金额请再次确认",
         "highlight_compensation_amount": "S2责令退赔金额请再次确认",
-        "highlight_registration_amount": "T2登记上交金额请再次确认"
+        "highlight_registration_amount": "T2登记上交金额请再次确认",
+        "highlight_recovery_amount": "U2追缴失职渎职滥用职权造成的损失金额请再次确认"
     }
     
     # 组织措施关键词（恢复此部分）
