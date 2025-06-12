@@ -64,6 +64,12 @@ def validate_collection_amount(report_text):
         return False
     return "收缴" in str(report_text)
 
+def validate_confiscation_amount(report_text):
+    """检查处置情况报告是否包含'没收'，返回是否需要高亮没收金额"""
+    if pd.isna(report_text):
+        return False
+    return "没收" in str(report_text)
+
 def get_validation_issues(df):
     mismatch_indices = set()
     issues_list = []
@@ -127,8 +133,12 @@ def get_validation_issues(df):
             logger.info(msg)
             print(msg)
 
-        # 新增：检查“收缴金额”相关逻辑
+        # 检查“收缴金额”相关逻辑
         if "收缴金额（万元）" in df.columns and validate_collection_amount(report_text):
             issues_list.append((index, Config.VALIDATION_RULES["highlight_collection_amount"]))
+
+        # 新增：检查“没收金额”相关逻辑
+        if "没收金额" in df.columns and validate_confiscation_amount(report_text):
+            issues_list.append((index, Config.VALIDATION_RULES["highlight_confiscation_amount"]))
 
     return mismatch_indices, issues_list

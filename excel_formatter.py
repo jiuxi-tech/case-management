@@ -37,11 +37,18 @@ def format_excel(df, mismatch_indices, output_path, issues_list):
             if pd.isna(report_text):
                 apply_format(worksheet, idx, 'AB', report_text, any(issue == Config.VALIDATION_RULES["empty_report"] for i, issue in issues_list if i == idx), yellow_format)
 
-            # 新增：检查“收缴金额（万元）”字段
+            # 检查“收缴金额（万元）”字段
             if "收缴金额（万元）" in df.columns:
                 col_letter = get_column_letter(df, "收缴金额（万元）")
                 value = row["收缴金额（万元）"]
                 if any(issue == Config.VALIDATION_RULES["highlight_collection_amount"] for i, issue in issues_list if i == idx):
+                    apply_format(worksheet, idx, col_letter, value, True, yellow_format)
+
+            # 新增：检查“没收金额”字段
+            if "没收金额" in df.columns:
+                col_letter = get_column_letter(df, "没收金额")
+                value = row["没收金额"]
+                if any(issue == Config.VALIDATION_RULES["highlight_confiscation_amount"] for i, issue in issues_list if i == idx):
                     apply_format(worksheet, idx, col_letter, value, True, yellow_format)
 
         # 基于 mismatch_indices 和 issues_list 标红
