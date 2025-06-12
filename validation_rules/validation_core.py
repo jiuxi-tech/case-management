@@ -19,18 +19,22 @@ except ImportError as e:
     logger.error(msg)
     print(msg)
 
-def normalize_date(date_str):
-    """标准化日期格式为 YYYY-MM"""
+def normalize_date(date_str, full_date=False):
+    """标准化日期格式，full_date=True返回YYYY-MM-DD，否则返回YYYY-MM"""
     if pd.isna(date_str):
         return None
     date_str = str(date_str).strip()
     msg = f"标准化日期: 原始 '{date_str}'"
     logger.debug(msg)
     print(msg)
-    match = re.match(r'(\d{4})[年/-](\d{1,2})[月]?', date_str)
+    # 匹配 YYYY/M、YYYY年M月、YYYY年M月D日、YYYY年M月生
+    match = re.match(r'(\d{4})[年/-](\d{1,2})(?:[月/-](\d{1,2})[日]?)?(?:生)?', date_str)
     if match:
-        year, month = match.groups()
-        normalized = f"{year}-{month.zfill(2)}"
+        year, month, day = match.groups()
+        if full_date and day:  # 办结时间需完整日期
+            normalized = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+        else:  # 入党时间和出生年月仅需年月
+            normalized = f"{year}-{month.zfill(2)}"
         msg = f"标准化结果: {normalized}"
         logger.debug(msg)
         print(msg)
@@ -174,7 +178,32 @@ def extract_birth_date_from_report(report_text):
     msg = f"提取出生年月: {birth_date}"
     logger.info(msg)
     print(msg)
-    return normalize_date(birth_date) if birth_date else None
+    return normalize_date(birth_date)
+
+def extract_completion_date_from_report(report_text):
+    """从处置情况报告最后一行的日期"""
+    if not report_text or pd.isna(report_text):
+        msg = f"report_text 为空或无效: {report_text}"
+        logger.info(msg)
+        print(msg)
+        return None
+    lines = report_text.strip().split('\n')
+    last_line = lines[-1].strip() if lines else ""
+    msg = f"最后一行的内容: '{last_line}'"
+    logger.debug(msg)
+    print(msg)
+    match = re.search(r'(\d{4})[年/-](\d{1,2})[月/-](\d{1,2})[日]?', last_line)
+    if match:
+        year, month, day = match.groups()
+        completion_date = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+        msg = f"提取落款日期: {completion_date}"
+        logger.debug(msg)
+        print(msg)
+        return completion_date
+    msg = "未找到有效的落款日期"
+    logger.warning(msg)
+    print(msg)
+    return None
 
 def validate_ethnicity(ethnicity, report_text):
     report_ethnicity = extract_ethnicity_from_report(report_text)
@@ -264,6 +293,19 @@ def get_validation_issues(df):
             if not normalized_bd or not report_bd or normalized_bd != report_bd:
                 issues_list.append((index, Config.VALIDATION_RULES["highlight_birth_date"]))
                 msg = f"行 {index + 1} - 出生年月与报告不一致: {birth_date}"
+                logger.info(msg)
+                print(msg)
+
+        if Config.COLUMN_MAPPINGS["completion_time"] in df.columns:
+            completion_time = str(row[Config.COLUMN_MAPPINGS["completion_time"]]).strip() if pd.notna(row[Config.COLUMN_MAPPINGS["completion_time"]]) else ''
+            normalized_ct = normalize_date(completion_time, full_date=True)
+            report_ct = extract_completion_date_from_report(report_text)
+            msg = f"比较办结时间: {completion_time} -> {normalized_ct} vs 报告落款时间: {report_ct}"
+            logger.debug(msg)
+            print(msg)
+            if normalized_ct and report_ct and normalized_ct != report_ct:
+                issues_list.append((index, Config.VALIDATION_RULES["highlight_completion_time"]))
+                msg = f"行 {index + 1} - 办结时间与报告落款不一致: {completion_time}"
                 logger.info(msg)
                 print(msg)
 

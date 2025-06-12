@@ -73,3 +73,7 @@ def format_excel(df, mismatch_indices, output_path, issues_list):
                 if Config.COLUMN_MAPPINGS["birth_date"] in df.columns and any(issue == Config.VALIDATION_RULES["highlight_birth_date"] for i, issue in issues_list if i == idx):
                     col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["birth_date"])
                     apply_format(worksheet, idx, col_letter, row[Config.COLUMN_MAPPINGS["birth_date"]], True, red_format)
+                # 办结时间
+                if Config.COLUMN_MAPPINGS["completion_time"] in df.columns and any(issue == Config.VALIDATION_RULES["highlight_completion_time"] for i, issue in issues_list if i == idx):
+                    col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["completion_time"])
+                    apply_format(worksheet, idx, col_letter, row[Config.COLUMN_MAPPINGS["completion_time"]], True, red_format)
