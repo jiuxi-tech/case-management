@@ -54,14 +54,6 @@ def process_upload(request, app):
             for i, (index, issue) in enumerate(issues_list, 1):
                 issues_df = pd.concat([issues_df, pd.DataFrame({'序号': [current_index], '问题': [issue]})], ignore_index=True)
                 current_index += 1
-                # 为“highlight_collection_amount”添加“Q2收缴金额请再次确认”
-                if issue == Config.VALIDATION_RULES["highlight_collection_amount"]:
-                    issues_df = pd.concat([issues_df, pd.DataFrame({'序号': [current_index], '问题': ['Q2收缴金额请再次确认']})], ignore_index=True)
-                    current_index += 1
-                # 新增：为“highlight_confiscation_amount”添加“R2没收金额请再次确认”
-                if issue == Config.VALIDATION_RULES["highlight_confiscation_amount"]:
-                    issues_df = pd.concat([issues_df, pd.DataFrame({'序号': [current_index], '问题': ['R2没收金额请再次确认']})], ignore_index=True)
-                    current_index += 1
             issue_filename = f"线索编号{datetime.now().strftime('%Y%m%d')}.xlsx"
             issue_path = os.path.join(app.config['UPLOAD_FOLDER'], issue_filename)
             issues_df.to_excel(issue_path, index=False)
