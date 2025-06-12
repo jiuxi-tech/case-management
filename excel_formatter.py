@@ -35,7 +35,14 @@ def format_excel(df, mismatch_indices, output_path, issues_list):
             # 处置情况报告为空
             report_text = row["处置情况报告"] if "处置情况报告" in df.columns else ''
             if pd.isna(report_text):
-                apply_format(worksheet, idx, 'AB', report_text, True, yellow_format)
+                apply_format(worksheet, idx, 'AB', report_text, any(issue == Config.VALIDATION_RULES["empty_report"] for i, issue in issues_list if i == idx), yellow_format)
+
+            # 新增：检查“收缴金额（万元）”字段
+            if "收缴金额（万元）" in df.columns:
+                col_letter = get_column_letter(df, "收缴金额（万元）")
+                value = row["收缴金额（万元）"]
+                if any(issue == Config.VALIDATION_RULES["highlight_collection_amount"] for i, issue in issues_list if i == idx):
+                    apply_format(worksheet, idx, col_letter, value, True, yellow_format)
 
         # 基于 mismatch_indices 和 issues_list 标红
         for idx in range(len(df)):
@@ -53,12 +60,12 @@ def format_excel(df, mismatch_indices, output_path, issues_list):
             # 组织措施
             if Config.COLUMN_MAPPINGS["organization_measure"] in df.columns:
                 col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["organization_measure"])
-                organization_measure = str(row[Config.COLUMN_MAPPINGS["organization_measure"]]).strip() if pd.notna(row[Config.COLUMN_MAPPINGS["organization_measure"]]) else ''
+                organization_measure = str(row[Config.COLUMN_MAPPINGS["organization_measure"]].strip()) if pd.notna(row[Config.COLUMN_MAPPINGS["organization_measure"]]) else ''
                 if any(issue == Config.VALIDATION_RULES["inconsistent_organization_measure"] for _, issue in issues_list if _ == idx):
                     apply_format(worksheet, idx, col_letter, organization_measure, True, red_format)
             # 入党时间
             if Config.COLUMN_MAPPINGS["joining_party_time"] in df.columns:
                 col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["joining_party_time"])
-                joining_party_time = str(row[Config.COLUMN_MAPPINGS["joining_party_time"]]).strip() if pd.notna(row[Config.COLUMN_MAPPINGS["joining_party_time"]]) else ''
+                joining_party_time = str(row[Config.COLUMN_MAPPINGS["joining_party_time"]].strip()) if pd.notna(row[Config.COLUMN_MAPPINGS["joining_party_time"]]) else ''
                 if any(issue == Config.VALIDATION_RULES["inconsistent_joining_party_time"] for _, issue in issues_list if _ == idx):
                     apply_format(worksheet, idx, col_letter, joining_party_time, True, red_format)
