@@ -65,7 +65,7 @@ def format_excel(df, mismatch_indices, output_path, issues_list):
                 if any(issue == Config.VALIDATION_RULES["highlight_registration_amount"] for i, issue in issues_list if i == idx):
                     apply_format(worksheet, idx, col_letter, value, True, yellow_format)
 
-            # 新增：检查“追缴失职渎职滥用职权造成的损失金额”字段
+            # 检查“追缴失职渎职滥用职权造成的损失金额”字段
             if "追缴失职渎职滥用职权造成的损失金额" in df.columns:
                 col_letter = get_column_letter(df, "追缴失职渎职滥用职权造成的损失金额")
                 value = row["追缴失职渎职滥用职权造成的损失金额"]
@@ -97,3 +97,9 @@ def format_excel(df, mismatch_indices, output_path, issues_list):
                 joining_party_time = str(row[Config.COLUMN_MAPPINGS["joining_party_time"]].strip()) if pd.notna(row[Config.COLUMN_MAPPINGS["joining_party_time"]]) else ''
                 if any(issue == Config.VALIDATION_RULES["inconsistent_joining_party_time"] for _, issue in issues_list if _ == idx):
                     apply_format(worksheet, idx, col_letter, joining_party_time, True, red_format)
+            # 民族
+            if Config.COLUMN_MAPPINGS["ethnicity"] in df.columns:
+                col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["ethnicity"])
+                ethnicity = row[Config.COLUMN_MAPPINGS["ethnicity"]]
+                if any(issue == Config.VALIDATION_RULES["inconsistent_ethnicity"] for i, issue in issues_list if i == idx):
+                    apply_format(worksheet, idx, col_letter, ethnicity, True, red_format)

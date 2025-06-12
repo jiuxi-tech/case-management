@@ -5,13 +5,14 @@ class Config:
     UPLOAD_FOLDER = 'uploads'
     ALLOWED_EXTENSIONS = {'.xlsx', '.xls'}
     REQUIRED_FILENAME_PATTERN = '线索登记表'
-    REQUIRED_HEADERS = ["填报单位名称", "办理机关", "被反映人", "处置情况报告", "受理时间", "入党时间"]
+    REQUIRED_HEADERS = ["填报单位名称", "办理机关", "被反映人", "处置情况报告", "受理时间", "入党时间", "民族"]
     
     # 列配置
     COLUMN_MAPPINGS = {
         "organization_measure": "组织措施",
         "acceptance_time": "受理时间",
-        "joining_party_time": "入党时间"
+        "joining_party_time": "入党时间",
+        "ethnicity": "民族"
     }
     
     # Excel 格式
@@ -32,7 +33,8 @@ class Config:
         "highlight_confiscation_amount": "R2没收金额请再次确认",
         "highlight_compensation_amount": "S2责令退赔金额请再次确认",
         "highlight_registration_amount": "T2登记上交金额请再次确认",
-        "highlight_recovery_amount": "U2追缴失职渎职滥用职权造成的损失金额请再次确认"
+        "highlight_recovery_amount": "U2追缴失职渎职滥用职权造成的损失金额请再次确认",
+        "inconsistent_ethnicity": "W2民族与AB2处置情况报告民族不一致"
     }
     
     # 组织措施关键词（恢复此部分）
