@@ -30,8 +30,10 @@ def process_upload(request, app):
         flash('文件名必须包含“线索登记表”', 'error')
         return redirect(request.url)
 
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+    # 使用 CLUE_FOLDER 作为保存路径
+    file_path = os.path.join(Config.CLUE_FOLDER, file.filename)
     logger.info(f"文件保存路径: {file_path}")  # 记录保存路径
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)  # 确保目录存在
     file.save(file_path)
     if not os.path.exists(file_path):
         logger.error(f"文件保存失败: {file_path} 不存在")
@@ -55,12 +57,12 @@ def process_upload(request, app):
                 issues_df = pd.concat([issues_df, pd.DataFrame({'序号': [current_index], '问题': [issue]})], ignore_index=True)
                 current_index += 1
             issue_filename = f"线索编号{datetime.now().strftime('%Y%m%d')}.xlsx"
-            issue_path = os.path.join(app.config['UPLOAD_FOLDER'], issue_filename)
+            issue_path = os.path.join(Config.CLUE_FOLDER, issue_filename)
             issues_df.to_excel(issue_path, index=False)
             logger.info(f"生成线索编号文件: {issue_path}")
 
         original_filename = file.filename.replace('.xlsx', '_副本.xlsx').replace('.xls', '_副本.xlsx')
-        original_path = os.path.join(app.config['UPLOAD_FOLDER'], original_filename)
+        original_path = os.path.join(Config.CLUE_FOLDER, original_filename)
         format_excel(df, mismatch_indices, original_path, issues_list)
 
         if not all(header in df.columns for header in required_headers) or \

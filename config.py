@@ -1,8 +1,13 @@
 # 配置文件
 import os
+from datetime import datetime
 
 class Config:
-    UPLOAD_FOLDER = 'uploads'
+    BASE_UPLOAD_FOLDER = 'uploads'
+    TODAY_DATE = datetime.now().strftime('%Y%m%d')
+    UPLOAD_FOLDER = os.path.join(BASE_UPLOAD_FOLDER, TODAY_DATE)
+    CLUE_FOLDER = os.path.join(UPLOAD_FOLDER, 'clue')
+    CASE_FOLDER = os.path.join(UPLOAD_FOLDER, 'case')
     ALLOWED_EXTENSIONS = {'.xlsx', '.xls'}
     REQUIRED_FILENAME_PATTERN = '线索登记表'
     REQUIRED_HEADERS = ["填报单位名称", "办理机关", "被反映人", "处置情况报告", "受理时间", "入党时间", "民族", "办结时间", "处置方式1二级"]
@@ -15,7 +20,7 @@ class Config:
         "ethnicity": "民族",
         "birth_date": "出生年月",
         "completion_time": "办结时间",
-        "disposal_method_1": "处置方式1二级"  # 新增字段
+        "disposal_method_1": "处置方式1二级"
     }
     
     # Excel 格式
@@ -40,7 +45,7 @@ class Config:
         "inconsistent_ethnicity": "W2民族与AB2处置情况报告民族不一致",
         "highlight_birth_date": "X2出生年月与AB2处置情况报告出生年月不一致",
         "highlight_completion_time": "BT2办结时间与AB2处置情况报告落款时间不一致",
-        "highlight_disposal_method_1": "AK2处置方式1二级请再次确认"  # 新增规则
+        "highlight_disposal_method_1": "AK2处置方式1二级请再次确认"
     }
     
     # 组织措施关键词
@@ -55,3 +60,9 @@ class Config:
     
     # 安全密钥
     SECRET_KEY = os.urandom(24)  # 生成一个24字节的随机密钥
+
+    # 创建目录
+    if not os.path.exists(CLUE_FOLDER):
+        os.makedirs(CLUE_FOLDER)
+    if not os.path.exists(CASE_FOLDER):
+        os.makedirs(CASE_FOLDER)
