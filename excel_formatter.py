@@ -77,3 +77,7 @@ def format_excel(df, mismatch_indices, output_path, issues_list):
                 if Config.COLUMN_MAPPINGS["completion_time"] in df.columns and any(issue == Config.VALIDATION_RULES["highlight_completion_time"] for i, issue in issues_list if i == idx):
                     col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["completion_time"])
                     apply_format(worksheet, idx, col_letter, row[Config.COLUMN_MAPPINGS["completion_time"]], True, red_format)
+                # 处置方式1二级
+                if Config.COLUMN_MAPPINGS["disposal_method_1"] in df.columns and any(issue == Config.VALIDATION_RULES["highlight_disposal_method_1"] for i, issue in issues_list if i == idx):
+                    col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["disposal_method_1"])
+                    apply_format(worksheet, idx, col_letter, row[Config.COLUMN_MAPPINGS["disposal_method_1"]], True, yellow_format)

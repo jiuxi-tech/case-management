@@ -309,6 +309,13 @@ def get_validation_issues(df):
                 logger.info(msg)
                 print(msg)
 
+        if Config.COLUMN_MAPPINGS["disposal_method_1"] in df.columns:
+            disposal_method = row[Config.COLUMN_MAPPINGS["disposal_method_1"]]
+            issues_list.append((index, Config.VALIDATION_RULES["highlight_disposal_method_1"]))
+            msg = f"行 {index + 1} - 处置方式1二级需确认: {disposal_method}"
+            logger.info(msg)
+            print(msg)
+
         if "收缴金额（万元）" in df.columns and validate_collection_amount(report_text):
             issues_list.append((index, Config.VALIDATION_RULES["highlight_collection_amount"]))
 
