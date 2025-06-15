@@ -10,7 +10,7 @@ class Config:
     CASE_FOLDER = os.path.join(UPLOAD_FOLDER, 'case')
     ALLOWED_EXTENSIONS = {'.xlsx', '.xls'}
     REQUIRED_FILENAME_PATTERN = '线索登记表'
-        
+    
     # 列配置
     COLUMN_MAPPINGS = {
         "organization_measure": "组织措施",
@@ -44,7 +44,11 @@ class Config:
         "inconsistent_ethnicity": "W2民族与AB2处置情况报告民族不一致",
         "highlight_birth_date": "X2出生年月与AB2处置情况报告出生年月不一致",
         "highlight_completion_time": "BT2办结时间与AB2处置情况报告落款时间不一致",
-        "highlight_disposal_method_1": "AK2处置方式1二级请再次确认"
+        "highlight_disposal_method_1": "AK2处置方式1二级请再次确认",
+        "inconsistent_case_name_report": "C2被调查人与BF2立案报告不一致",
+        "inconsistent_case_name_decision": "C2被调查人与CU2处分决定不一致",
+        "inconsistent_case_name_investigation": "C2被调查人与CX2审查调查报告不一致",
+        "inconsistent_case_name_trial": "C2被调查人与CY2审理报告不一致"
     }
     
     # 组织措施关键词
@@ -53,6 +57,12 @@ class Config:
         "责令其做出检查", "诫勉", "警示谈话", "通报批评", "责令公开道歉（检查）", 
         "责令具结悔过"
     ]
+    
+    # 线索登记表必需的表头
+    CLUE_REQUIRED_HEADERS = ["填报单位名称", "办理机关", "被反映人", "处置情况报告", "受理时间"]
+    
+    # 立案登记表必需的表头
+    CASE_REQUIRED_HEADERS = ["被调查人", "立案报告", "处分决定", "审查调查报告", "审理报告"]
     
     # 数据库路径
     DATABASE_PATH = os.path.join(os.path.dirname(__file__), 'case_management.db')

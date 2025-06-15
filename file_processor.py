@@ -42,7 +42,7 @@ def process_upload(request, app):
     logger.info(f"文件保存成功: {file_path}")
     try:
         df = pd.read_excel(file_path)
-        required_headers = Config.REQUIRED_HEADERS + [Config.COLUMN_MAPPINGS["organization_measure"], Config.COLUMN_MAPPINGS["acceptance_time"]]
+        required_headers = Config.CLUE_REQUIRED_HEADERS + [Config.COLUMN_MAPPINGS["organization_measure"], Config.COLUMN_MAPPINGS["acceptance_time"]]
         if not all(header in df.columns for header in required_headers):
             logger.error(f"缺少必要表头: {required_headers}")
             flash('Excel文件缺少必要的表头“填报单位名称”、“办理机关”、“被反映人”、“处置情况报告”、“受理时间”或“组织措施”', 'error')
@@ -109,16 +109,16 @@ def process_case_upload(request, app):
 
     try:
         df = pd.read_excel(file_path)
-        required_headers = Config.REQUIRED_HEADERS  # 使用相同的表头验证
+        required_headers = Config.CASE_REQUIRED_HEADERS  # 使用立案登记表的表头
         if not all(header in df.columns for header in required_headers):
             logger.error(f"立案登记表缺少必要表头: {required_headers}")
             flash('Excel文件缺少必要的表头', 'error')
             return redirect(request.url)
 
-        # 验证字段关系（可根据需求扩展 validation_core.py）
-        from case_validation_core import validate_case_relationships, generate_case_files
+        # 验证字段关系
+        from validation_rules.case_validation_core import validate_case_relationships, generate_case_files
         mismatch_indices, issues_list = validate_case_relationships(df)
-        copy_path, case_num_path = generate_case_files(df, file.filename, Config.BASE_UPLOAD_FOLDER)
+        copy_path, case_num_path = generate_case_files(df, file.filename, Config.BASE_UPLOAD_FOLDER, mismatch_indices, issues_list)
 
         if issues_list:
             flash('文件分析发现问题，已生成立案编号表', 'warning')
