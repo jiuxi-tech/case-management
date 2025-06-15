@@ -20,7 +20,15 @@ def create_app():
         os.makedirs(upload_folder)
     app.config['UPLOAD_FOLDER'] = upload_folder
 
-    init_routes(app)
+    # 确保 CLUE_FOLDER 存在
+    clue_folder = os.path.join(upload_folder, Config.TODAY_DATE, 'clue')
+    if not os.path.exists(clue_folder):
+        os.makedirs(clue_folder)
+    app.config['CLUE_FOLDER'] = clue_folder
+
+    # 确保所有路由正确绑定
+    with app.app_context():
+        init_routes(app)
 
     return app
 
@@ -61,6 +69,7 @@ def run_app():
     logger.info("Log file set to: %s", log_file)
     logger.info("Template folder set to: %s", template_folder)
     logger.info("Upload folder set to: %s", app.config['UPLOAD_FOLDER'])
+    logger.info("Clue folder set to: %s", app.config['CLUE_FOLDER'])
 
     # 数据库初始化
     with app.app_context():

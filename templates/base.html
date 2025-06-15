@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='fontawesome/css/all.min.css') }}" />
     <!-- <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet"> -->
     <style>
-        body { font-family: 'Noto Serif SC', serif; }
+        body { font-family: 'Noto Serif SC', Arial, sans-serif; }
         .sidebar {
             transition: width 0.3s ease;
             resize: horizontal;
@@ -105,6 +105,7 @@
             <ul class="space-y-4">
                 {% if 'username' in session %}
                     <li><a href="{{ url_for('upload') }}" class="block hover:bg-blue-700 p-2 rounded-md">上传线索登记表</a></li>
+                    <li><a href="{{ url_for('upload_case') }}" class="block hover:bg-blue-700 p-2 rounded-md">上传立案登记表</a></li>
                     <li><a href="{{ url_for('authority_agency') }}" class="block hover:bg-blue-700 p-2 rounded-md">机关单位管理</a></li>
                 {% else %}
                     <li><a href="{{ url_for('login') }}" class="block hover:bg-blue-700 p-2 rounded-md">登录</a></li>
@@ -156,7 +157,7 @@
                         .swal2-custom {
                             border-radius: 12px;
                             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                            font-family: 'Noto Serif SC', serif;
+                            font-family: 'Noto Serif SC', Arial, sans-serif;
                         }
                         .swal2-title {
                             font-size: 1.5rem;

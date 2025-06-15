@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}上传立案登记表{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-lg">
+    <h2 class="text-2xl font-bold mb-6 text-center text-blue-600">上传立案登记表</h2>
+    <form method="post" enctype="multipart/form-data" class="space-y-6">
+        <div>
+            <input type="file" id="case_file" name="case_file" accept=".xlsx,.xls" required
+                   class="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <button type="submit"
+                class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition duration-300">
+            上传
+        </button>
+    </form>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="mt-4 p-2 {% if category == 'success' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %} rounded-md">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+</div>
+{% endblock %}

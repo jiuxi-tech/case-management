@@ -2,6 +2,9 @@ from flask import render_template, request, redirect, url_for, flash, session
 from db_utils import get_user, create_user, get_authority_agency_dict, add_authority_agency, update_authority_agency, delete_authority_agency, get_db
 from file_processor import process_upload
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+from config import Config
+import os
 
 def init_routes(app):
     @app.route('/')
@@ -97,3 +100,29 @@ def init_routes(app):
         delete_authority_agency(id)
         flash('删除成功！', 'success')
         return redirect(url_for('authority_agency'))
+
+    @app.route('/upload_case', methods=['GET', 'POST'])
+    def upload_case():
+        if 'username' not in session:
+            return redirect(url_for('login'))
+        if request.method == 'POST':
+            if 'case_file' not in request.files:
+                flash('未选择文件', 'error')
+                return redirect(url_for('upload_case'))
+            file = request.files['case_file']
+            if file.filename == '':
+                flash('未选择文件', 'error')
+                return redirect(url_for('upload_case'))
+            if file and (file.filename.endswith('.xlsx') or file.filename.endswith('.xls')):
+                filename = secure_filename(file.filename)
+                save_path = os.path.join(app.config['CLUE_FOLDER'], filename)
+                try:
+                    file.save(save_path)
+                    flash('文件上传成功', 'success')
+                except Exception as e:
+                    flash(f'文件保存失败: {str(e)}', 'error')
+                return redirect(url_for('upload_case'))
+            else:
+                flash('仅支持 .xlsx 或 .xls 文件', 'error')
+                return redirect(url_for('upload_case'))
+        return render_template('upload_case.html', title='上传立案登记表')
