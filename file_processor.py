@@ -79,3 +79,55 @@ def process_upload(request, app):
         logger.error(f"文件处理失败: {str(e)}")
         flash(f'文件处理失败: {str(e)}', 'error')
         return redirect(request.url)
+
+def process_case_upload(request, app):
+    logger.info("开始处理立案登记表上传请求")
+    if 'case_file' not in request.files:
+        logger.error("未选择立案登记表文件")
+        flash('未选择文件', 'error')
+        return redirect(request.url)
+    file = request.files['case_file']
+    if file.filename == '':
+        logger.error("立案登记表文件名为空")
+        flash('未选择文件', 'error')
+        return redirect(request.url)
+    if not any(file.filename.lower().endswith(ext) for ext in Config.ALLOWED_EXTENSIONS):
+        logger.error(f"立案登记表文件格式错误: {file.filename}")
+        flash('请上传Excel文件（.xlsx 或 .xls）', 'error')
+        return redirect(request.url)
+
+    # 使用 CASE_FOLDER 作为保存路径
+    file_path = os.path.join(Config.CASE_FOLDER, file.filename)
+    logger.info(f"立案登记表文件保存路径: {file_path}")
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    file.save(file_path)
+    if not os.path.exists(file_path):
+        logger.error(f"立案登记表文件保存失败: {file_path} 不存在")
+        flash(f'文件保存失败: {file_path} 不存在', 'error')
+        return redirect(request.url)
+    logger.info(f"立案登记表文件保存成功: {file_path}")
+
+    try:
+        df = pd.read_excel(file_path)
+        required_headers = Config.REQUIRED_HEADERS  # 使用相同的表头验证
+        if not all(header in df.columns for header in required_headers):
+            logger.error(f"立案登记表缺少必要表头: {required_headers}")
+            flash('Excel文件缺少必要的表头', 'error')
+            return redirect(request.url)
+
+        # 验证字段关系（可根据需求扩展 validation_core.py）
+        from case_validation_core import validate_case_relationships, generate_case_files
+        mismatch_indices, issues_list = validate_case_relationships(df)
+        copy_path, case_num_path = generate_case_files(df, file.filename, Config.BASE_UPLOAD_FOLDER)
+
+        if issues_list:
+            flash('文件分析发现问题，已生成立案编号表', 'warning')
+        else:
+            flash('文件上传并分析成功！', 'success')
+        logger.info("立案登记表处理成功")
+
+        return redirect(request.url)
+    except Exception as e:
+        logger.error(f"立案登记表处理失败: {str(e)}")
+        flash(f'文件处理失败: {str(e)}', 'error')
+        return redirect(request.url)

@@ -10,8 +10,7 @@ class Config:
     CASE_FOLDER = os.path.join(UPLOAD_FOLDER, 'case')
     ALLOWED_EXTENSIONS = {'.xlsx', '.xls'}
     REQUIRED_FILENAME_PATTERN = '线索登记表'
-    REQUIRED_HEADERS = ["填报单位名称", "办理机关", "被反映人", "处置情况报告", "受理时间", "入党时间", "民族", "办结时间", "处置方式1二级"]
-    
+        
     # 列配置
     COLUMN_MAPPINGS = {
         "organization_measure": "组织措施",
