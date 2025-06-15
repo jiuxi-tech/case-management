@@ -5,47 +5,9 @@ import re
 from datetime import datetime
 from config import Config
 import xlsxwriter
+from validation_rules.case_name_extraction import extract_name_from_case_report
 
 logger = logging.getLogger(__name__)
-
-def extract_name_from_report(report_text):
-    """Extract name from report text based on markers."""
-    if not report_text or pd.isna(report_text):
-        msg = f"report_text 为空或无效: {report_text}"
-        logger.info(msg)
-        return None
-    start_marker = "（一）被反映人基本情况"
-    start_idx = report_text.find(start_marker)
-    if start_idx == -1:
-        msg = f"未找到 '{start_marker}' 标记: {report_text}"
-        logger.warning(msg)
-        return None
-    start_idx += len(start_marker)
-    next_newline_idx = report_text.find("\n", start_idx)
-    if next_newline_idx == -1:
-        next_newline_idx = len(report_text)
-    paragraph = report_text[start_idx:next_newline_idx].strip()
-    if not paragraph:
-        next_newline_idx = report_text.find("\n", start_idx)
-        if next_newline_idx == -1:
-            next_newline_idx = len(report_text)
-        next_paragraph_start = report_text.find("\n", next_newline_idx + 1)
-        if next_paragraph_start == -1:
-            next_paragraph_start = len(report_text)
-        paragraph = report_text[next_newline_idx + 1:next_paragraph_start].strip()
-    end_idx = -1
-    for char in [",", "，"]:
-        temp_idx = paragraph.find(char)
-        if temp_idx != -1 and (end_idx == -1 or temp_idx < end_idx):
-            end_idx = temp_idx
-    if end_idx == -1:
-        msg = f"未找到逗号: {paragraph}"
-        logger.warning(msg)
-        return None
-    name = paragraph[:end_idx].strip()
-    msg = f"提取姓名: {name} from paragraph: {paragraph}"
-    logger.info(msg)
-    return name if name else None
 
 def validate_case_relationships(df):
     """Validate relationships between fields in the case registration Excel."""
@@ -67,7 +29,7 @@ def validate_case_relationships(df):
 
         # 1) Match with "立案报告"
         report_text = row["立案报告"] if pd.notna(row["立案报告"]) else ''
-        report_name = extract_name_from_report(report_text)
+        report_name = extract_name_from_case_report(report_text)
         if report_name and investigated_person != report_name:
             mismatch_indices.add(index)
             issues_list.append((index, "C2被调查人与BF2立案报告不一致"))
@@ -75,7 +37,7 @@ def validate_case_relationships(df):
 
         # 2) Match with "处分决定"
         decision_text = row["处分决定"] if pd.notna(row["处分决定"]) else ''
-        decision_name = extract_name_from_report(decision_text)
+        decision_name = extract_name_from_case_report(decision_text)
         if decision_name and investigated_person != decision_name:
             mismatch_indices.add(index)
             issues_list.append((index, "C2被调查人与CU2处分决定不一致"))
@@ -83,7 +45,7 @@ def validate_case_relationships(df):
 
         # 3) Match with "审查调查报告"
         investigation_text = row["审查调查报告"] if pd.notna(row["审查调查报告"]) else ''
-        investigation_name = extract_name_from_report(investigation_text)
+        investigation_name = extract_name_from_case_report(investigation_text)
         if investigation_name and investigated_person != investigation_name:
             mismatch_indices.add(index)
             issues_list.append((index, "C2被调查人与CX2审查调查报告不一致"))
@@ -91,7 +53,7 @@ def validate_case_relationships(df):
 
         # 4) Match with "审理报告"
         trial_text = row["审理报告"] if pd.notna(row["审理报告"]) else ''
-        trial_name = extract_name_from_report(trial_text)
+        trial_name = extract_name_from_case_report(trial_text)
         if trial_name and investigated_person != trial_name:
             mismatch_indices.add(index)
             issues_list.append((index, "C2被调查人与CY2审理报告不一致"))

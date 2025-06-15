@@ -71,7 +71,6 @@ def process_upload(request, app):
            file.filename == '':
             pass  # 错误已在校验阶段显示
         else:
-            flash('程序执行成功！', 'success')
             logger.info("程序执行成功")
 
         return redirect(request.url)
@@ -89,11 +88,16 @@ def process_case_upload(request, app):
     file = request.files['case_file']
     if file.filename == '':
         logger.error("立案登记表文件名为空")
-        flash('未选择文件', 'error')
+        flash('任务已处理完毕', 'info')
         return redirect(request.url)
+    # 校验文件格式和文件名
     if not any(file.filename.lower().endswith(ext) for ext in Config.ALLOWED_EXTENSIONS):
         logger.error(f"立案登记表文件格式错误: {file.filename}")
-        flash('请上传Excel文件（.xlsx 或 .xls）', 'error')
+        flash('上传文件格式不对', 'error')
+        return redirect(request.url)
+    if "立案登记表" not in file.filename:
+        logger.error(f"立案登记表文件名不符合要求: {file.filename}")
+        flash('文件名必须包含“立案登记表”', 'error')
         return redirect(request.url)
 
     # 使用 CASE_FOLDER 作为保存路径
@@ -120,11 +124,7 @@ def process_case_upload(request, app):
         mismatch_indices, issues_list = validate_case_relationships(df)
         copy_path, case_num_path = generate_case_files(df, file.filename, Config.BASE_UPLOAD_FOLDER, mismatch_indices, issues_list)
 
-        if issues_list:
-            flash('文件分析发现问题，已生成立案编号表', 'warning')
-        else:
-            flash('文件上传并分析成功！', 'success')
-        logger.info("立案登记表处理成功")
+        logger.info("立案登记表处理成功")  # 仅记录日志
 
         return redirect(request.url)
     except Exception as e:
