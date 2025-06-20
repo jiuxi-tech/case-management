@@ -37,3 +37,6 @@ Python库：flask, werkzeug, pandas, xlsxwriter
 <!-- pyinstaller --onefile --add-data "templates;templates" --add-data "uploads;uploads" --add-data "case_management.db;." app.py -->
 
 pyinstaller --add-data "templates;templates" --add-data "uploads;uploads" --add-data "logs;logs" --add-data "static;static" --onefile -F app.py
+
+
+

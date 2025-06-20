@@ -9,6 +9,46 @@ from validation_rules.case_name_extraction import extract_name_from_case_report
 
 logger = logging.getLogger(__name__)
 
+def extract_name_from_decision(decision_text):
+    """Extract name from decision text based on '关于给予...同志党内警告处分的决定' marker."""
+    if not decision_text or not isinstance(decision_text, str):
+        msg = f"decision_text 为空或无效: {decision_text}"
+        logger.info(msg)
+        return None
+    
+    # 定义姓名的正则表达式，匹配“关于给予...同志党内警告处分的决定”中的姓名
+    pattern = r"关于给予(.+?)同志党内警告处分的决定"
+    match = re.search(pattern, decision_text)
+    if match:
+        name = match.group(1).strip()
+        msg = f"提取姓名: {name} from decision: {decision_text}"
+        logger.info(msg)
+        return name
+    else:
+        msg = f"未找到 '关于给予...同志党内警告处分的决定' 标记: {decision_text}"
+        logger.warning(msg)
+        return None
+
+def extract_name_from_trial_report(trial_text):
+    """Extract name from trial report text based on '关于...同志违纪案的审理报告' marker."""
+    if not trial_text or not isinstance(trial_text, str):
+        msg = f"trial_text 为空或无效: {trial_text}"
+        logger.info(msg)
+        return None
+    
+    # 定义姓名的正则表达式，匹配“关于...同志违纪案的审理报告”中的姓名
+    pattern = r"关于(.+?)同志违纪案的审理报告"
+    match = re.search(pattern, trial_text)
+    if match:
+        name = match.group(1).strip()
+        msg = f"提取姓名: {name} from trial report: {trial_text}"
+        logger.info(msg)
+        return name
+    else:
+        msg = f"未找到 '关于...同志违纪案的审理报告' 标记: {trial_text}"
+        logger.warning(msg)
+        return None
+
 def validate_case_relationships(df):
     """Validate relationships between fields in the case registration Excel."""
     mismatch_indices = set()
@@ -37,8 +77,8 @@ def validate_case_relationships(df):
 
         # 2) Match with "处分决定"
         decision_text = row["处分决定"] if pd.notna(row["处分决定"]) else ''
-        decision_name = extract_name_from_case_report(decision_text)
-        if decision_name and investigated_person != decision_name:
+        decision_name = extract_name_from_decision(decision_text)
+        if not decision_name or (decision_name and investigated_person != decision_name):
             mismatch_indices.add(index)
             issues_list.append((index, "C2被调查人与CU2处分决定不一致"))
             logger.info(f"Row {index + 1} - Name mismatch: C2被调查人 ({investigated_person}) vs CU2处分决定 ({decision_name})")
@@ -53,8 +93,8 @@ def validate_case_relationships(df):
 
         # 4) Match with "审理报告"
         trial_text = row["审理报告"] if pd.notna(row["审理报告"]) else ''
-        trial_name = extract_name_from_case_report(trial_text)
-        if trial_name and investigated_person != trial_name:
+        trial_name = extract_name_from_trial_report(trial_text)
+        if not trial_name or (trial_name and investigated_person != trial_name):
             mismatch_indices.add(index)
             issues_list.append((index, "C2被调查人与CY2审理报告不一致"))
             logger.info(f"Row {index + 1} - Name mismatch: C2被调查人 ({investigated_person}) vs CY2审理报告 ({trial_name})")

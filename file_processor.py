@@ -73,6 +73,8 @@ def process_upload(request, app):
         else:
             logger.info("程序执行成功")
 
+        flash('文件上传处理成功！', 'success')  # 添加成功提示
+
         return redirect(request.url)
     except Exception as e:
         logger.error(f"文件处理失败: {str(e)}")
@@ -97,7 +99,7 @@ def process_case_upload(request, app):
         return redirect(request.url)
     if "立案登记表" not in file.filename:
         logger.error(f"立案登记表文件名不符合要求: {file.filename}")
-        flash('文件名必须包含“立案登记表”', 'error')
+        flash('文件名必须包含立案登记', 'error')
         return redirect(request.url)
 
     # 使用 CASE_FOLDER 作为保存路径
@@ -124,7 +126,8 @@ def process_case_upload(request, app):
         mismatch_indices, issues_list = validate_case_relationships(df)
         copy_path, case_num_path = generate_case_files(df, file.filename, Config.BASE_UPLOAD_FOLDER, mismatch_indices, issues_list)
 
-        logger.info("立案登记表处理成功")  # 仅记录日志
+        flash('文件上传处理成功！', 'success')  # 添加成功提示
+        logger.info("立案登记表处理成功")
 
         return redirect(request.url)
     except Exception as e:
