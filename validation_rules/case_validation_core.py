@@ -113,6 +113,35 @@ def extract_gender_from_decision_report(decision_text):
         print(msg)
         return None
 
+def extract_gender_from_investigation_report(investigation_text):
+    """
+    从审查调查报告中提取性别。
+    性别位于“一、XXX同志基本情况”后第一个和第二个逗号之间。
+    例如：“王xx，男，汉族”中的“男”。
+    """
+    if not investigation_text or not isinstance(investigation_text, str):
+        msg = f"extract_gender_from_investigation_report: investigation_text 为空或无效: {investigation_text}"
+        logger.info(msg)
+        print(msg)
+        return None
+    
+    # 查找“同志基本情况”后面的第一个和第二个逗号之间的内容
+    # 使用 re.DOTALL 确保 '.' 匹配换行符
+    # 匹配模式： "一、" + 任意内容 + "同志基本情况" + 任意内容（非贪婪）+ "，" + 捕获组（非逗号字符）+ "，"
+    pattern = r"一、.+?同志基本情况.*?，([^，]+)，"
+    match = re.search(pattern, investigation_text, re.DOTALL)
+    if match:
+        gender = match.group(1).strip()
+        msg = f"提取性别 (审查调查报告): {gender} from investigation report"
+        logger.info(msg)
+        print(msg)
+        return gender
+    else:
+        msg = f"未找到性别信息 in investigation report: {investigation_text[:100]}..."
+        logger.warning(msg)
+        print(msg)
+        return None
+
 
 def extract_name_from_decision(decision_text):
     """从处分决定中提取姓名，基于'关于给予...同志党内警告处分的决定'标记。"""
@@ -186,7 +215,7 @@ def validate_case_relationships(df):
 
         excel_gender = str(row["性别"]).strip() if pd.notna(row["性别"]) else ''
 
-        # 1) 新增：性别与“立案报告”匹配
+        # 1) 性别与“立案报告”匹配
         report_text_for_gender = row["立案报告"] if pd.notna(row["立案报告"]) else ''
         extracted_gender_from_report = extract_gender_from_case_report(report_text_for_gender)
         if extracted_gender_from_report is None or (excel_gender and excel_gender != extracted_gender_from_report):
@@ -195,18 +224,28 @@ def validate_case_relationships(df):
             logger.info(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 立案报告提取性别 ('{extracted_gender_from_report}')")
             print(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 立案报告提取性别 ('{extracted_gender_from_report}')")
 
-        # 2) 新增：性别与“处分决定”匹配
+        # 2) 性别与“处分决定”匹配
         decision_text_for_gender = row["处分决定"] if pd.notna(row["处分决定"]) else ''
         extracted_gender_from_decision = extract_gender_from_decision_report(decision_text_for_gender)
+        # Check if extracted gender is None OR (if Excel gender exists AND they don't match)
         if extracted_gender_from_decision is None or (excel_gender and excel_gender != extracted_gender_from_decision):
-            # 只有当之前没有因为立案报告性别不一致而加入时，才添加到性别不匹配集合
-            # 或者即使加入了，也添加具体的问题描述
             gender_mismatch_indices.add(index) 
             issues_list.append((index, "M2性别与CU2处分决定不一致"))
             logger.info(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 处分决定提取性别 ('{extracted_gender_from_decision}')")
             print(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 处分决定提取性别 ('{extracted_gender_from_decision}')")
 
+        # 3) 新增：性别与“审查调查报告”匹配
+        investigation_text_for_gender = row["审查调查报告"] if pd.notna(row["审查调查报告"]) else ''
+        extracted_gender_from_investigation = extract_gender_from_investigation_report(investigation_text_for_gender)
+        # Check if extracted gender is None OR (if Excel gender exists AND they don't match)
+        if extracted_gender_from_investigation is None or (excel_gender and excel_gender != extracted_gender_from_investigation):
+            gender_mismatch_indices.add(index)
+            issues_list.append((index, "M2性别与CX2审查调查报告不一致"))
+            logger.info(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 审查调查报告提取性别 ('{extracted_gender_from_investigation}')")
+            print(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 审查调查报告提取性别 ('{extracted_gender_from_investigation}')")
 
+
+        # Name matching rules (remain unchanged)
         # 1) Match with "立案报告" (Name part)
         report_text = row["立案报告"] if pd.notna(row["立案报告"]) else ''
         report_name = extract_name_from_case_report(report_text)
