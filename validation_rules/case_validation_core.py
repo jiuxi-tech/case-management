@@ -240,6 +240,62 @@ def extract_birth_year_from_case_report(report_text):
         print(msg)
         return None
 
+def extract_birth_year_from_decision_report(decision_text):
+    """
+    从处分决定中提取出生年份。
+    年龄位置在“关于给予王xx同志党内警告处分的决定”这样字符串下面段落里
+    第三个逗号和第四个逗号中间的位置。
+    例如：“王xx，男，汉族，1966年12月生，山东省平度市xx镇xx村人”中的“1966”。
+    """
+    if not decision_text or not isinstance(decision_text, str):
+        msg = f"extract_birth_year_from_decision_report: decision_text 为空或无效: {decision_text}"
+        logger.info(msg)
+        print(msg)
+        return None
+    
+    # 首先找到处分决定的标题标记
+    title_pattern = r"关于给予.+?同志党内警告处分的决定"
+    title_match = re.search(title_pattern, decision_text, re.DOTALL)
+
+    if title_match:
+        start_pos = title_match.end()
+        # Search area after the marker, limit to prevent matching irrelevant text further down
+        search_area = decision_text[start_pos : start_pos + 300] # Adjust length as needed
+
+        # Split by comma and find the 4th segment (0-indexed 3rd segment) which contains year
+        # "王xx，男，汉族，1966年12月生，山东省平度市xx镇xx村人"
+        # 0: 王xx
+        # 1: 男
+        # 2: 汉族
+        # 3: 1966年12月生
+        parts = [p.strip() for p in search_area.split('，')]
+        
+        if len(parts) > 3:
+            # The 4th part (index 3) should contain the birth year
+            birth_info_segment = parts[3]
+            year_match = re.search(r'(\d{4})年', birth_info_segment)
+            if year_match:
+                birth_year = int(year_match.group(1))
+                msg = f"提取出生年份 (处分决定): {birth_year} from decision report"
+                logger.info(msg)
+                print(msg)
+                return birth_year
+            else:
+                msg = f"在处分决定的第4个逗号分隔段中未找到年份信息: '{birth_info_segment}'"
+                logger.warning(msg)
+                print(msg)
+                return None
+        else:
+            msg = f"处分决定中 '关于给予...同志党内警告处分的决定' 后面的逗号分隔段不足，无法提取年份: {search_area[:50]}..."
+            logger.warning(msg)
+            print(msg)
+            return None
+    else:
+        msg = f"未找到 '关于给予...同志党内警告处分的决定' 标记，无法提取处分决定出生年份: {decision_text[:100]}..."
+        logger.warning(msg)
+        print(msg)
+        return None
+
 def extract_name_from_decision(decision_text):
     """从处分决定中提取姓名，基于'关于给予...同志党内警告处分的决定'标记。"""
     if not decision_text or not isinstance(decision_text, str):
@@ -290,7 +346,7 @@ def validate_case_relationships(df):
     """Validate relationships between fields in the case registration Excel."""
     mismatch_indices = set() # For name mismatches
     gender_mismatch_indices = set() # For gender mismatches
-    age_mismatch_indices = set() # New: For age mismatches
+    age_mismatch_indices = set() # For age mismatches
     issues_list = []
     
     # Define required headers specific to case registration
@@ -339,6 +395,7 @@ def validate_case_relationships(df):
         # 2) 性别与“处分决定”匹配
         decision_text_for_gender = row["处分决定"] if pd.notna(row["处分决定"]) else ''
         extracted_gender_from_decision = extract_gender_from_decision_report(decision_text_for_gender)
+        # Check if extracted gender is None OR (if Excel gender exists AND they don't match)
         if extracted_gender_from_decision is None or (excel_gender and excel_gender != extracted_gender_from_decision):
             gender_mismatch_indices.add(index) 
             issues_list.append((index, "M2性别与CU2处分决定不一致"))
@@ -348,6 +405,7 @@ def validate_case_relationships(df):
         # 3) 性别与“审查调查报告”匹配
         investigation_text_for_gender = row["审查调查报告"] if pd.notna(row["审查调查报告"]) else ''
         extracted_gender_from_investigation = extract_gender_from_investigation_report(investigation_text_for_gender)
+        # Check if extracted gender is None OR (if Excel gender exists AND they don't match)
         if extracted_gender_from_investigation is None or (excel_gender and excel_gender != extracted_gender_from_investigation):
             gender_mismatch_indices.add(index)
             issues_list.append((index, "M2性别与CX2审查调查报告不一致"))
@@ -364,23 +422,41 @@ def validate_case_relationships(df):
             print(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 审理报告提取性别 ('{extracted_gender_from_trial}')")
 
         # --- Age matching rules ---
-        # 年龄与“立案报告”匹配
+        # 1) 年龄与“立案报告”匹配
         report_text_for_age = row["立案报告"] if pd.notna(row["立案报告"]) else ''
-        extracted_birth_year = extract_birth_year_from_case_report(report_text_for_age)
+        extracted_birth_year_from_report = extract_birth_year_from_case_report(report_text_for_age)
         
-        calculated_age = None
-        if extracted_birth_year is not None:
-            calculated_age = current_year - extracted_birth_year
-            logger.info(f"行 {index + 1} - 计算年龄: {current_year} - {extracted_birth_year} = {calculated_age}")
-            print(f"行 {index + 1} - 计算年龄: {current_year} - {extracted_birth_year} = {calculated_age}")
+        calculated_age_from_report = None
+        if extracted_birth_year_from_report is not None:
+            calculated_age_from_report = current_year - extracted_birth_year_from_report
+            logger.info(f"行 {index + 1} - 立案报告计算年龄: {current_year} - {extracted_birth_year_from_report} = {calculated_age_from_report}")
+            print(f"行 {index + 1} - 立案报告计算年龄: {current_year} - {extracted_birth_year_from_report} = {calculated_age_from_report}")
 
-        # Check for age mismatch
-        if (calculated_age is None) or \
-           (excel_age is not None and calculated_age is not None and excel_age != calculated_age):
+        # Check for age mismatch with report
+        if (calculated_age_from_report is None) or \
+           (excel_age is not None and calculated_age_from_report is not None and excel_age != calculated_age_from_report):
             age_mismatch_indices.add(index)
             issues_list.append((index, "N2年龄与BF2立案报告不一致"))
-            logger.info(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 立案报告计算年龄 ('{calculated_age}')")
-            print(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 立案报告计算年龄 ('{calculated_age}')")
+            logger.info(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 立案报告计算年龄 ('{calculated_age_from_report}')")
+            print(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 立案报告计算年龄 ('{calculated_age_from_report}')")
+
+        # 2) 新增：年龄与“处分决定”匹配
+        decision_text_for_age = row["处分决定"] if pd.notna(row["处分决定"]) else ''
+        extracted_birth_year_from_decision = extract_birth_year_from_decision_report(decision_text_for_age)
+
+        calculated_age_from_decision = None
+        if extracted_birth_year_from_decision is not None:
+            calculated_age_from_decision = current_year - extracted_birth_year_from_decision
+            logger.info(f"行 {index + 1} - 处分决定计算年龄: {current_year} - {extracted_birth_year_from_decision} = {calculated_age_from_decision}")
+            print(f"行 {index + 1} - 处分决定计算年龄: {current_year} - {extracted_birth_year_from_decision} = {calculated_age_from_decision}")
+        
+        # Check for age mismatch with decision report
+        if (calculated_age_from_decision is None) or \
+           (excel_age is not None and calculated_age_from_decision is not None and excel_age != calculated_age_from_decision):
+            age_mismatch_indices.add(index)
+            issues_list.append((index, "N2年龄与CU2处分决定不一致"))
+            logger.info(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 处分决定计算年龄 ('{calculated_age_from_decision}')")
+            print(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 处分决定计算年龄 ('{calculated_age_from_decision}')")
 
 
         # --- Name matching rules (remain unchanged) ---
