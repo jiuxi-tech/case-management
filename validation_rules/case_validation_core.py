@@ -296,6 +296,117 @@ def extract_birth_year_from_decision_report(decision_text):
         print(msg)
         return None
 
+def extract_birth_year_from_investigation_report(investigation_text):
+    """
+    从审查调查报告中提取出生年份。
+    年龄位置在“一、王xx同志基本情况”这样字符串下面段落里第三个逗号和第四个逗号中间的位置。
+    例如：“王xx，男，汉族，1966年12月生，山东省平度市xx镇xx村人”中的“1966”。
+    """
+    if not investigation_text or not isinstance(investigation_text, str):
+        msg = f"extract_birth_year_from_investigation_report: investigation_text 为空或无效: {investigation_text}"
+        logger.info(msg)
+        print(msg)
+        return None
+
+    # Find the "一、XXX同志基本情况" marker
+    marker_pattern = r"一、.+?同志基本情况"
+    marker_match = re.search(marker_pattern, investigation_text, re.DOTALL)
+
+    if marker_match:
+        start_pos = marker_match.end()
+        # Search area after the marker, limit to prevent matching irrelevant text further down
+        search_area = investigation_text[start_pos : start_pos + 300] # Adjust length as needed
+
+        # Split by comma and find the 4th segment (0-indexed 3rd segment) which contains year
+        # "王xx，男，汉族，1966年12月生，山东省平度市xx镇xx村人"
+        # 0: 王xx
+        # 1: 男
+        # 2: 汉族
+        # 3: 1966年12月生
+        parts = [p.strip() for p in search_area.split('，')]
+        
+        if len(parts) > 3:
+            # The 4th part (index 3) should contain the birth year
+            birth_info_segment = parts[3]
+            year_match = re.search(r'(\d{4})年', birth_info_segment)
+            if year_match:
+                birth_year = int(year_match.group(1))
+                msg = f"提取出生年份 (审查调查报告): {birth_year} from investigation report"
+                logger.info(msg)
+                print(msg)
+                return birth_year
+            else:
+                msg = f"在审查调查报告的第4个逗号分隔段中未找到年份信息: '{birth_info_segment}'"
+                logger.warning(msg)
+                print(msg)
+                return None
+        else:
+            msg = f"审查调查报告中 '一、同志基本情况' 后面的逗号分隔段不足，无法提取年份: {search_area[:50]}..."
+            logger.warning(msg)
+            print(msg)
+            return None
+    else:
+        msg = f"未找到 '一、XXX同志基本情况' 标记，无法提取审查调查报告出生年份: {investigation_text[:100]}..."
+        logger.warning(msg)
+        print(msg)
+        return None
+
+def extract_birth_year_from_trial_report(trial_text):
+    """
+    从审理报告中提取出生年份。
+    年龄位置在“现将具体情况报告如下”这样字符串下面段落里第三个逗号和第四个逗号中间的位置。
+    例如：“王xx，男，汉族，1966年12月生，山东省平度市xx镇xx村人”中的“1966”。
+    """
+    if not trial_text or not isinstance(trial_text, str):
+        msg = f"extract_birth_year_from_trial_report: trial_text 为空或无效: {trial_text}"
+        logger.info(msg)
+        print(msg)
+        return None
+
+    # 首先找到“现将具体情况报告如下”标记
+    marker = "现将具体情况报告如下"
+    marker_pos = trial_text.find(marker)
+
+    if marker_pos != -1:
+        start_pos = marker_pos + len(marker)
+        # Search area after the marker, limit to prevent matching irrelevant text further down
+        search_area = trial_text[start_pos : start_pos + 300] # Adjust length as needed
+
+        # Split by comma and find the 4th segment (0-indexed 3rd segment) which contains year
+        # "王xx，男，汉族，1966年12月生，山东省平度市xx镇xx村人"
+        # 0: 王xx
+        # 1: 男
+        # 2: 汉族
+        # 3: 1966年12月生
+        parts = [p.strip() for p in search_area.split('，')]
+        
+        if len(parts) > 3:
+            # The 4th part (index 3) should contain the birth year
+            birth_info_segment = parts[3]
+            year_match = re.search(r'(\d{4})年', birth_info_segment)
+            if year_match:
+                birth_year = int(year_match.group(1))
+                msg = f"提取出生年份 (审理报告): {birth_year} from trial report"
+                logger.info(msg)
+                print(msg)
+                return birth_year
+            else:
+                msg = f"在审理报告的第4个逗号分隔段中未找到年份信息: '{birth_info_segment}'"
+                logger.warning(msg)
+                print(msg)
+                return None
+        else:
+            msg = f"审理报告中 '现将具体情况报告如下' 后面的逗号分隔段不足，无法提取年份: {search_area[:50]}..."
+            logger.warning(msg)
+            print(msg)
+            return None
+    else:
+        msg = f"未找到 '现将具体情况报告如下' 标记，无法提取审理报告出生年份: {trial_text[:100]}..."
+        logger.warning(msg)
+        print(msg)
+        return None
+
+
 def extract_name_from_decision(decision_text):
     """从处分决定中提取姓名，基于'关于给予...同志党内警告处分的决定'标记。"""
     if not decision_text or not isinstance(decision_text, str):
@@ -440,7 +551,7 @@ def validate_case_relationships(df):
             logger.info(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 立案报告计算年龄 ('{calculated_age_from_report}')")
             print(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 立案报告计算年龄 ('{calculated_age_from_report}')")
 
-        # 2) 新增：年龄与“处分决定”匹配
+        # 2) 年龄与“处分决定”匹配
         decision_text_for_age = row["处分决定"] if pd.notna(row["处分决定"]) else ''
         extracted_birth_year_from_decision = extract_birth_year_from_decision_report(decision_text_for_age)
 
@@ -457,6 +568,42 @@ def validate_case_relationships(df):
             issues_list.append((index, "N2年龄与CU2处分决定不一致"))
             logger.info(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 处分决定计算年龄 ('{calculated_age_from_decision}')")
             print(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 处分决定计算年龄 ('{calculated_age_from_decision}')")
+
+        # 3) 年龄与“审查调查报告”匹配
+        investigation_text_for_age = row["审查调查报告"] if pd.notna(row["审查调查报告"]) else ''
+        extracted_birth_year_from_investigation = extract_birth_year_from_investigation_report(investigation_text_for_age)
+        
+        calculated_age_from_investigation = None
+        if extracted_birth_year_from_investigation is not None:
+            calculated_age_from_investigation = current_year - extracted_birth_year_from_investigation
+            logger.info(f"行 {index + 1} - 审查调查报告计算年龄: {current_year} - {extracted_birth_year_from_investigation} = {calculated_age_from_investigation}")
+            print(f"行 {index + 1} - 审查调查报告计算年龄: {current_year} - {extracted_birth_year_from_investigation} = {calculated_age_from_investigation}")
+        
+        # Check for age mismatch with investigation report
+        if (calculated_age_from_investigation is None) or \
+           (excel_age is not None and calculated_age_from_investigation is not None and excel_age != calculated_age_from_investigation):
+            age_mismatch_indices.add(index)
+            issues_list.append((index, "N2年龄与CX2审查调查报告不一致"))
+            logger.info(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 审查调查报告计算年龄 ('{calculated_age_from_investigation}')")
+            print(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 审查调查报告计算年龄 ('{calculated_age_from_investigation}')")
+
+        # 4) 新增：年龄与“审理报告”匹配
+        trial_text_for_age = row["审理报告"] if pd.notna(row["审理报告"]) else ''
+        extracted_birth_year_from_trial = extract_birth_year_from_trial_report(trial_text_for_age)
+
+        calculated_age_from_trial = None
+        if extracted_birth_year_from_trial is not None:
+            calculated_age_from_trial = current_year - extracted_birth_year_from_trial
+            logger.info(f"行 {index + 1} - 审理报告计算年龄: {current_year} - {extracted_birth_year_from_trial} = {calculated_age_from_trial}")
+            print(f"行 {index + 1} - 审理报告计算年龄: {current_year} - {extracted_birth_year_from_trial} = {calculated_age_from_trial}")
+        
+        # Check for age mismatch with trial report
+        if (calculated_age_from_trial is None) or \
+           (excel_age is not None and calculated_age_from_trial is not None and excel_age != calculated_age_from_trial):
+            age_mismatch_indices.add(index)
+            issues_list.append((index, "N2年龄与CY2审理报告不一致"))
+            logger.info(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 审理报告计算年龄 ('{calculated_age_from_trial}')")
+            print(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 审理报告计算年龄 ('{calculated_age_from_trial}')")
 
 
         # --- Name matching rules (remain unchanged) ---
