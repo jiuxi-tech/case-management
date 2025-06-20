@@ -5,35 +5,34 @@ import re
 from datetime import datetime
 import xlsxwriter
 
-# 假设 Config 类存在于 config.py 中
-# 如果没有，你需要提供 Config 类的定义，或者直接定义 FORMATS 字典
-# 为了让这个文件独立运行（用于测试或作为示例），这里提供一个简单的占位 Config
+# Assume Config class exists in config.py
+# If not, you need to provide Config class definition, or directly define FORMATS dict
 try:
     from config import Config
 except ImportError:
     class Config:
         FORMATS = {
-            "red": "#FFC7CE"  # 假设红色高亮的颜色代码
+            "red": "#FFC7CE"  # Assuming red highlight color code
         }
-        # 补充一些可能在其他地方用到的路径，确保不会因为缺失而报错
-        BASE_UPLOAD_FOLDER = "uploads" # 示例路径
-        CASE_FOLDER = os.path.join(BASE_UPLOAD_FOLDER, "case_files") # 示例路径
+        # Supplement some paths that may be used elsewhere, ensure no error due to missing
+        BASE_UPLOAD_FOLDER = "uploads" # Example path
+        CASE_FOLDER = os.path.join(BASE_UPLOAD_FOLDER, "case_files") # Example path
 
 
-# 假设 extract_name_from_case_report 存在于 validation_rules.case_name_extraction 中
-# 如果没有，请确保提供此函数的实现，这里提供一个示例实现
+# Assume extract_name_from_case_report exists in validation_rules.case_name_extraction
+# If not, please ensure to provide its implementation, here's a sample implementation
 try:
     from validation_rules.case_name_extraction import extract_name_from_case_report
 except ImportError:
-    # 如果导入失败，提供一个简单的占位实现
+    # If import fails, provide a simple placeholder implementation
     def extract_name_from_case_report(report_text):
         """
-        这是一个占位函数，你需要根据实际情况实现它。
-        通常用于从立案报告中提取被调查人姓名。
+        This is a placeholder function, you need to implement it according to your actual situation.
+        It is usually used to extract the name of the person being investigated from the case report.
         """
         if not report_text or not isinstance(report_text, str):
             return None
-        # 示例：假设名字在“一、XXX同志基本情况”中
+        # Example: Assume the name is in "一、XXX同志基本情况"
         match = re.search(r"一、(.+?)同志基本情况", report_text)
         if match:
             return match.group(1).strip()
@@ -60,7 +59,7 @@ def extract_gender_from_case_report(report_text):
     match = re.search(pattern, report_text, re.DOTALL)
     if match:
         gender = match.group(1).strip()
-        msg = f"提取性别: {gender} from case report"
+        msg = f"提取性别 (立案报告): {gender} from case report"
         logger.info(msg)
         print(msg)
         return gender
@@ -69,6 +68,51 @@ def extract_gender_from_case_report(report_text):
         logger.warning(msg)
         print(msg)
         return None
+
+def extract_gender_from_decision_report(decision_text):
+    """
+    从处分决定中提取性别。
+    性别位于“关于给予...同志党内警告处分的决定”后的段落里，第一个和第二个逗号之间。
+    例如：“王xx，男，汉族”中的“男”。
+    """
+    if not decision_text or not isinstance(decision_text, str):
+        msg = f"extract_gender_from_decision_report: decision_text 为空或无效: {decision_text}"
+        logger.info(msg)
+        print(msg)
+        return None
+    
+    # 首先找到处分决定的标题标记
+    title_pattern = r"关于给予.+?同志党内警告处分的决定"
+    title_match = re.search(title_pattern, decision_text, re.DOTALL)
+
+    if title_match:
+        # 从标题匹配的结束位置开始搜索性别信息
+        start_pos = title_match.end()
+        # 假设性别信息在标题后的第一个非空行或段落中
+        # 查找标题后，第一个逗号和第二个逗号之间的内容
+        # 匹配标题结束后的任意内容（非贪婪），直到第一个逗号，然后捕获非逗号内容，再到第二个逗号
+        gender_pattern = r".*?，([^，]+)，"
+        # 限制搜索范围，例如只搜索标题后的前200个字符，防止匹配到无关内容
+        search_area = decision_text[start_pos : start_pos + 200] 
+        gender_match = re.search(gender_pattern, search_area, re.DOTALL)
+
+        if gender_match:
+            gender = gender_match.group(1).strip()
+            msg = f"提取性别 (处分决定): {gender} from decision report"
+            logger.info(msg)
+            print(msg)
+            return gender
+        else:
+            msg = f"在处分决定标题后未找到性别信息: {search_area[:50]}..."
+            logger.warning(msg)
+            print(msg)
+            return None
+    else:
+        msg = f"未找到 '关于给予...同志党内警告处分的决定' 标记，无法提取性别: {decision_text[:100]}..."
+        logger.warning(msg)
+        print(msg)
+        return None
+
 
 def extract_name_from_decision(decision_text):
     """从处分决定中提取姓名，基于'关于给予...同志党内警告处分的决定'标记。"""
@@ -119,16 +163,15 @@ def extract_name_from_trial_report(trial_text):
 def validate_case_relationships(df):
     """Validate relationships between fields in the case registration Excel."""
     mismatch_indices = set()
-    gender_mismatch_indices = set() # 新增：用于存储性别不匹配的行索引
+    gender_mismatch_indices = set() # 用于存储性别不匹配的行索引
     issues_list = []
     
     # Define required headers specific to case registration
-    # 新增“性别”到必要表头中
     required_headers = ["被调查人", "性别", "立案报告", "处分决定", "审查调查报告", "审理报告"]
     if not all(header in df.columns for header in required_headers):
         logger.error(f"Missing required headers for case registration: {required_headers}")
         print(f"缺少必要的表头: {required_headers}") # Added print for console output
-        return mismatch_indices, gender_mismatch_indices, issues_list # 返回三个值
+        return mismatch_indices, gender_mismatch_indices, issues_list # Return three values
 
     for index, row in df.iterrows():
         logger.debug(f"Processing row {index + 1}")
@@ -141,20 +184,30 @@ def validate_case_relationships(df):
             print(f"行 {index + 1} - '被调查人' 字段为空，跳过此行验证。")
             continue
 
-        # 新增：性别验证
         excel_gender = str(row["性别"]).strip() if pd.notna(row["性别"]) else ''
-        report_text_for_gender = row["立案报告"] if pd.notna(row["立案报告"]) else ''
-        extracted_gender = extract_gender_from_case_report(report_text_for_gender)
 
-        # 检查提取的性别是否为空，或者与Excel中的性别不一致
-        if extracted_gender is None or (excel_gender and excel_gender != extracted_gender):
+        # 1) 新增：性别与“立案报告”匹配
+        report_text_for_gender = row["立案报告"] if pd.notna(row["立案报告"]) else ''
+        extracted_gender_from_report = extract_gender_from_case_report(report_text_for_gender)
+        if extracted_gender_from_report is None or (excel_gender and excel_gender != extracted_gender_from_report):
             gender_mismatch_indices.add(index)
             issues_list.append((index, "M2性别与BF2立案报告不一致"))
-            logger.info(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 立案报告提取性别 ('{extracted_gender}')")
-            print(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 立案报告提取性别 ('{extracted_gender}')")
+            logger.info(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 立案报告提取性别 ('{extracted_gender_from_report}')")
+            print(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 立案报告提取性别 ('{extracted_gender_from_report}')")
+
+        # 2) 新增：性别与“处分决定”匹配
+        decision_text_for_gender = row["处分决定"] if pd.notna(row["处分决定"]) else ''
+        extracted_gender_from_decision = extract_gender_from_decision_report(decision_text_for_gender)
+        if extracted_gender_from_decision is None or (excel_gender and excel_gender != extracted_gender_from_decision):
+            # 只有当之前没有因为立案报告性别不一致而加入时，才添加到性别不匹配集合
+            # 或者即使加入了，也添加具体的问题描述
+            gender_mismatch_indices.add(index) 
+            issues_list.append((index, "M2性别与CU2处分决定不一致"))
+            logger.info(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 处分决定提取性别 ('{extracted_gender_from_decision}')")
+            print(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 处分决定提取性别 ('{extracted_gender_from_decision}')")
 
 
-        # 1) Match with "立案报告" (姓名部分)
+        # 1) Match with "立案报告" (Name part)
         report_text = row["立案报告"] if pd.notna(row["立案报告"]) else ''
         report_name = extract_name_from_case_report(report_text)
         if report_name and investigated_person != report_name:
@@ -164,7 +217,7 @@ def validate_case_relationships(df):
             print(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs BF2立案报告 ('{report_name}')")
 
 
-        # 2) Match with "处分决定"
+        # 2) Match with "处分决定" (Name part)
         decision_text = row["处分决定"] if pd.notna(row["处分决定"]) else ''
         decision_name = extract_name_from_decision(decision_text)
         if not decision_name or (decision_name and investigated_person != decision_name):
@@ -174,7 +227,7 @@ def validate_case_relationships(df):
             print(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CU2处分决定 ('{decision_name}')")
 
 
-        # 3) Match with "审查调查报告"
+        # 3) Match with "审查调查报告" (Name part)
         investigation_text = row["审查调查报告"] if pd.notna(row["审查调查报告"]) else ''
         investigation_name = extract_name_from_case_report(investigation_text)
         if investigation_name and investigated_person != investigation_name:
@@ -184,7 +237,7 @@ def validate_case_relationships(df):
             print(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CX2审查调查报告 ('{investigation_name}')")
 
 
-        # 4) Match with "审理报告"
+        # 4) Match with "审理报告" (Name part)
         trial_text = row["审理报告"] if pd.notna(row["审理报告"]) else ''
         trial_name = extract_name_from_trial_report(trial_text)
         if not trial_name or (trial_name and investigated_person != trial_name):
@@ -193,7 +246,7 @@ def validate_case_relationships(df):
             logger.info(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
             print(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
 
-    return mismatch_indices, gender_mismatch_indices, issues_list # 返回三个值
+    return mismatch_indices, gender_mismatch_indices, issues_list # Return three values
 
 def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list):
     """Generate copy and case number Excel files based on analysis."""
@@ -210,24 +263,23 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
         worksheet = writer.sheets['Sheet1']
         red_format = workbook.add_format({'bg_color': Config.FORMATS["red"]})
 
-        # 获取“被调查人”和“性别”列的实际索引
+        # Get actual column indices for "被调查人" and "性别"
         try:
             col_index_investigated_person = df.columns.get_loc("被调查人")
             col_index_gender = df.columns.get_loc("性别")
         except KeyError as e:
             logger.error(f"Excel 文件缺少必要的列: {e}")
             print(f"Excel 文件缺少必要的列: {e}")
-            return None, None # 如果列不存在，则无法进行高亮和后续操作
-
+            return None, None # If columns are missing, cannot highlight or proceed
 
         for idx in range(len(df)):
-            # 高亮“被调查人”列
+            # Highlight "被调查人" column
             if idx in mismatch_indices:  # Highlight mismatched rows for '被调查人'
-                # idx + 1 是因为 Excel 行是 1-indexed，而 pandas 是 0-indexed
+                # idx + 1 is because Excel rows are 1-indexed, while pandas is 0-indexed
                 worksheet.write(idx + 1, col_index_investigated_person, 
                                 df.iloc[idx]["被调查人"] if pd.notna(df.iloc[idx]["被调查人"]) else '', red_format)
             
-            # 高亮“性别”列
+            # Highlight "性别" column
             if idx in gender_mismatch_indices: # Highlight mismatched rows for '性别'
                 worksheet.write(idx + 1, col_index_gender,
                                 df.iloc[idx]["性别"] if pd.notna(df.iloc[idx]["性别"]) else '', red_format)
@@ -244,7 +296,7 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     if not issues_list:
         issues_df = pd.DataFrame({'序号': [1], '问题': ['无问题']})
     else:
-        # 使用列表推导式构建数据，然后一次性创建DataFrame，效率更高
+        # Use list comprehension to build data, then create DataFrame at once for better efficiency
         data = [{'序号': i + 1, '问题': issue} for i, (index, issue) in enumerate(issues_list)]
         issues_df = pd.DataFrame(data)
 
