@@ -142,6 +142,48 @@ def extract_gender_from_investigation_report(investigation_text):
         print(msg)
         return None
 
+def extract_gender_from_trial_report(trial_text):
+    """
+    从审理报告中提取性别。
+    性别位于“现将具体情况报告如下”这样字符串下面段落里第一个逗号和第二个逗号中间的位置。
+    例如：“王xx，男，汉族”中的“男”。
+    """
+    if not trial_text or not isinstance(trial_text, str):
+        msg = f"extract_gender_from_trial_report: trial_text 为空或无效: {trial_text}"
+        logger.info(msg)
+        print(msg)
+        return None
+
+    # 首先找到“现将具体情况报告如下”标记
+    title_marker = "现将具体情况报告如下"
+    marker_pos = trial_text.find(title_marker)
+
+    if marker_pos != -1:
+        # 从标记的结束位置开始搜索性别信息
+        start_pos = marker_pos + len(title_marker)
+        # 查找标记后，第一个逗号和第二个逗号之间的内容
+        # 匹配标记结束后的任意内容（非贪婪），直到第一个逗号，然后捕获非逗号内容，再到第二个逗号
+        gender_pattern = r".*?，([^，]+)，"
+        # 限制搜索范围，例如只搜索标记后的前200个字符，防止匹配到无关内容
+        search_area = trial_text[start_pos : start_pos + 200]
+        gender_match = re.search(gender_pattern, search_area, re.DOTALL)
+
+        if gender_match:
+            gender = gender_match.group(1).strip()
+            msg = f"提取性别 (审理报告): {gender} from trial report"
+            logger.info(msg)
+            print(msg)
+            return gender
+        else:
+            msg = f"在审理报告中 '现将具体情况报告如下' 后未找到性别信息: {search_area[:50]}..."
+            logger.warning(msg)
+            print(msg)
+            return None
+    else:
+        msg = f"未找到 '现将具体情况报告如下' 标记，无法提取审理报告性别: {trial_text[:100]}..."
+        logger.warning(msg)
+        print(msg)
+        return None
 
 def extract_name_from_decision(decision_text):
     """从处分决定中提取姓名，基于'关于给予...同志党内警告处分的决定'标记。"""
@@ -229,12 +271,14 @@ def validate_case_relationships(df):
         extracted_gender_from_decision = extract_gender_from_decision_report(decision_text_for_gender)
         # Check if extracted gender is None OR (if Excel gender exists AND they don't match)
         if extracted_gender_from_decision is None or (excel_gender and excel_gender != extracted_gender_from_decision):
+            # Only add to gender_mismatch_indices if not already added due to case report gender mismatch
+            # Or always add the specific issue description
             gender_mismatch_indices.add(index) 
             issues_list.append((index, "M2性别与CU2处分决定不一致"))
             logger.info(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 处分决定提取性别 ('{extracted_gender_from_decision}')")
             print(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 处分决定提取性别 ('{extracted_gender_from_decision}')")
 
-        # 3) 新增：性别与“审查调查报告”匹配
+        # 3) 性别与“审查调查报告”匹配
         investigation_text_for_gender = row["审查调查报告"] if pd.notna(row["审查调查报告"]) else ''
         extracted_gender_from_investigation = extract_gender_from_investigation_report(investigation_text_for_gender)
         # Check if extracted gender is None OR (if Excel gender exists AND they don't match)
@@ -243,6 +287,15 @@ def validate_case_relationships(df):
             issues_list.append((index, "M2性别与CX2审查调查报告不一致"))
             logger.info(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 审查调查报告提取性别 ('{extracted_gender_from_investigation}')")
             print(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 审查调查报告提取性别 ('{extracted_gender_from_investigation}')")
+
+        # 4) 新增：性别与“审理报告”匹配
+        trial_text_for_gender = row["审理报告"] if pd.notna(row["审理报告"]) else ''
+        extracted_gender_from_trial = extract_gender_from_trial_report(trial_text_for_gender)
+        if extracted_gender_from_trial is None or (excel_gender and excel_gender != extracted_gender_from_trial):
+            gender_mismatch_indices.add(index)
+            issues_list.append((index, "M2性别与CY2审理报告不一致"))
+            logger.info(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 审理报告提取性别 ('{extracted_gender_from_trial}')")
+            print(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 审理报告提取性别 ('{extracted_gender_from_trial}')")
 
 
         # Name matching rules (remain unchanged)
