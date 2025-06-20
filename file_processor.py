@@ -7,8 +7,11 @@ from config import Config
 
 logger = logging.getLogger(__name__)
 
+# 从你的项目结构中导入，如果不存在，请确保提供这些文件的内容
 from validation_rules.validation_core import get_validation_issues
 from excel_formatter import format_excel
+from validation_rules.case_validation_core import validate_case_relationships, generate_case_files
+
 
 def process_upload(request, app):
     logger.info("开始处理文件上传请求")
@@ -48,6 +51,7 @@ def process_upload(request, app):
             flash('Excel文件缺少必要的表头“填报单位名称”、“办理机关”、“被反映人”、“处置情况报告”、“受理时间”或“组织措施”', 'error')
             return redirect(request.url)
 
+        # 这一部分是处理线索登记表的逻辑，与本次修改的立案登记表无关，但保留原样
         mismatch_indices, issues_list = get_validation_issues(df)
 
         if issues_list:
@@ -122,9 +126,11 @@ def process_case_upload(request, app):
             return redirect(request.url)
 
         # 验证字段关系
-        from validation_rules.case_validation_core import validate_case_relationships, generate_case_files
-        mismatch_indices, issues_list = validate_case_relationships(df)
-        copy_path, case_num_path = generate_case_files(df, file.filename, Config.BASE_UPLOAD_FOLDER, mismatch_indices, issues_list)
+        # *** 关键修改：现在接收三个返回值 ***
+        mismatch_indices, gender_mismatch_indices, issues_list = validate_case_relationships(df)
+        
+        # *** 关键修改：现在传递三个索引列表 ***
+        copy_path, case_num_path = generate_case_files(df, file.filename, Config.BASE_UPLOAD_FOLDER, mismatch_indices, gender_mismatch_indices, issues_list)
 
         flash('文件上传处理成功！', 'success')  # 添加成功提示
         logger.info("立案登记表处理成功")
