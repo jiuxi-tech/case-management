@@ -126,11 +126,19 @@ def process_case_upload(request, app):
             return redirect(request.url)
 
         # 验证字段关系
-        # *** 关键修改：现在接收三个返回值 ***
-        mismatch_indices, gender_mismatch_indices, issues_list = validate_case_relationships(df)
+        # *** 关键修改：现在接收四个返回值 ***
+        mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list = validate_case_relationships(df)
         
-        # *** 关键修改：现在传递三个索引列表 ***
-        copy_path, case_num_path = generate_case_files(df, file.filename, Config.BASE_UPLOAD_FOLDER, mismatch_indices, gender_mismatch_indices, issues_list)
+        # *** 关键修改：现在传递所有四个索引列表给 generate_case_files ***
+        copy_path, case_num_path = generate_case_files(
+            df, 
+            file.filename, 
+            Config.BASE_UPLOAD_FOLDER, 
+            mismatch_indices, 
+            gender_mismatch_indices, 
+            issues_list,
+            age_mismatch_indices # 新增的参数
+        )
 
         flash('文件上传处理成功！', 'success')  # 添加成功提示
         logger.info("立案登记表处理成功")
@@ -140,3 +148,4 @@ def process_case_upload(request, app):
         logger.error(f"立案登记表处理失败: {str(e)}")
         flash(f'文件处理失败: {str(e)}', 'error')
         return redirect(request.url)
+
