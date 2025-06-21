@@ -654,6 +654,184 @@ def extract_education_from_case_report(report_text):
         print(msg)
         return None
 
+def extract_ethnicity_from_case_report(report_text):
+    """
+    从立案报告中提取民族。
+    民族位于“一、XXX同志基本情况”后第二个和第三个逗号之间。
+    例如：“王xx，男，汉族，1966年12月生”中的“汉族”。
+    """
+    if not report_text or not isinstance(report_text, str):
+        msg = f"extract_ethnicity_from_case_report: report_text 为空或无效: {report_text}"
+        logger.info(msg)
+        print(msg)
+        return None
+
+    marker_pattern = r"一、.+?同志基本情况"
+    marker_match = re.search(marker_pattern, report_text, re.DOTALL)
+
+    if marker_match:
+        start_pos = marker_match.end()
+        # Search area after the marker, limit to prevent matching irrelevant text further down
+        # Need to capture enough text to include the ethnicity part
+        search_area = report_text[start_pos : start_pos + 300] # Adjust length as needed
+
+        # Split by comma and find the 3rd segment (0-indexed 2nd segment) which contains ethnicity
+        # "王xx，男，汉族，1966年12月生，..."
+        # 0: 王xx
+        # 1: 男
+        # 2: 汉族 <-- This is the one
+        parts = [p.strip() for p in search_area.split('，')] # Use full-width comma
+        
+        if len(parts) > 2: # Ensure there are at least 3 parts (index 0, 1, 2)
+            ethnicity = parts[2]
+            msg = f"提取民族 (立案报告): '{ethnicity}' from text: '{search_area[:50]}...'"
+            logger.info(msg)
+            print(msg)
+            return ethnicity
+        else:
+            msg = f"立案报告中 '一、同志基本情况' 后面的逗号分隔段不足，无法提取民族: {search_area[:50]}..."
+            logger.warning(msg)
+            print(msg)
+            return None
+    else:
+        msg = f"未找到 '一、XXX同志基本情况' 标记，无法提取立案报告民族: {report_text[:100]}..."
+        logger.warning(msg)
+        print(msg)
+        return None
+
+def extract_ethnicity_from_decision_report(decision_text):
+    """
+    从处分决定中提取民族。
+    民族位于“关于给予王xx同志党内警告处分的决定”这样字符串（王xx是变量）下面段落里
+    第二个逗号和第三个逗号中间的位置。
+    例如：“王xx，男，汉族，1966年12月生，山东省平度市xx镇xx村人”中的“汉族”。
+    """
+    if not decision_text or not isinstance(decision_text, str):
+        msg = f"extract_ethnicity_from_decision_report: decision_text 为空或无效: {decision_text}"
+        logger.info(msg)
+        print(msg)
+        return None
+    
+    title_pattern = r"关于给予.+?同志党内警告处分的决定"
+    title_match = re.search(title_pattern, decision_text, re.DOTALL)
+
+    if title_match:
+        start_pos = title_match.end()
+        search_area = decision_text[start_pos : start_pos + 300] # Adjust length as needed
+
+        # Split by comma and find the 3rd segment (0-indexed 2nd segment) which contains ethnicity
+        # "王xx，男，汉族，1966年12月生，..."
+        # 0: 王xx
+        # 1: 男
+        # 2: 汉族 <-- This is the one
+        parts = [p.strip() for p in search_area.split('，')]
+        
+        if len(parts) > 2:
+            ethnicity = parts[2]
+            msg = f"提取民族 (处分决定): '{ethnicity}' from text: '{search_area[:50]}...'"
+            logger.info(msg)
+            print(msg)
+            return ethnicity
+        else:
+            msg = f"处分决定中 '关于给予...同志党内警告处分的决定' 后面的逗号分隔段不足，无法提取民族: {search_area[:50]}..."
+            logger.warning(msg)
+            print(msg)
+            return None
+    else:
+        msg = f"未找到 '关于给予...同志党内警告处分的决定' 标记，无法提取处分决定民族: {decision_text[:100]}..."
+        logger.warning(msg)
+        print(msg)
+        return None
+
+def extract_ethnicity_from_investigation_report(investigation_text):
+    """
+    从审查调查报告中提取民族。
+    民族位于“一、XXX同志基本情况”这样字符串（王xx是变量）下面段落里
+    第二个逗号和第三个逗号中间的位置。
+    例如：“王xx，男，汉族，1966年12月生，山东省平度市xx镇xx村人”中的“汉族”。
+    """
+    if not investigation_text or not isinstance(investigation_text, str):
+        msg = f"extract_ethnicity_from_investigation_report: investigation_text 为空或无效: {investigation_text}"
+        logger.info(msg)
+        print(msg)
+        return None
+
+    marker_pattern = r"一、.+?同志基本情况"
+    marker_match = re.search(marker_pattern, investigation_text, re.DOTALL)
+
+    if marker_match:
+        start_pos = marker_match.end()
+        search_area = investigation_text[start_pos : start_pos + 300] # Adjust length as needed
+
+        # Split by comma and find the 3rd segment (0-indexed 2nd segment) which contains ethnicity
+        # "王xx，男，汉族，1966年12月生，..."
+        # 0: 王xx
+        # 1: 男
+        # 2: 汉族 <-- This is the one
+        parts = [p.strip() for p in search_area.split('，')]
+        
+        if len(parts) > 2:
+            ethnicity = parts[2]
+            msg = f"提取民族 (审查调查报告): '{ethnicity}' from text: '{search_area[:50]}...'"
+            logger.info(msg)
+            print(msg)
+            return ethnicity
+        else:
+            msg = f"审查调查报告中 '一、同志基本情况' 后面的逗号分隔段不足，无法提取民族: {search_area[:50]}..."
+            logger.warning(msg)
+            print(msg)
+            return None
+    else:
+        msg = f"未找到 '一、XXX同志基本情况' 标记，无法提取审查调查报告民族: {investigation_text[:100]}..."
+        logger.warning(msg)
+        print(msg)
+        return None
+
+def extract_ethnicity_from_trial_report(trial_text):
+    """
+    从审理报告中提取民族。
+    民族位于“现将具体情况报告如下”这样字符串下面段落里
+    第二个逗号和第三个逗号中间的位置。
+    例如：“王xx，男，汉族，1966年12月生，山东省平度市xx镇xx村人”中的“汉族”。
+    """
+    if not trial_text or not isinstance(trial_text, str):
+        msg = f"extract_ethnicity_from_trial_report: trial_text 为空或无效: {trial_text}"
+        logger.info(msg)
+        print(msg)
+        return None
+    
+    marker = "现将具体情况报告如下"
+    marker_pos = trial_text.find(marker)
+
+    if marker_pos != -1:
+        start_pos = marker_pos + len(marker)
+        search_area = trial_text[start_pos : start_pos + 300] # Adjust length as needed
+
+        # Split by comma and find the 3rd segment (0-indexed 2nd segment) which contains ethnicity
+        # "王xx，男，汉族，1966年12月生，..."
+        # 0: 王xx
+        # 1: 男
+        # 2: 汉族 <-- This is the one
+        parts = [p.strip() for p in search_area.split('，')]
+        
+        if len(parts) > 2:
+            ethnicity = parts[2]
+            msg = f"提取民族 (审理报告): '{ethnicity}' from text: '{search_area[:50]}...'"
+            logger.info(msg)
+            print(msg)
+            return ethnicity
+        else:
+            msg = f"审理报告中 '现将具体情况报告如下' 后面的逗号分隔段不足，无法提取民族: {search_area[:50]}..."
+            logger.warning(msg)
+            print(msg)
+            return None
+    else:
+        msg = f"未找到 '现将具体情况报告如下' 标记，无法提取审理报告民族: {trial_text[:100]}..."
+        logger.warning(msg)
+        print(msg)
+        return None
+
+
 def extract_name_from_decision(decision_text):
     """从处分决定中提取姓名，基于'关于给予...同志党内警告处分的决定'标记。"""
     if not decision_text or not isinstance(decision_text, str):
@@ -707,16 +885,18 @@ def validate_case_relationships(df):
     gender_mismatch_indices = set() # For gender mismatches
     age_mismatch_indices = set() # For age mismatches
     birth_date_mismatch_indices = set() # For birth date mismatches
-    education_mismatch_indices = set() # New: For education mismatches
+    education_mismatch_indices = set() # For education mismatches
+    ethnicity_mismatch_indices = set() # For ethnicity mismatches
     issues_list = []
     
     # Define required headers specific to case registration
-    # Added "年龄", "出生年月", "学历" to required headers
-    required_headers = ["被调查人", "性别", "年龄", "出生年月", "学历", "立案报告", "处分决定", "审查调查报告", "审理报告"]
+    # Added "年龄", "出生年月", "学历", "民族" to required headers
+    required_headers = ["被调查人", "性别", "年龄", "出生年月", "学历", "民族", "立案报告", "处分决定", "审查调查报告", "审理报告"]
     if not all(header in df.columns for header in required_headers):
         logger.error(f"Missing required headers for case registration: {required_headers}")
         print(f"缺少必要的表头: {required_headers}") # Added print for console output
-        return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list, birth_date_mismatch_indices, education_mismatch_indices # Return six values
+        # Update return values to include the new set
+        return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices
 
     current_year = datetime.now().year
 
@@ -744,7 +924,8 @@ def validate_case_relationships(df):
                 issues_list.append((index, "N2年龄字段格式不正确"))
 
         excel_birth_date = str(row["出生年月"]).strip() if pd.notna(row["出生年月"]) else ''
-        excel_education = str(row["学历"]).strip() if pd.notna(row["学历"]) else '' # New: Extract Excel Education
+        excel_education = str(row["学历"]).strip() if pd.notna(row["学历"]) else '' 
+        excel_ethnicity = str(row["民族"]).strip() if pd.notna(row["民族"]) else '' # Extract Excel Ethnicity
 
 
         # --- Gender matching rules ---
@@ -960,6 +1141,95 @@ def validate_case_relationships(df):
         if is_education_mismatch_report:
             education_mismatch_indices.add(index)
             issues_list.append((index, "P2学历与BF2立案报告不一致"))
+        
+        # --- Ethnicity matching rules ---
+        # 1) 民族与“立案报告”匹配 (Existing Rule)
+        extracted_ethnicity_from_report = extract_ethnicity_from_case_report(report_text_raw)
+
+        is_ethnicity_mismatch_report = False
+        if not excel_ethnicity: # Excel field is empty
+            if extracted_ethnicity_from_report is not None: # But report has it
+                is_ethnicity_mismatch_report = True
+                logger.info(f"行 {index + 1} - 民族不匹配: Excel民族为空，但立案报告中提取到民族 ('{extracted_ethnicity_from_report}')。")
+                print(f"行 {index + 1} - 民族不匹配: Excel民族为空，但立案报告中提取到民族 ('{extracted_ethnicity_from_report}')。")
+        elif extracted_ethnicity_from_report is None: # Excel has value, but report has no recognized ethnicity
+            is_ethnicity_mismatch_report = True
+            logger.info(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') 有值，但立案报告中未提取到民族。")
+            print(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') 有值，但立案报告中未提取到民族。")
+        elif excel_ethnicity != extracted_ethnicity_from_report: # Both have values, but mismatch (exact match)
+            is_ethnicity_mismatch_report = True
+            logger.info(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') vs 立案报告提取民族 ('{extracted_ethnicity_from_report}')。")
+            print(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') vs 立案报告提取民族 ('{extracted_ethnicity_from_report}')")
+
+        if is_ethnicity_mismatch_report:
+            ethnicity_mismatch_indices.add(index)
+            issues_list.append((index, "Q2民族与BF2立案报告不一致"))
+        
+        # 2) 民族与“处分决定”匹配 (Existing Rule)
+        extracted_ethnicity_from_decision = extract_ethnicity_from_decision_report(decision_text_raw)
+
+        is_ethnicity_mismatch_decision = False
+        if not excel_ethnicity: # Excel field is empty
+            if extracted_ethnicity_from_decision is not None: # But decision has it
+                is_ethnicity_mismatch_decision = True
+                logger.info(f"行 {index + 1} - 民族不匹配: Excel民族为空，但处分决定中提取到民族 ('{extracted_ethnicity_from_decision}')。")
+                print(f"行 {index + 1} - 民族不匹配: Excel民族为空，但处分决定中提取到民族 ('{extracted_ethnicity_from_decision}')。")
+        elif extracted_ethnicity_from_decision is None: # Excel has value, but decision has no recognized ethnicity
+            is_ethnicity_mismatch_decision = True
+            logger.info(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') 有值，但处分决定中未提取到民族。")
+            print(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') 有值，但处分决定中未提取到民族。")
+        elif excel_ethnicity != extracted_ethnicity_from_decision: # Both have values, but mismatch (exact match)
+            is_ethnicity_mismatch_decision = True
+            logger.info(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') vs 处分决定提取民族 ('{extracted_ethnicity_from_decision}')。")
+            print(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') vs 处分决定提取民族 ('{extracted_ethnicity_from_decision}')")
+
+        if is_ethnicity_mismatch_decision:
+            ethnicity_mismatch_indices.add(index)
+            issues_list.append((index, "Q2民族与CU2处分决定不一致"))
+
+        # 3) 民族与“审查调查报告”匹配 (Existing Rule)
+        extracted_ethnicity_from_investigation = extract_ethnicity_from_investigation_report(investigation_text_raw)
+
+        is_ethnicity_mismatch_investigation = False
+        if not excel_ethnicity: # Excel field is empty
+            if extracted_ethnicity_from_investigation is not None: # But investigation report has it
+                is_ethnicity_mismatch_investigation = True
+                logger.info(f"行 {index + 1} - 民族不匹配: Excel民族为空，但审查调查报告中提取到民族 ('{extracted_ethnicity_from_investigation}')。")
+                print(f"行 {index + 1} - 民族不匹配: Excel民族为空，但审查调查报告中提取到民族 ('{extracted_ethnicity_from_investigation}')。")
+        elif extracted_ethnicity_from_investigation is None: # Excel has value, but investigation report has no recognized ethnicity
+            is_ethnicity_mismatch_investigation = True
+            logger.info(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') 有值，但审查调查报告中未提取到民族。")
+            print(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') 有值，但审查调查报告中未提取到民族。")
+        elif excel_ethnicity != extracted_ethnicity_from_investigation: # Both have values, but mismatch (exact match)
+            is_ethnicity_mismatch_investigation = True
+            logger.info(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') vs 审查调查报告提取民族 ('{extracted_ethnicity_from_investigation}')。")
+            print(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') vs 审查调查报告提取民族 ('{extracted_ethnicity_from_investigation}')")
+
+        if is_ethnicity_mismatch_investigation:
+            ethnicity_mismatch_indices.add(index)
+            issues_list.append((index, "Q2民族与CX2审查调查报告不一致"))
+
+        # 4) 新增：民族与“审理报告”匹配
+        extracted_ethnicity_from_trial = extract_ethnicity_from_trial_report(trial_text_raw)
+
+        is_ethnicity_mismatch_trial = False
+        if not excel_ethnicity: # Excel field is empty
+            if extracted_ethnicity_from_trial is not None: # But trial report has it
+                is_ethnicity_mismatch_trial = True
+                logger.info(f"行 {index + 1} - 民族不匹配: Excel民族为空，但审理报告中提取到民族 ('{extracted_ethnicity_from_trial}')。")
+                print(f"行 {index + 1} - 民族不匹配: Excel民族为空，但审理报告中提取到民族 ('{extracted_ethnicity_from_trial}')。")
+        elif extracted_ethnicity_from_trial is None: # Excel has value, but trial report has no recognized ethnicity
+            is_ethnicity_mismatch_trial = True
+            logger.info(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') 有值，但审理报告中未提取到民族。")
+            print(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') 有值，但审理报告中未提取到民族。")
+        elif excel_ethnicity != extracted_ethnicity_from_trial: # Both have values, but mismatch (exact match)
+            is_ethnicity_mismatch_trial = True
+            logger.info(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') vs 审理报告提取民族 ('{extracted_ethnicity_from_trial}')。")
+            print(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') vs 审理报告提取民族 ('{extracted_ethnicity_from_trial}')")
+
+        if is_ethnicity_mismatch_trial:
+            ethnicity_mismatch_indices.add(index)
+            issues_list.append((index, "Q2民族与CY2审理报告不一致"))
 
 
         # --- Name matching rules (remain unchanged) ---
@@ -1002,10 +1272,10 @@ def validate_case_relationships(df):
             logger.info(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
             print(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
 
-    # Important: The return statement now includes education_mismatch_indices
-    return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list, birth_date_mismatch_indices, education_mismatch_indices
+    # Important: The return statement now includes education_mismatch_indices and ethnicity_mismatch_indices
+    return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices
 
-def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices):
+def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices):
     """Generate copy and case number Excel files based on analysis."""
     today = datetime.now().strftime('%Y%m%d')
     case_dir = os.path.join(upload_dir, today, 'case')
@@ -1020,13 +1290,14 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
         worksheet = writer.sheets['Sheet1']
         red_format = workbook.add_format({'bg_color': Config.FORMATS["red"]})
 
-        # Get actual column indices for "被调查人", "性别", "年龄", "出生年月", and "学历"
+        # Get actual column indices for "被调查人", "性别", "年龄", "出生年月", "学历", and "民族"
         try:
             col_index_investigated_person = df.columns.get_loc("被调查人")
             col_index_gender = df.columns.get_loc("性别")
             col_index_age = df.columns.get_loc("年龄")
             col_index_birth_date = df.columns.get_loc("出生年月")
-            col_index_education = df.columns.get_loc("学历") # New: Education column index
+            col_index_education = df.columns.get_loc("学历") 
+            col_index_ethnicity = df.columns.get_loc("民族") # Ethnicity column index
         except KeyError as e:
             logger.error(f"Excel 文件缺少必要的列: {e}")
             print(f"Excel 文件缺少必要的列: {e}")
@@ -1050,15 +1321,20 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
                 worksheet.write(idx + 1, col_index_age,
                                 df.iloc[idx]["年龄"] if pd.notna(df.iloc[idx]["年龄"]) else '', red_format)
 
-            # Highlight "出生年月" column (New)
+            # Highlight "出生年月" column
             if idx in birth_date_mismatch_indices: # Highlight mismatched rows for '出生年月'
                 worksheet.write(idx + 1, col_index_birth_date,
                                 df.iloc[idx]["出生年月"] if pd.notna(df.iloc[idx]["出生年月"]) else '', red_format)
 
-            # Highlight "学历" column (New)
+            # Highlight "学历" column
             if idx in education_mismatch_indices: # Highlight mismatched rows for '学历'
                 worksheet.write(idx + 1, col_index_education,
                                 df.iloc[idx]["学历"] if pd.notna(df.iloc[idx]["学历"]) else '', red_format)
+
+            # Highlight "民族" column
+            if idx in ethnicity_mismatch_indices: # Highlight mismatched rows for '民族'
+                worksheet.write(idx + 1, col_index_ethnicity,
+                                df.iloc[idx]["民族"] if pd.notna(df.iloc[idx]["民族"]) else '', red_format)
 
 
     logger.info(f"Generated copy file with highlights: {copy_path}")
