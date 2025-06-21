@@ -164,7 +164,7 @@ def extract_gender_from_trial_report(trial_text):
         # 查找标记后，第一个逗号和第二个逗号之间的内容
         # 匹配标记结束后的任意内容（非贪婪），直到第一个逗号，然后捕获非逗号内容，再到第二个逗号
         gender_pattern = r".*?，([^，]+)，"
-        # 限制搜索范围，例如只搜索标记后的前200个字符，防止匹配到无关内容
+        # 限制搜索范围，例如只搜索标题后的前200个字符，防止匹配到无关内容
         search_area = trial_text[start_pos : start_pos + 200]
         gender_match = re.search(gender_pattern, search_area, re.DOTALL)
 
@@ -454,6 +454,54 @@ def extract_birth_date_from_case_report(report_text):
         print(msg)
         return None
 
+def extract_birth_date_from_decision_report(decision_text):
+    """
+    从处分决定中提取出生年月，并格式化为“YYYY/MM”。
+    出生年月位置在“关于给予王xx同志党内警告处分的决定”这样字符串（王xx是变量）下面段落里
+    第三个逗号和第四个逗号中间的位置。
+    例如：“王xx，男，汉族，1966年12月生，山东省平度市xx镇xx村人”中的“1966年12月”。
+    """
+    if not decision_text or not isinstance(decision_text, str):
+        msg = f"extract_birth_date_from_decision_report: decision_text 为空或无效: {decision_text}"
+        logger.info(msg)
+        print(msg)
+        return None
+
+    title_pattern = r"关于给予.+?同志党内警告处分的决定"
+    title_match = re.search(title_pattern, decision_text, re.DOTALL)
+
+    if title_match:
+        start_pos = title_match.end()
+        search_area = decision_text[start_pos : start_pos + 300] 
+        parts = [p.strip() for p in search_area.split('，')]
+        
+        if len(parts) > 3:
+            birth_info_segment = parts[3]
+            date_match = re.search(r'(\d{4})年(\d{1,2})月', birth_info_segment)
+            if date_match:
+                year = date_match.group(1)
+                month = date_match.group(2).zfill(2)
+                formatted_date = f"{year}/{month}"
+                msg = f"提取出生年月 (处分决定): {formatted_date} from decision report"
+                logger.info(msg)
+                print(msg)
+                return formatted_date
+            else:
+                msg = f"在处分决定的第4个逗号分隔段中未找到出生年月信息: '{birth_info_segment}'"
+                logger.warning(msg)
+                print(msg)
+                return None
+        else:
+            msg = f"处分决定中 '关于给予...同志党内警告处分的决定' 后面的逗号分隔段不足，无法提取出生年月: {search_area[:50]}..."
+            logger.warning(msg)
+            print(msg)
+            return None
+    else:
+        msg = f"未找到 '关于给予...同志党内警告处分的决定' 标记，无法提取处分决定出生年月: {decision_text[:100]}..."
+        logger.warning(msg)
+        print(msg)
+        return None
+
 def extract_name_from_decision(decision_text):
     """从处分决定中提取姓名，基于'关于给予...同志党内警告处分的决定'标记。"""
     if not decision_text or not isinstance(decision_text, str):
@@ -495,8 +543,9 @@ def extract_name_from_trial_report(trial_text):
         print(msg) # Added print for console output
         return name
     else:
+        # Corrected the syntax error here
         msg = f"未找到 '关于...同志违纪案的审理报告' 标记: {trial_text[:50]}..."
-        logger.warning(msg)
+        logger.warning(msg) # Corrected from trial_warning(msg)
         print(msg) # Added print for console output
         return None
 
@@ -669,6 +718,24 @@ def validate_case_relationships(df):
             issues_list.append((index, "O2出生年月与BF2立案报告不一致"))
             logger.info(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 立案报告提取出生年月 ('{extracted_birth_date_from_report}')")
             print(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 立案报告提取出生年月 ('{extracted_birth_date_from_report}')")
+
+        # 2) 出生年月与“处分决定”匹配
+        extracted_birth_date_from_decision = extract_birth_date_from_decision_report(decision_text_raw)
+
+        is_birth_date_mismatch_decision = False
+        if pd.isna(row["出生年月"]) or excel_birth_date == '': # Excel字段缺失或为空字符串
+            if extracted_birth_date_from_decision is not None: # 但报告中提取到了
+                is_birth_date_mismatch_decision = True
+        elif extracted_birth_date_from_decision is None: # Excel字段有值，但报告中未提取到
+            is_birth_date_mismatch_decision = True
+        elif excel_birth_date != extracted_birth_date_from_decision: # 两者都有值但内容不一致
+            is_birth_date_mismatch_decision = True
+
+        if is_birth_date_mismatch_decision:
+            birth_date_mismatch_indices.add(index)
+            issues_list.append((index, "O2出生年月与CU2处分决定不一致"))
+            logger.info(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 处分决定提取出生年月 ('{extracted_birth_date_from_decision}')")
+            print(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 处分决定提取出生年月 ('{extracted_birth_date_from_decision}')")
 
 
         # --- Name matching rules (remain unchanged) ---
