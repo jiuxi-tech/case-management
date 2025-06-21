@@ -502,6 +502,101 @@ def extract_birth_date_from_decision_report(decision_text):
         print(msg)
         return None
 
+def extract_birth_date_from_investigation_report(investigation_text):
+    """
+    从审查调查报告中提取出生年月，并格式化为“YYYY/MM”。
+    出生年月位置在“一、王xx同志基本情况”这样字符串（王xx是变量）下面段落里
+    第三个逗号和第四个逗号中间的位置。
+    例如：“王xx，男，汉族，1966年12月生，山东省平度市xx镇xx村人”中的“1966年12月”。
+    """
+    if not investigation_text or not isinstance(investigation_text, str):
+        msg = f"extract_birth_date_from_investigation_report: investigation_text 为空或无效: {investigation_text}"
+        logger.info(msg)
+        print(msg)
+        return None
+
+    marker_pattern = r"一、.+?同志基本情况"
+    marker_match = re.search(marker_pattern, investigation_text, re.DOTALL)
+
+    if marker_match:
+        start_pos = marker_match.end()
+        search_area = investigation_text[start_pos : start_pos + 300]
+        parts = [p.strip() for p in search_area.split('，')]
+        
+        if len(parts) > 3:
+            birth_info_segment = parts[3]
+            date_match = re.search(r'(\d{4})年(\d{1,2})月', birth_info_segment)
+            if date_match:
+                year = date_match.group(1)
+                month = date_match.group(2).zfill(2)
+                formatted_date = f"{year}/{month}"
+                msg = f"提取出生年月 (审查调查报告): {formatted_date} from investigation report"
+                logger.info(msg)
+                print(msg)
+                return formatted_date
+            else:
+                msg = f"在审查调查报告的第4个逗号分隔段中未找到出生年月信息: '{birth_info_segment}'"
+                logger.warning(msg)
+                print(msg)
+                return None
+        else:
+            msg = f"审查调查报告中 '一、同志基本情况' 后面的逗号分隔段不足，无法提取出生年月: {search_area[:50]}..."
+            logger.warning(msg)
+            print(msg)
+            return None
+    else:
+        msg = f"未找到 '一、XXX同志基本情况' 标记，无法提取审查调查报告出生年月: {investigation_text[:100]}..."
+        logger.warning(msg)
+        print(msg)
+        return None
+
+def extract_birth_date_from_trial_report(trial_text):
+    """
+    从审理报告中提取出生年月，并格式化为“YYYY/MM”。
+    出生年月位置在“现将具体情况报告如下”这样字符串下面段落里第三个逗号和第四个逗号中间的位置。
+    例如：“王xx，男，汉族，1966年12月生，山东省平度市xx镇xx村人”中的“1966年12月”。
+    """
+    if not trial_text or not isinstance(trial_text, str):
+        msg = f"extract_birth_date_from_trial_report: trial_text 为空或无效: {trial_text}"
+        logger.info(msg)
+        print(msg)
+        return None
+
+    marker = "现将具体情况报告如下"
+    marker_pos = trial_text.find(marker)
+
+    if marker_pos != -1:
+        start_pos = marker_pos + len(marker)
+        search_area = trial_text[start_pos : start_pos + 300]
+        parts = [p.strip() for p in search_area.split('，')]
+        
+        if len(parts) > 3:
+            birth_info_segment = parts[3]
+            date_match = re.search(r'(\d{4})年(\d{1,2})月', birth_info_segment)
+            if date_match:
+                year = date_match.group(1)
+                month = date_match.group(2).zfill(2)
+                formatted_date = f"{year}/{month}"
+                msg = f"提取出生年月 (审理报告): {formatted_date} from trial report"
+                logger.info(msg)
+                print(msg)
+                return formatted_date
+            else:
+                msg = f"在审理报告的第4个逗号分隔段中未找到出生年月信息: '{birth_info_segment}'"
+                logger.warning(msg)
+                print(msg)
+                return None
+        else:
+            msg = f"审理报告中 '现将具体情况报告如下' 后面的逗号分隔段不足，无法提取出生年月: {search_area[:50]}..."
+            logger.warning(msg)
+            print(msg)
+            return None
+    else:
+        msg = f"未找到 '现将具体情况报告如下' 标记，无法提取审理报告出生年月: {trial_text[:100]}..."
+        logger.warning(msg)
+        print(msg)
+        return None
+
 def extract_name_from_decision(decision_text):
     """从处分决定中提取姓名，基于'关于给予...同志党内警告处分的决定'标记。"""
     if not decision_text or not isinstance(decision_text, str):
@@ -703,7 +798,6 @@ def validate_case_relationships(df):
         # 1) 出生年月与“立案报告”匹配
         extracted_birth_date_from_report = extract_birth_date_from_case_report(report_text_raw)
         
-        # 修正逻辑以确保覆盖所有缺失和不一致情况
         is_birth_date_mismatch_report = False
         if pd.isna(row["出生年月"]) or excel_birth_date == '': # Excel字段缺失或为空字符串
             if extracted_birth_date_from_report is not None: # 但报告中提取到了
@@ -736,6 +830,42 @@ def validate_case_relationships(df):
             issues_list.append((index, "O2出生年月与CU2处分决定不一致"))
             logger.info(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 处分决定提取出生年月 ('{extracted_birth_date_from_decision}')")
             print(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 处分决定提取出生年月 ('{extracted_birth_date_from_decision}')")
+
+        # 3) 出生年月与“审查调查报告”匹配
+        extracted_birth_date_from_investigation = extract_birth_date_from_investigation_report(investigation_text_raw)
+        
+        is_birth_date_mismatch_investigation = False
+        if pd.isna(row["出生年月"]) or excel_birth_date == '': # Excel字段缺失或为空字符串
+            if extracted_birth_date_from_investigation is not None: # 但报告中提取到了
+                is_birth_date_mismatch_investigation = True
+        elif extracted_birth_date_from_investigation is None: # Excel字段有值，但报告中未提取到
+            is_birth_date_mismatch_investigation = True
+        elif excel_birth_date != extracted_birth_date_from_investigation: # 两者都有值但内容不一致
+            is_birth_date_mismatch_investigation = True
+
+        if is_birth_date_mismatch_investigation:
+            birth_date_mismatch_indices.add(index)
+            issues_list.append((index, "O2出生年月与CX2审查调查报告不一致"))
+            logger.info(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 审查调查报告提取出生年月 ('{extracted_birth_date_from_investigation}')")
+            print(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 审查调查报告提取出生年月 ('{extracted_birth_date_from_investigation}')")
+
+        # 4) 新增：出生年月与“审理报告”匹配
+        extracted_birth_date_from_trial = extract_birth_date_from_trial_report(trial_text_raw)
+
+        is_birth_date_mismatch_trial = False
+        if pd.isna(row["出生年月"]) or excel_birth_date == '': # Excel字段缺失或为空字符串
+            if extracted_birth_date_from_trial is not None: # 但报告中提取到了
+                is_birth_date_mismatch_trial = True
+        elif extracted_birth_date_from_trial is None: # Excel字段有值，但报告中未提取到
+            is_birth_date_mismatch_trial = True
+        elif excel_birth_date != extracted_birth_date_from_trial: # 两者都有值但内容不一致
+            is_birth_date_mismatch_trial = True
+
+        if is_birth_date_mismatch_trial:
+            birth_date_mismatch_indices.add(index)
+            issues_list.append((index, "O2出生年月与CY2审理报告不一致"))
+            logger.info(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 审理报告提取出生年月 ('{extracted_birth_date_from_trial}')")
+            print(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 审理报告提取出生年月 ('{extracted_birth_date_from_trial}')")
 
 
         # --- Name matching rules (remain unchanged) ---
