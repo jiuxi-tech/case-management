@@ -885,6 +885,48 @@ def extract_party_member_from_decision_report(decision_text):
         print(msg)
         return None
 
+def extract_party_joining_date_from_case_report(report_text):
+    """
+    从立案报告中提取入党时间，并格式化为“YYYY/MM”。
+    例如：“1990年1月加入中国共产党”中的“1990年1月”。
+    """
+    if not report_text or not isinstance(report_text, str):
+        msg = f"extract_party_joining_date_from_case_report: report_text 为空或无效: {report_text}"
+        logger.info(msg)
+        print(msg)
+        return None
+
+    # 正则表达式匹配“YYYY年MM月加入中国共产党”或“YYYY年M月加入中国共产党”
+    # 捕获组 (d{4}年d{1,2}月)
+    pattern = r"(\d{4}年\d{1,2}月)加入中国共产党"
+    match = re.search(pattern, report_text)
+
+    if match:
+        date_str = match.group(1) # e.g., "1990年1月"
+        # Extract year and month
+        year_match = re.search(r"(\d{4})年", date_str)
+        month_match = re.search(r"(\d{1,2})月", date_str)
+
+        if year_match and month_match:
+            year = year_match.group(1)
+            month = month_match.group(1).zfill(2) # Pad month with leading zero if single digit
+            formatted_date = f"{year}/{month}"
+            msg = f"提取入党时间 (立案报告): '{formatted_date}' from text: '{report_text[:100]}...'"
+            logger.info(msg)
+            print(msg)
+            return formatted_date
+        else:
+            msg = f"在立案报告中找到入党时间段但无法解析年月: '{date_str}'"
+            logger.warning(msg)
+            print(msg)
+            return None
+    else:
+        msg = f"在立案报告中未找到“加入中国共产党”及其前面的入党时间信息: {report_text[:100]}..."
+        logger.info(msg)
+        print(msg)
+        return None
+
+
 def extract_name_from_decision(decision_text):
     """从处分决定中提取姓名，基于'关于给予...同志党内警告处分的决定'标记。"""
     if not decision_text or not isinstance(decision_text, str):
@@ -941,16 +983,17 @@ def validate_case_relationships(df):
     education_mismatch_indices = set() # For education mismatches
     ethnicity_mismatch_indices = set() # For ethnicity mismatches
     party_member_mismatch_indices = set() # For party member mismatches
+    party_joining_date_mismatch_indices = set() # For party joining date mismatches
     issues_list = []
     
     # Define required headers specific to case registration
-    # Added "年龄", "出生年月", "学历", "民族", "是否中共党员" to required headers
-    required_headers = ["被调查人", "性别", "年龄", "出生年月", "学历", "民族", "是否中共党员", "立案报告", "处分决定", "审查调查报告", "审理报告"]
+    # Added "年龄", "出生年月", "学历", "民族", "是否中共党员", "入党时间" to required headers
+    required_headers = ["被调查人", "性别", "年龄", "出生年月", "学历", "民族", "是否中共党员", "入党时间", "立案报告", "处分决定", "审查调查报告", "审理报告"]
     if not all(header in df.columns for header in required_headers):
         logger.error(f"Missing required headers for case registration: {required_headers}")
         print(f"缺少必要的表头: {required_headers}") # Added print for console output
         # Update return values to include the new set
-        return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices
+        return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices
 
     current_year = datetime.now().year
 
@@ -981,6 +1024,7 @@ def validate_case_relationships(df):
         excel_education = str(row["学历"]).strip() if pd.notna(row["学历"]) else '' 
         excel_ethnicity = str(row["民族"]).strip() if pd.notna(row["民族"]) else '' # Extract Excel Ethnicity
         excel_party_member = str(row["是否中共党员"]).strip() if pd.notna(row["是否中共党员"]) else '' # Extract Excel Party Member
+        excel_party_joining_date = str(row["入党时间"]).strip() if pd.notna(row["入党时间"]) else '' # Extract Excel Party Joining Date
 
 
         # --- Gender matching rules ---
@@ -1312,7 +1356,7 @@ def validate_case_relationships(df):
             party_member_mismatch_indices.add(index)
             issues_list.append((index, "T2是否中共党员与BF2立案报告不一致"))
 
-        # 2) 新增：“是否中共党员”与“处分决定”匹配
+        # 2) 新增：“是否中共党员”与“处分决定”匹配 (Existing Rule)
         extracted_party_member_from_decision = extract_party_member_from_decision_report(decision_text_raw)
 
         is_party_member_mismatch_decision = False
@@ -1335,6 +1379,42 @@ def validate_case_relationships(df):
         if is_party_member_mismatch_decision:
             party_member_mismatch_indices.add(index)
             issues_list.append((index, "T2是否中共党员与CU2处分决定不一致"))
+
+        # --- New: 入党时间 (Party Joining Date) matching rule ---
+        extracted_party_joining_date_from_report = extract_party_joining_date_from_case_report(report_text_raw)
+
+        is_party_joining_date_mismatch = False
+
+        if excel_party_member == "是":
+            # 如果是党员，检查入党时间是否一致或为空
+            if not excel_party_joining_date: # Excel字段为空
+                if extracted_party_joining_date_from_report is not None: # 报告中有提取到
+                    is_party_joining_date_mismatch = True
+                    logger.info(f"行 {index + 1} - 入党时间不匹配: Excel入党时间为空，但立案报告中提取到 ('{extracted_party_joining_date_from_report}')。")
+                    print(f"行 {index + 1} - 入党时间不匹配: Excel入党时间为空，但立案报告中提取到 ('{extracted_party_joining_date_from_report}')。")
+            elif extracted_party_joining_date_from_report is None: # Excel有值，但报告未提取到
+                is_party_joining_date_mismatch = True
+                logger.info(f"行 {index + 1} - 入党时间不匹配: Excel入党时间 ('{excel_party_joining_date}') 有值，但立案报告中未提取到。")
+                print(f"行 {index + 1} - 入党时间不匹配: Excel入党时间 ('{excel_party_joining_date}') 有值，但立案报告中未提取到。")
+            elif excel_party_joining_date != extracted_party_joining_date_from_report: # 两者有值但不一致
+                is_party_joining_date_mismatch = True
+                logger.info(f"行 {index + 1} - 入党时间不匹配: Excel入党时间 ('{excel_party_joining_date}') vs 立案报告提取 ('{extracted_party_joining_date_from_report}')。")
+                print(f"行 {index + 1} - 入党时间不匹配: Excel入党时间 ('{excel_party_joining_date}') vs 立案报告提取 ('{extracted_party_joining_date_from_report}')。")
+        elif excel_party_member == "否":
+            # 如果不是党员，入党时间必须为空
+            if excel_party_joining_date: # Excel字段不为空
+                is_party_joining_date_mismatch = True
+                logger.info(f"行 {index + 1} - 入党时间不匹配: Excel是否中共党员为“否”，但入党时间字段不为空 ('{excel_party_joining_date}')。")
+                print(f"行 {index + 1} - 入党时间不匹配: Excel是否中共党员为“否”，但入党时间字段不为空 ('{excel_party_joining_date}')。")
+        # else: # excel_party_member is empty or other unexpected value
+        #     # Decision on how to handle ambiguous "是否中共党员" field:
+        #     # For now, treat as no mismatch if "是否中共党员" is not explicitly "是" or "否".
+        #     # Or, you might want to add a rule for this ambiguity itself.
+        #     pass
+
+        if is_party_joining_date_mismatch:
+            party_joining_date_mismatch_indices.add(index)
+            issues_list.append((index, "V2入党时间与BF2立案报告不一致"))
 
 
         # --- Name matching rules (remain unchanged) ---
@@ -1377,10 +1457,10 @@ def validate_case_relationships(df):
             logger.info(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
             print(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
 
-    # Important: The return statement now includes the new party_member_mismatch_indices
-    return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices
+    # Important: The return statement now includes the new party_joining_date_mismatch_indices
+    return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices
 
-def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices):
+def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices):
     """Generate copy and case number Excel files based on analysis."""
     today = datetime.now().strftime('%Y%m%d')
     case_dir = os.path.join(upload_dir, today, 'case')
@@ -1403,7 +1483,8 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
             col_index_birth_date = df.columns.get_loc("出生年月")
             col_index_education = df.columns.get_loc("学历") 
             col_index_ethnicity = df.columns.get_loc("民族") 
-            col_index_party_member = df.columns.get_loc("是否中共党员") # New: Party Member column index
+            col_index_party_member = df.columns.get_loc("是否中共党员") 
+            col_index_party_joining_date = df.columns.get_loc("入党时间") # New: Party Joining Date column index
         except KeyError as e:
             logger.error(f"Excel 文件缺少必要的列: {e}")
             print(f"Excel 文件缺少必要的列: {e}")
@@ -1446,6 +1527,11 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
             if idx in party_member_mismatch_indices: # Highlight mismatched rows for '是否中共党员'
                 worksheet.write(idx + 1, col_index_party_member,
                                 df.iloc[idx]["是否中共党员"] if pd.notna(df.iloc[idx]["是否中共党员"]) else '', red_format)
+
+            # Highlight "入党时间" column
+            if idx in party_joining_date_mismatch_indices: # Highlight mismatched rows for '入党时间'
+                worksheet.write(idx + 1, col_index_party_joining_date,
+                                df.iloc[idx]["入党时间"] if pd.notna(df.iloc[idx]["入党时间"]) else '', red_format)
 
 
     logger.info(f"Generated copy file with highlights: {copy_path}")
