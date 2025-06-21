@@ -162,7 +162,7 @@ def extract_gender_from_trial_report(trial_text):
         # 从标记的结束位置开始搜索性别信息
         start_pos = marker_pos + len(title_marker)
         # 查找标记后，第一个逗号和第二个逗号之间的内容
-        # 匹配标记结束后的任意内容（非贪婪），直到第一个逗号，然后捕获非逗号内容，再到第二个逗号
+        # 匹配标题结束后的任意内容（非贪婪），直到第一个逗号，然后捕获非逗号内容，再到第二个逗号
         gender_pattern = r".*?，([^，]+)，"
         # 限制搜索范围，例如只搜索标题后的前200个字符，防止匹配到无关内容
         search_area = trial_text[start_pos : start_pos + 200]
@@ -597,6 +597,63 @@ def extract_birth_date_from_trial_report(trial_text):
         print(msg)
         return None
 
+def extract_education_from_case_report(report_text):
+    """
+    从立案报告中提取学历。
+    学历位置可能在“一、王xx同志基本情况”这样字符串下面段落里某个位置。
+    会优先匹配更具体的学历词汇，并能处理“大学本科”与“本科”的匹配。
+    """
+    if not report_text or not isinstance(report_text, str):
+        msg = f"extract_education_from_case_report: report_text 为空或无效: {report_text}"
+        logger.info(msg)
+        print(msg)
+        return None
+
+    marker_pattern = r"一、.+?同志基本情况"
+    marker_match = re.search(marker_pattern, report_text, re.DOTALL)
+
+    if marker_match:
+        start_pos = marker_match.end()
+        # Search a sufficiently large area after the marker for education info
+        search_area = report_text[start_pos : start_pos + 1000].lower() # Convert to lowercase early for matching
+
+        # Define education terms and their preferred return values
+        # Order them from most specific/full term to less specific/shorter term
+        # Prioritize full terms like "大学本科" before "本科"
+        education_mappings = {
+            "大学本科": "大学本科",
+            "本科": "本科",
+            "研究生": "研究生",
+            "硕士": "硕士",
+            "博士": "博士",
+            "大专": "大专",
+            "高中": "高中",
+            "中专": "中专",
+            "初中": "初中",
+            "小学": "小学"
+        }
+        
+        # Iterate through ordered keys to find the first match
+        for term_in_list, return_value in education_mappings.items():
+            # Create a regex pattern that looks for the term, optionally followed by "学历", "学位", "毕业"
+            # Using \b for word boundary at the start to prevent partial matches
+            pattern = r'\b' + re.escape(term_in_list).lower() + r'(?:学历)?(?:学位)?(?:毕业)?'
+            if re.search(pattern, search_area):
+                msg = f"提取学历 (立案报告): '{return_value}' from text: '{search_area[:100]}...'"
+                logger.info(msg)
+                print(msg)
+                return return_value # Return the standardized value
+        
+        msg = f"在立案报告的基本情况段落中未找到已知学历信息: {search_area[:100]}..."
+        logger.warning(msg)
+        print(msg)
+        return None
+    else:
+        msg = f"未找到 '一、XXX同志基本情况' 标记，无法提取立案报告学历: {report_text[:100]}..."
+        logger.warning(msg)
+        print(msg)
+        return None
+
 def extract_name_from_decision(decision_text):
     """从处分决定中提取姓名，基于'关于给予...同志党内警告处分的决定'标记。"""
     if not decision_text or not isinstance(decision_text, str):
@@ -650,15 +707,16 @@ def validate_case_relationships(df):
     gender_mismatch_indices = set() # For gender mismatches
     age_mismatch_indices = set() # For age mismatches
     birth_date_mismatch_indices = set() # For birth date mismatches
+    education_mismatch_indices = set() # New: For education mismatches
     issues_list = []
     
     # Define required headers specific to case registration
-    # Added "年龄" and "出生年月" to required headers
-    required_headers = ["被调查人", "性别", "年龄", "出生年月", "立案报告", "处分决定", "审查调查报告", "审理报告"]
+    # Added "年龄", "出生年月", "学历" to required headers
+    required_headers = ["被调查人", "性别", "年龄", "出生年月", "学历", "立案报告", "处分决定", "审查调查报告", "审理报告"]
     if not all(header in df.columns for header in required_headers):
         logger.error(f"Missing required headers for case registration: {required_headers}")
         print(f"缺少必要的表头: {required_headers}") # Added print for console output
-        return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list, birth_date_mismatch_indices # Return five values
+        return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list, birth_date_mismatch_indices, education_mismatch_indices # Return six values
 
     current_year = datetime.now().year
 
@@ -686,6 +744,7 @@ def validate_case_relationships(df):
                 issues_list.append((index, "N2年龄字段格式不正确"))
 
         excel_birth_date = str(row["出生年月"]).strip() if pd.notna(row["出生年月"]) else ''
+        excel_education = str(row["学历"]).strip() if pd.notna(row["学历"]) else '' # New: Extract Excel Education
 
 
         # --- Gender matching rules ---
@@ -849,7 +908,7 @@ def validate_case_relationships(df):
             logger.info(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 审查调查报告提取出生年月 ('{extracted_birth_date_from_investigation}')")
             print(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 审查调查报告提取出生年月 ('{extracted_birth_date_from_investigation}')")
 
-        # 4) 新增：出生年月与“审理报告”匹配
+        # 4) 出生年月与“审理报告”匹配
         extracted_birth_date_from_trial = extract_birth_date_from_trial_report(trial_text_raw)
 
         is_birth_date_mismatch_trial = False
@@ -866,6 +925,41 @@ def validate_case_relationships(df):
             issues_list.append((index, "O2出生年月与CY2审理报告不一致"))
             logger.info(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 审理报告提取出生年月 ('{extracted_birth_date_from_trial}')")
             print(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 审理报告提取出生年月 ('{extracted_birth_date_from_trial}')")
+
+        # --- Education matching rules ---
+        # 1) 学历与“立案报告”匹配
+        extracted_education_from_report = extract_education_from_case_report(report_text_raw)
+
+        is_education_mismatch_report = False
+
+        # Normalize excel_education for comparison (e.g., "大学本科" vs "本科")
+        excel_education_normalized = excel_education # Keep original for logging
+        if excel_education == "大学本科":
+            excel_education_normalized = "本科" # For comparison, treat "大学本科" as "本科"
+
+        extracted_education_normalized = extracted_education_from_report # Keep original for logging
+        if extracted_education_from_report == "大学本科":
+            extracted_education_normalized = "本科"
+        # If extracted is None, it remains None for comparison.
+
+        if not excel_education: # Case: Excel's education field is empty
+            if extracted_education_from_report is not None: # If Excel is empty but report has an education
+                is_education_mismatch_report = True
+                logger.info(f"行 {index + 1} - 学历不匹配: Excel学历为空，但立案报告中提取到学历 ('{extracted_education_from_report}')。")
+                print(f"行 {index + 1} - 学历不匹配: Excel学历为空，但立案报告中提取到学历 ('{extracted_education_from_report}')。")
+        else: # Case: Excel's education field has a value
+            if extracted_education_from_report is None: # Excel has value, but report has no recognized education
+                is_education_mismatch_report = True
+                logger.info(f"行 {index + 1} - 学历不匹配: Excel学历 ('{excel_education}') 有值，但立案报告中未提取到学历。")
+                print(f"行 {index + 1} - 学历不匹配: Excel学历 ('{excel_education}') 有值，但立案报告中未提取到学历。")
+            elif excel_education_normalized != extracted_education_normalized: # Both have values, compare normalized forms
+                is_education_mismatch_report = True
+                logger.info(f"行 {index + 1} - 学历不匹配: Excel学历 ('{excel_education}') vs 立案报告提取学历 ('{extracted_education_from_report}')。")
+                print(f"行 {index + 1} - 学历不匹配: Excel学历 ('{excel_education}') vs 立案报告提取学历 ('{extracted_education_from_report}')")
+
+        if is_education_mismatch_report:
+            education_mismatch_indices.add(index)
+            issues_list.append((index, "P2学历与BF2立案报告不一致"))
 
 
         # --- Name matching rules (remain unchanged) ---
@@ -908,10 +1002,10 @@ def validate_case_relationships(df):
             logger.info(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
             print(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
 
-    # Important: The return statement now includes age_mismatch_indices and birth_date_mismatch_indices
-    return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list, birth_date_mismatch_indices
+    # Important: The return statement now includes education_mismatch_indices
+    return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list, birth_date_mismatch_indices, education_mismatch_indices
 
-def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, age_mismatch_indices, birth_date_mismatch_indices):
+def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices):
     """Generate copy and case number Excel files based on analysis."""
     today = datetime.now().strftime('%Y%m%d')
     case_dir = os.path.join(upload_dir, today, 'case')
@@ -926,12 +1020,13 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
         worksheet = writer.sheets['Sheet1']
         red_format = workbook.add_format({'bg_color': Config.FORMATS["red"]})
 
-        # Get actual column indices for "被调查人", "性别", "年龄", and "出生年月"
+        # Get actual column indices for "被调查人", "性别", "年龄", "出生年月", and "学历"
         try:
             col_index_investigated_person = df.columns.get_loc("被调查人")
             col_index_gender = df.columns.get_loc("性别")
             col_index_age = df.columns.get_loc("年龄")
-            col_index_birth_date = df.columns.get_loc("出生年月") # New: Birth Date column index
+            col_index_birth_date = df.columns.get_loc("出生年月")
+            col_index_education = df.columns.get_loc("学历") # New: Education column index
         except KeyError as e:
             logger.error(f"Excel 文件缺少必要的列: {e}")
             print(f"Excel 文件缺少必要的列: {e}")
@@ -959,6 +1054,11 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
             if idx in birth_date_mismatch_indices: # Highlight mismatched rows for '出生年月'
                 worksheet.write(idx + 1, col_index_birth_date,
                                 df.iloc[idx]["出生年月"] if pd.notna(df.iloc[idx]["出生年月"]) else '', red_format)
+
+            # Highlight "学历" column (New)
+            if idx in education_mismatch_indices: # Highlight mismatched rows for '学历'
+                worksheet.write(idx + 1, col_index_education,
+                                df.iloc[idx]["学历"] if pd.notna(df.iloc[idx]["学历"]) else '', red_format)
 
 
     logger.info(f"Generated copy file with highlights: {copy_path}")

@@ -22,7 +22,7 @@ def process_upload(request, app):
     file = request.files['file']
     if file.filename == '':
         logger.error("文件名为空")
-        flash('未选择文件', 'error')
+        flash('未选择文件', 'info') # 更改为info，表示操作完成但无文件
         return redirect(request.url)
     if not any(file.filename.lower().endswith(ext) for ext in Config.ALLOWED_EXTENSIONS):
         logger.error(f"文件格式错误: {file.filename}")
@@ -126,10 +126,10 @@ def process_case_upload(request, app):
             return redirect(request.url)
 
         # 验证字段关系
-        # *** 关键修改：现在接收所有五个返回值 ***
-        mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list, birth_date_mismatch_indices = validate_case_relationships(df)
+        # *** 关键修改：现在接收所有六个返回值 ***
+        mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list, birth_date_mismatch_indices, education_mismatch_indices = validate_case_relationships(df)
         
-        # *** 关键修改：现在传递所有五个索引列表给 generate_case_files ***
+        # *** 关键修改：现在传递所有六个索引列表给 generate_case_files ***
         copy_path, case_num_path = generate_case_files(
             df, 
             file.filename, 
@@ -138,7 +138,8 @@ def process_case_upload(request, app):
             gender_mismatch_indices, 
             issues_list,
             age_mismatch_indices,
-            birth_date_mismatch_indices # 新增的参数
+            birth_date_mismatch_indices,
+            education_mismatch_indices # 新增的参数
         )
 
         flash('文件上传处理成功！', 'success')  # 添加成功提示
@@ -149,4 +150,3 @@ def process_case_upload(request, app):
         logger.error(f"立案登记表处理失败: {str(e)}")
         flash(f'文件处理失败: {str(e)}', 'error')
         return redirect(request.url)
-
