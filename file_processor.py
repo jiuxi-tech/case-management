@@ -126,10 +126,10 @@ def process_case_upload(request, app):
             return redirect(request.url)
 
         # 验证字段关系
-        # *** 关键修改：现在接收四个返回值 ***
-        mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list = validate_case_relationships(df)
+        # *** 关键修改：现在接收所有五个返回值 ***
+        mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list, birth_date_mismatch_indices = validate_case_relationships(df)
         
-        # *** 关键修改：现在传递所有四个索引列表给 generate_case_files ***
+        # *** 关键修改：现在传递所有五个索引列表给 generate_case_files ***
         copy_path, case_num_path = generate_case_files(
             df, 
             file.filename, 
@@ -137,7 +137,8 @@ def process_case_upload(request, app):
             mismatch_indices, 
             gender_mismatch_indices, 
             issues_list,
-            age_mismatch_indices # 新增的参数
+            age_mismatch_indices,
+            birth_date_mismatch_indices # 新增的参数
         )
 
         flash('文件上传处理成功！', 'success')  # 添加成功提示

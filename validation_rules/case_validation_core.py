@@ -406,6 +406,53 @@ def extract_birth_year_from_trial_report(trial_text):
         print(msg)
         return None
 
+def extract_birth_date_from_case_report(report_text):
+    """
+    从立案报告中提取出生年月，并格式化为“YYYY/MM”。
+    出生年月位置在“一、王xx同志基本情况”这样字符串下面段落里第三个逗号和第四个逗号中间的位置。
+    例如：“王xx，男，汉族，1966年12月生，山东省平度市xx镇xx村人”中的“1966年12月”。
+    """
+    if not report_text or not isinstance(report_text, str):
+        msg = f"extract_birth_date_from_case_report: report_text 为空或无效: {report_text}"
+        logger.info(msg)
+        print(msg)
+        return None
+
+    marker_pattern = r"一、.+?同志基本情况"
+    marker_match = re.search(marker_pattern, report_text, re.DOTALL)
+
+    if marker_match:
+        start_pos = marker_match.end()
+        search_area = report_text[start_pos : start_pos + 300] 
+        parts = [p.strip() for p in search_area.split('，')]
+        
+        if len(parts) > 3:
+            birth_info_segment = parts[3]
+            # 匹配“YYYY年MM月”或“YYYY年M月”的格式
+            date_match = re.search(r'(\d{4})年(\d{1,2})月', birth_info_segment)
+            if date_match:
+                year = date_match.group(1)
+                month = date_match.group(2).zfill(2) # 补齐两位月份
+                formatted_date = f"{year}/{month}"
+                msg = f"提取出生年月 (立案报告): {formatted_date} from case report"
+                logger.info(msg)
+                print(msg)
+                return formatted_date
+            else:
+                msg = f"在立案报告的第4个逗号分隔段中未找到出生年月信息: '{birth_info_segment}'"
+                logger.warning(msg)
+                print(msg)
+                return None
+        else:
+            msg = f"立案报告中 '一、同志基本情况' 后面的逗号分隔段不足，无法提取出生年月: {search_area[:50]}..."
+            logger.warning(msg)
+            print(msg)
+            return None
+    else:
+        msg = f"未找到 '一、XXX同志基本情况' 标记，无法提取立案报告出生年月: {report_text[:100]}..."
+        logger.warning(msg)
+        print(msg)
+        return None
 
 def extract_name_from_decision(decision_text):
     """从处分决定中提取姓名，基于'关于给予...同志党内警告处分的决定'标记。"""
@@ -458,15 +505,16 @@ def validate_case_relationships(df):
     mismatch_indices = set() # For name mismatches
     gender_mismatch_indices = set() # For gender mismatches
     age_mismatch_indices = set() # For age mismatches
+    birth_date_mismatch_indices = set() # For birth date mismatches
     issues_list = []
     
     # Define required headers specific to case registration
-    # Added "年龄" to required headers
-    required_headers = ["被调查人", "性别", "年龄", "立案报告", "处分决定", "审查调查报告", "审理报告"]
+    # Added "年龄" and "出生年月" to required headers
+    required_headers = ["被调查人", "性别", "年龄", "出生年月", "立案报告", "处分决定", "审查调查报告", "审理报告"]
     if not all(header in df.columns for header in required_headers):
         logger.error(f"Missing required headers for case registration: {required_headers}")
         print(f"缺少必要的表头: {required_headers}") # Added print for console output
-        return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list # Return four values
+        return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list, birth_date_mismatch_indices # Return five values
 
     current_year = datetime.now().year
 
@@ -482,6 +530,7 @@ def validate_case_relationships(df):
             continue
 
         excel_gender = str(row["性别"]).strip() if pd.notna(row["性别"]) else ''
+        
         excel_age = None
         if pd.notna(row["年龄"]):
             try:
@@ -492,11 +541,13 @@ def validate_case_relationships(df):
                 age_mismatch_indices.add(index)
                 issues_list.append((index, "N2年龄字段格式不正确"))
 
+        excel_birth_date = str(row["出生年月"]).strip() if pd.notna(row["出生年月"]) else ''
+
 
         # --- Gender matching rules ---
         # 1) 性别与“立案报告”匹配
-        report_text_for_gender = row["立案报告"] if pd.notna(row["立案报告"]) else ''
-        extracted_gender_from_report = extract_gender_from_case_report(report_text_for_gender)
+        report_text_raw = row["立案报告"] if pd.notna(row["立案报告"]) else '' # Use a raw variable for multiple extractions
+        extracted_gender_from_report = extract_gender_from_case_report(report_text_raw)
         if extracted_gender_from_report is None or (excel_gender and excel_gender != extracted_gender_from_report):
             gender_mismatch_indices.add(index)
             issues_list.append((index, "M2性别与BF2立案报告不一致"))
@@ -504,9 +555,8 @@ def validate_case_relationships(df):
             print(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 立案报告提取性别 ('{extracted_gender_from_report}')")
 
         # 2) 性别与“处分决定”匹配
-        decision_text_for_gender = row["处分决定"] if pd.notna(row["处分决定"]) else ''
-        extracted_gender_from_decision = extract_gender_from_decision_report(decision_text_for_gender)
-        # Check if extracted gender is None OR (if Excel gender exists AND they don't match)
+        decision_text_raw = row["处分决定"] if pd.notna(row["处分决定"]) else ''
+        extracted_gender_from_decision = extract_gender_from_decision_report(decision_text_raw)
         if extracted_gender_from_decision is None or (excel_gender and excel_gender != extracted_gender_from_decision):
             gender_mismatch_indices.add(index) 
             issues_list.append((index, "M2性别与CU2处分决定不一致"))
@@ -514,9 +564,8 @@ def validate_case_relationships(df):
             print(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 处分决定提取性别 ('{extracted_gender_from_decision}')")
 
         # 3) 性别与“审查调查报告”匹配
-        investigation_text_for_gender = row["审查调查报告"] if pd.notna(row["审查调查报告"]) else ''
-        extracted_gender_from_investigation = extract_gender_from_investigation_report(investigation_text_for_gender)
-        # Check if extracted gender is None OR (if Excel gender exists AND they don't match)
+        investigation_text_raw = row["审查调查报告"] if pd.notna(row["审查调查报告"]) else ''
+        extracted_gender_from_investigation = extract_gender_from_investigation_report(investigation_text_raw)
         if extracted_gender_from_investigation is None or (excel_gender and excel_gender != extracted_gender_from_investigation):
             gender_mismatch_indices.add(index)
             issues_list.append((index, "M2性别与CX2审查调查报告不一致"))
@@ -524,8 +573,8 @@ def validate_case_relationships(df):
             print(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 审查调查报告提取性别 ('{extracted_gender_from_investigation}')")
 
         # 4) 性别与“审理报告”匹配
-        trial_text_for_gender = row["审理报告"] if pd.notna(row["审理报告"]) else ''
-        extracted_gender_from_trial = extract_gender_from_trial_report(trial_text_for_gender)
+        trial_text_raw = row["审理报告"] if pd.notna(row["审理报告"]) else ''
+        extracted_gender_from_trial = extract_gender_from_trial_report(trial_text_raw)
         if extracted_gender_from_trial is None or (excel_gender and excel_gender != extracted_gender_from_trial):
             gender_mismatch_indices.add(index)
             issues_list.append((index, "M2性别与CY2审理报告不一致"))
@@ -534,8 +583,7 @@ def validate_case_relationships(df):
 
         # --- Age matching rules ---
         # 1) 年龄与“立案报告”匹配
-        report_text_for_age = row["立案报告"] if pd.notna(row["立案报告"]) else ''
-        extracted_birth_year_from_report = extract_birth_year_from_case_report(report_text_for_age)
+        extracted_birth_year_from_report = extract_birth_year_from_case_report(report_text_raw)
         
         calculated_age_from_report = None
         if extracted_birth_year_from_report is not None:
@@ -552,8 +600,7 @@ def validate_case_relationships(df):
             print(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 立案报告计算年龄 ('{calculated_age_from_report}')")
 
         # 2) 年龄与“处分决定”匹配
-        decision_text_for_age = row["处分决定"] if pd.notna(row["处分决定"]) else ''
-        extracted_birth_year_from_decision = extract_birth_year_from_decision_report(decision_text_for_age)
+        extracted_birth_year_from_decision = extract_birth_year_from_decision_report(decision_text_raw)
 
         calculated_age_from_decision = None
         if extracted_birth_year_from_decision is not None:
@@ -570,8 +617,7 @@ def validate_case_relationships(df):
             print(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 处分决定计算年龄 ('{calculated_age_from_decision}')")
 
         # 3) 年龄与“审查调查报告”匹配
-        investigation_text_for_age = row["审查调查报告"] if pd.notna(row["审查调查报告"]) else ''
-        extracted_birth_year_from_investigation = extract_birth_year_from_investigation_report(investigation_text_for_age)
+        extracted_birth_year_from_investigation = extract_birth_year_from_investigation_report(investigation_text_raw)
         
         calculated_age_from_investigation = None
         if extracted_birth_year_from_investigation is not None:
@@ -587,9 +633,8 @@ def validate_case_relationships(df):
             logger.info(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 审查调查报告计算年龄 ('{calculated_age_from_investigation}')")
             print(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 审查调查报告计算年龄 ('{calculated_age_from_investigation}')")
 
-        # 4) 新增：年龄与“审理报告”匹配
-        trial_text_for_age = row["审理报告"] if pd.notna(row["审理报告"]) else ''
-        extracted_birth_year_from_trial = extract_birth_year_from_trial_report(trial_text_for_age)
+        # 4) 年龄与“审理报告”匹配
+        extracted_birth_year_from_trial = extract_birth_year_from_trial_report(trial_text_raw)
 
         calculated_age_from_trial = None
         if extracted_birth_year_from_trial is not None:
@@ -604,6 +649,26 @@ def validate_case_relationships(df):
             issues_list.append((index, "N2年龄与CY2审理报告不一致"))
             logger.info(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 审理报告计算年龄 ('{calculated_age_from_trial}')")
             print(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 审理报告计算年龄 ('{calculated_age_from_trial}')")
+
+        # --- Birth Date matching rules ---
+        # 1) 出生年月与“立案报告”匹配
+        extracted_birth_date_from_report = extract_birth_date_from_case_report(report_text_raw)
+        
+        # 修正逻辑以确保覆盖所有缺失和不一致情况
+        is_birth_date_mismatch_report = False
+        if pd.isna(row["出生年月"]) or excel_birth_date == '': # Excel字段缺失或为空字符串
+            if extracted_birth_date_from_report is not None: # 但报告中提取到了
+                is_birth_date_mismatch_report = True
+        elif extracted_birth_date_from_report is None: # Excel字段有值，但报告中未提取到
+            is_birth_date_mismatch_report = True
+        elif excel_birth_date != extracted_birth_date_from_report: # 两者都有值但内容不一致
+            is_birth_date_mismatch_report = True
+
+        if is_birth_date_mismatch_report:
+            birth_date_mismatch_indices.add(index)
+            issues_list.append((index, "O2出生年月与BF2立案报告不一致"))
+            logger.info(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 立案报告提取出生年月 ('{extracted_birth_date_from_report}')")
+            print(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 立案报告提取出生年月 ('{extracted_birth_date_from_report}')")
 
 
         # --- Name matching rules (remain unchanged) ---
@@ -646,10 +711,10 @@ def validate_case_relationships(df):
             logger.info(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
             print(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
 
-    # Important: The return statement now includes age_mismatch_indices
-    return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list
+    # Important: The return statement now includes age_mismatch_indices and birth_date_mismatch_indices
+    return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list, birth_date_mismatch_indices
 
-def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, age_mismatch_indices):
+def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, age_mismatch_indices, birth_date_mismatch_indices):
     """Generate copy and case number Excel files based on analysis."""
     today = datetime.now().strftime('%Y%m%d')
     case_dir = os.path.join(upload_dir, today, 'case')
@@ -664,11 +729,12 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
         worksheet = writer.sheets['Sheet1']
         red_format = workbook.add_format({'bg_color': Config.FORMATS["red"]})
 
-        # Get actual column indices for "被调查人", "性别", and "年龄"
+        # Get actual column indices for "被调查人", "性别", "年龄", and "出生年月"
         try:
             col_index_investigated_person = df.columns.get_loc("被调查人")
             col_index_gender = df.columns.get_loc("性别")
-            col_index_age = df.columns.get_loc("年龄") # New: Age column index
+            col_index_age = df.columns.get_loc("年龄")
+            col_index_birth_date = df.columns.get_loc("出生年月") # New: Birth Date column index
         except KeyError as e:
             logger.error(f"Excel 文件缺少必要的列: {e}")
             print(f"Excel 文件缺少必要的列: {e}")
@@ -687,10 +753,15 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
                 worksheet.write(idx + 1, col_index_gender,
                                 df.iloc[idx]["性别"] if pd.notna(df.iloc[idx]["性别"]) else '', red_format)
 
-            # Highlight "年龄" column (New)
+            # Highlight "年龄" column
             if idx in age_mismatch_indices: # Highlight mismatched rows for '年龄'
                 worksheet.write(idx + 1, col_index_age,
                                 df.iloc[idx]["年龄"] if pd.notna(df.iloc[idx]["年龄"]) else '', red_format)
+
+            # Highlight "出生年月" column (New)
+            if idx in birth_date_mismatch_indices: # Highlight mismatched rows for '出生年月'
+                worksheet.write(idx + 1, col_index_birth_date,
+                                df.iloc[idx]["出生年月"] if pd.notna(df.iloc[idx]["出生年月"]) else '', red_format)
 
 
     logger.info(f"Generated copy file with highlights: {copy_path}")
