@@ -40,6 +40,9 @@ from validation_rules.case_extractors_party_info import (
     extract_party_member_from_decision_report,
     extract_party_joining_date_from_case_report
 )
+# 新增导入立案时间规则
+from validation_rules.case_timestamp_rules import validate_filing_time
+
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +57,8 @@ def validate_case_relationships(df):
     ethnicity_mismatch_indices = set()
     party_member_mismatch_indices = set()
     party_joining_date_mismatch_indices = set()
+    filing_time_mismatch_indices = set() # 新增立案时间不一致索引集合
+
     # issues_list 现在将包含 (index, case_code, person_code, issue_description)
     issues_list = [] 
     
@@ -62,16 +67,16 @@ def validate_case_relationships(df):
         "被调查人", "性别", "年龄", "出生年月", "学历", "民族", 
         "是否中共党员", "入党时间", "立案报告", "处分决定", 
         "审查调查报告", "审理报告", "简要案情", # 现有字段
-        "案件编码", "涉案人员编码" # 新增字段
+        "案件编码", "涉案人员编码", # 新增字段
+        "立案时间", "立案决定书" # 新增立案时间相关字段
     ]
     if not all(header in df.columns for header in required_headers):
         logger.error(f"Missing required headers for case registration: {required_headers}")
         print(f"缺少必要的表头: {required_headers}")
         # 返回所有可能的不一致索引集，确保与调用处的解包数量一致
-        return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list, \
-               brief_case_details_mismatch_indices, \
+        return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, \
                birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, \
-               party_member_mismatch_indices, party_joining_date_mismatch_indices
+               party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices # 添加新的返回值
 
     current_year = datetime.now().year
 
@@ -113,6 +118,8 @@ def validate_case_relationships(df):
         decision_text_raw = row["处分决定"] if pd.notna(row["处分决定"]) else ''
         investigation_text_raw = row["审查调查报告"] if pd.notna(row["审查调查报告"]) else ''
         trial_text_raw = row["审理报告"] if pd.notna(row["审理报告"]) else ''
+        # 获取立案决定书内容
+        filing_decision_doc_raw = row["立案决定书"] if pd.notna(row["立案决定书"]) else ''
 
 
         # --- Gender matching rules ---
@@ -509,7 +516,10 @@ def validate_case_relationships(df):
             logger.info(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
             print(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
 
+    # 调用新的立案时间规则验证函数
+    validate_filing_time(df, issues_list, filing_time_mismatch_indices)
+
     # 返回所有可能的不一致索引集以及更新后的 issues_list
     return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, \
            birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, \
-           party_member_mismatch_indices, party_joining_date_mismatch_indices
+           party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices # 添加新的返回值

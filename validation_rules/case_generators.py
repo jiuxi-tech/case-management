@@ -7,7 +7,7 @@ from config import Config # Assuming Config class exists in config.py
 
 logger = logging.getLogger(__name__)
 
-def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices, brief_case_details_mismatch_indices):
+def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices, brief_case_details_mismatch_indices, filing_time_mismatch_indices): # 新增 filing_time_mismatch_indices
     """
     根据分析结果生成副本和立案编号Excel文件。
     该函数将原始DataFrame写入一个副本文件，对不匹配的单元格进行标红。
@@ -27,6 +27,7 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     ethnicity_mismatch_indices (set): 民族不匹配的行索引集合。
     party_member_mismatch_indices (set): 是否中共党员不匹配的行索引集合。
     party_joining_date_mismatch_indices (set): 入党时间不匹配的行索引集合。
+    filing_time_mismatch_indices (set): 立案时间不匹配的行索引集合。（新增参数）
 
     返回:
     tuple: (copy_path, case_num_path) 生成的副本文件路径和立案编号文件路径。
@@ -59,6 +60,8 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
             col_index_ethnicity = df.columns.get_loc("民族") 
             col_index_party_member = df.columns.get_loc("是否中共党员") 
             col_index_party_joining_date = df.columns.get_loc("入党时间")
+            col_index_filing_time = df.columns.get_loc("立案时间") # 获取“立案时间”列索引
+
         except KeyError as e:
             logger.error(f"Excel 文件缺少必要的列: {e}")
             print(f"Excel 文件缺少必要的列: {e}")
@@ -101,6 +104,10 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
             if idx in party_joining_date_mismatch_indices:
                 worksheet.write(idx + 1, col_index_party_joining_date,
                                 df.iloc[idx]["入党时间"] if pd.notna(df.iloc[idx]["入党时间"]) else '', red_format)
+
+            if idx in filing_time_mismatch_indices: # 对“立案时间”进行标红
+                worksheet.write(idx + 1, col_index_filing_time,
+                                df.iloc[idx]["立案时间"] if pd.notna(df.iloc[idx]["立案时间"]) else '', red_format)
 
     logger.info(f"Generated copy file with highlights: {copy_path}")
     print(f"生成高亮后的副本文件: {copy_path}")
