@@ -7,7 +7,7 @@ from config import Config # Assuming Config class exists in config.py
 
 logger = logging.getLogger(__name__)
 
-def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices, brief_case_details_mismatch_indices): # 新增 brief_case_details_mismatch_indices
+def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices, brief_case_details_mismatch_indices):
     """
     根据分析结果生成副本和立案编号Excel文件。
     该函数将原始DataFrame写入一个副本文件，对不匹配的单元格进行标红。
@@ -20,7 +20,7 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     mismatch_indices (set): 姓名不匹配的行索引集合。
     gender_mismatch_indices (set): 性别不匹配的行索引集合。
     age_mismatch_indices (set): 年龄不匹配的行索引集合。
-    issues_list (list): 包含所有问题的列表，每个问题是一个(索引, 问题描述)元组。
+    issues_list (list): 包含所有问题的列表，每个问题是一个(索引, 案件编码, 涉案人员编码, 问题描述)元组。
     brief_case_details_mismatch_indices (set): 简要案情不匹配的行索引集合。
     birth_date_mismatch_indices (set): 出生年月不匹配的行索引集合。
     education_mismatch_indices (set): 学历不匹配的行索引集合。
@@ -108,12 +108,20 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
 
     case_num_filename = f"立案编号{today}.xlsx"
     case_num_path = os.path.join(case_dir, case_num_filename)
-    issues_df = pd.DataFrame(columns=['序号', '问题'])
+    
+    # 更改：现在 issues_df 包含“序号”、“案件编码”、“涉案人员编码”和“问题”字段
+    issues_df = pd.DataFrame(columns=['序号', '案件编码', '涉案人员编码', '问题'])
+    
     if not issues_list:
-        issues_df = pd.DataFrame({'序号': [1], '问题': ['无问题']}) # 如果没有问题，则显示“无问题”
+        # 如果没有问题，则显示“无问题”，并为新字段填充空字符串
+        issues_df = pd.DataFrame({'序号': [1], '案件编码': [''], '涉案人员编码': [''], '问题': ['无问题']})
     else:
-        # 将issues_list转换为DataFrame，以便写入Excel
-        data = [{'序号': i + 1, '问题': issue} for i, (index, issue) in enumerate(issues_list)]
+        # 将issues_list转换为DataFrame，并从每个元组中解包出编码字段
+        # issues_list中的每个元素现在是 (index, case_code, person_code, issue_description)
+        data = []
+        # *** 关键修改：将 (index, issue) 解包为 (original_index, case_code, person_code, issue_description) ***
+        for i, (original_index, case_code, person_code, issue_description) in enumerate(issues_list):
+            data.append({'序号': i + 1, '案件编码': case_code, '涉案人员编码': person_code, '问题': issue_description})
         issues_df = pd.DataFrame(data)
 
     issues_df.to_excel(case_num_path, index=False) # 写入立案编号文件

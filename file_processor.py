@@ -1,189 +1,182 @@
-import os
-import pandas as pd
-import logging
-from datetime import datetime
-from flask import flash, redirect, url_for
-from config import Config
+import os 
+import pandas as pd 
+import logging 
+from datetime import datetime 
+from flask import flash, redirect, url_for 
+from config import Config 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__) 
 
-# 从你的项目结构中导入，如果不存在，请确保提供这些文件的内容
-from validation_rules.validation_core import get_validation_issues
-from excel_formatter import format_excel
-# 导入路径已更新，从新的拆分文件中导入
-from validation_rules.case_validators import validate_case_relationships
-from validation_rules.case_generators import generate_case_files
+# 确保这些导入路径是正确的，并且文件存在
+from validation_rules.validation_core import get_validation_issues 
+from excel_formatter import format_excel 
+from validation_rules.case_validators import validate_case_relationships 
+from validation_rules.case_generators import generate_case_files 
 
 
-def process_upload(request, app):
-    logger.info("开始处理文件上传请求")
-    if 'file' not in request.files:
-        logger.error("未选择文件")
-        flash('未选择文件', 'error')
-        return redirect(request.url)
-    file = request.files['file']
-    if file.filename == '':
-        logger.error("文件名为空")
-        flash('未选择文件', 'info') # 更改为info，表示操作完成但无文件
-        return redirect(request.url)
-    if not any(file.filename.lower().endswith(ext) for ext in Config.ALLOWED_EXTENSIONS):
-        logger.error(f"文件格式错误: {file.filename}")
-        flash('请上传Excel文件（.xlsx 或 .xls）', 'error')
-        return redirect(request.url)
-    if Config.REQUIRED_FILENAME_PATTERN not in file.filename:
-        logger.error(f"文件名不符合要求: {file.filename}")
-        flash('文件名必须包含“线索登记表”', 'error')
-        return redirect(request.url)
+def process_upload(request, app): 
+    logger.info("开始处理线索登记表上传请求") 
+    if 'file' not in request.files: 
+        logger.error("未选择文件") 
+        flash('未选择文件', 'error') 
+        return redirect(request.url) 
+    file = request.files['file'] 
+    if file.filename == '': 
+        logger.error("文件名为空") 
+        flash('未选择文件', 'info') 
+        return redirect(request.url) 
+    if not any(file.filename.lower().endswith(ext) for ext in Config.ALLOWED_EXTENSIONS): 
+        logger.error(f"文件格式错误: {file.filename}") 
+        flash('请上传Excel文件（.xlsx 或 .xls）', 'error') 
+        return redirect(request.url) 
+    if Config.REQUIRED_FILENAME_PATTERN not in file.filename: 
+        logger.error(f"文件名不符合要求: {file.filename}") 
+        flash('文件名必须包含“线索登记表”', 'error') 
+        return redirect(request.url) 
 
-    # 使用 CLUE_FOLDER 作为保存路径
-    file_path = os.path.join(Config.CLUE_FOLDER, file.filename)
-    logger.info(f"文件保存路径: {file_path}")  # 记录保存路径
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)  # 确保目录存在
-    file.save(file_path)
-    if not os.path.exists(file_path):
-        logger.error(f"文件保存失败: {file_path} 不存在")
-        flash(f'文件保存失败: {file_path} 不存在', 'error')
-        return redirect(request.url)
-    logger.info(f"文件保存成功: {file_path}")
+    # 使用 CLUE_FOLDER 作为保存路径 
+    file_path = os.path.join(Config.CLUE_FOLDER, file.filename) 
+    logger.info(f"文件保存路径: {file_path}") 
+    os.makedirs(os.path.dirname(file_path), exist_ok=True) 
     try:
-        df = pd.read_excel(file_path)
-        required_headers = Config.CLUE_REQUIRED_HEADERS + [Config.COLUMN_MAPPINGS["organization_measure"], Config.COLUMN_MAPPINGS["acceptance_time"]]
-        if not all(header in df.columns for header in required_headers):
-            logger.error(f"缺少必要表头: {required_headers}")
-            flash('Excel文件缺少必要的表头“填报单位名称”、“办理机关”、“被反映人”、“处置情况报告”、“受理时间”或“组织措施”', 'error')
-            return redirect(request.url)
-
-        # 新增的逻辑：检查“处置情况报告”字段是否为空
-        # Ensure 'disposal_report' key exists in COLUMN_MAPPINGS for robustness
-        disposal_report_column = Config.COLUMN_MAPPINGS.get("disposal_report", "处置情况报告") # Default to "处置情况报告" if not found
-        if disposal_report_column not in df.columns:
-            logger.error(f"Excel文件缺少必要表头: {disposal_report_column}")
-            flash(f'Excel文件缺少必要的表头“{disposal_report_column}”', 'error')
-            return redirect(request.url)
-            
-        if df[disposal_report_column].isnull().all():
-            logger.error(f"线索登记表“{disposal_report_column}”字段为空")
-            flash(f'线索登记表“{disposal_report_column}”字段为空', 'error')
-            # If the column is empty, stop further processing and do not generate files
-            return redirect(request.url)
-
-
-        # 这一部分是处理线索登记表的逻辑，与本次修改的立案登记表无关，但保留原样
-        # get_validation_issues 现在返回 (mismatch_indices, issues_list)
-        # issues_list 中的每个元素现在是 (original_df_index, clue_code_value, issue_description)
-        mismatch_indices, issues_list = get_validation_issues(df)
-
-        if issues_list:
-            # 为 issues_df 准备数据，现在 issues_list 已经包含了受理线索编码
-            data_for_issues_df = []
-            
-            # 关键修改：确保这里能够解包三个值 (original_df_index, clue_code_value, issue_description)
-            # 之前的错误是因为这里只预期解包两个值 (index, issue)
-            for i, (original_df_index, clue_code_value, issue_description) in enumerate(issues_list):
-                current_serial_number = i + 1
-                
-                data_for_issues_df.append({
-                    '序号': current_serial_number,
-                    '受理线索编码': clue_code_value, # 直接使用从 get_validation_issues 传过来的值
-                    '问题': issue_description
-                })
-            
-            # 使用列表推导式高效创建 DataFrame
-            issues_df = pd.DataFrame(data_for_issues_df)
-            
-            issue_filename = f"线索编号{datetime.now().strftime('%Y%m%d')}.xlsx"
-            issue_path = os.path.join(Config.CLUE_FOLDER, issue_filename)
-            issues_df.to_excel(issue_path, index=False)
-            logger.info(f"生成线索编号文件: {issue_path}")
-
-        original_filename = file.filename.replace('.xlsx', '_副本.xlsx').replace('.xls', '_副本.xlsx')
-        original_path = os.path.join(Config.CLUE_FOLDER, original_filename)
-        # format_excel 函数可能也需要调整其对 issues_list 中元组结构的预期
-        # 这里仅传入 issues_list，如果 format_excel 有问题，需要进一步检查
-        format_excel(df, mismatch_indices, original_path, issues_list)
-
-        if not all(header in df.columns for header in required_headers) or \
-           not any(file.filename.lower().endswith(ext) for ext in Config.ALLOWED_EXTENSIONS) or \
-           Config.REQUIRED_FILENAME_PATTERN not in file.filename or \
-           file.filename == '':
-            pass  # 错误已在校验阶段显示
-        else:
-            logger.info("程序执行成功")
-
-        flash('文件上传处理成功！', 'success')  # 添加成功提示
-
-        return redirect(request.url)
+        file.save(file_path) 
     except Exception as e:
-        logger.error(f"文件处理失败: {str(e)}")
-        flash(f'文件处理失败: {str(e)}', 'error')
+        logger.error(f"文件保存失败: {file_path} - {e}")
+        flash(f'文件保存失败: {e}', 'error')
         return redirect(request.url)
 
-def process_case_upload(request, app):
-    logger.info("开始处理立案登记表上传请求")
-    if 'case_file' not in request.files:
-        logger.error("未选择立案登记表文件")
-        flash('未选择文件', 'error')
-        return redirect(request.url)
-    file = request.files['case_file']
-    if file.filename == '':
-        logger.error("立案登记表文件名为空")
-        flash('任务已处理完毕', 'info')
-        return redirect(request.url)
-    # 校验文件格式和文件名
-    if not any(file.filename.lower().endswith(ext) for ext in Config.ALLOWED_EXTENSIONS):
-        logger.error(f"立案登记表文件格式错误: {file.filename}")
-        flash('上传文件格式不对', 'error')
-        return redirect(request.url)
-    if "立案登记表" not in file.filename:
-        logger.error(f"立案登记表文件名不符合要求: {file.filename}")
-        flash('文件名必须包含立案登记', 'error')
-        return redirect(request.url)
+    if not os.path.exists(file_path): 
+        logger.error(f"文件保存失败: {file_path} 不存在") 
+        flash(f'文件保存失败: {file_path} 不存在', 'error') 
+        return redirect(request.url) 
+    logger.info(f"文件保存成功: {file_path}") 
 
-    # 使用 CASE_FOLDER 作为保存路径
-    file_path = os.path.join(Config.CASE_FOLDER, file.filename)
-    logger.info(f"立案登记表文件保存路径: {file_path}")
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    file.save(file_path)
-    if not os.path.exists(file_path):
-        logger.error(f"立案登记表文件保存失败: {file_path} 不存在")
-        flash(f'文件保存失败: {file_path} 不存在', 'error')
-        return redirect(request.url)
-    logger.info(f"立案登记表文件保存成功: {file_path}")
+    try: 
+        df = pd.read_excel(file_path) 
+        required_headers = Config.CLUE_REQUIRED_HEADERS + [Config.COLUMN_MAPPINGS["organization_measure"], Config.COLUMN_MAPPINGS["acceptance_time"]] 
+        if not all(header in df.columns for header in required_headers): 
+            logger.error(f"缺少必要表头: {required_headers}") 
+            flash('Excel文件缺少必要的表头“填报单位名称”、“办理机关”、“被反映人”、“处置情况报告”、“受理时间”或“组织措施”', 'error') 
+            return redirect(request.url) 
 
+        disposal_report_column = Config.COLUMN_MAPPINGS.get("disposal_report", "处置情况报告") 
+        if disposal_report_column not in df.columns: 
+            logger.error(f"Excel文件缺少必要表头: {disposal_report_column}") 
+            flash(f'Excel文件缺少必要的表头“{disposal_report_column}”', 'error') 
+            return redirect(request.url) 
+            
+        if df[disposal_report_column].isnull().all(): 
+            logger.error(f"线索登记表“{disposal_report_column}”字段为空") 
+            flash(f'线索登记表“{disposal_report_column}”字段为空', 'error') 
+            return redirect(request.url) 
+
+        # *** 重点：这里的 get_validation_issues 必须返回2个值 (mismatch_indices, issues_list) ***
+        # issues_list 中的每个元素应该是一个3元组 (original_df_index, clue_code_value, issue_description)
+        mismatch_indices, issues_list = get_validation_issues(df) 
+        logger.info(f"get_validation_issues 返回了 {len(mismatch_indices)} 个不匹配索引和 {len(issues_list)} 个问题。")
+
+        if issues_list: 
+            data_for_issues_df = [] 
+            for i, (original_df_index, clue_code_value, issue_description) in enumerate(issues_list): 
+                current_serial_number = i + 1 
+                data_for_issues_df.append({ 
+                    '序号': current_serial_number, 
+                    '受理线索编码': clue_code_value, 
+                    '问题': issue_description 
+                }) 
+            issues_df = pd.DataFrame(data_for_issues_df) 
+            
+            issue_filename = f"线索编号{datetime.now().strftime('%Y%m%d')}.xlsx" 
+            issue_path = os.path.join(Config.CLUE_FOLDER, issue_filename) 
+            issues_df.to_excel(issue_path, index=False) 
+            logger.info(f"生成线索编号文件: {issue_path}") 
+
+        original_filename_copy = file.filename.replace('.xlsx', '_副本.xlsx').replace('.xls', '_副本.xlsx') 
+        original_path = os.path.join(Config.CLUE_FOLDER, original_filename_copy) 
+        # format_excel 函数也需要能够正确处理 issues_list 中每个元素是3元组的情况
+        format_excel(df, mismatch_indices, original_path, issues_list) 
+
+        logger.info("程序执行成功") 
+        flash('文件上传处理成功！', 'success') 
+        return redirect(request.url) 
+    except Exception as e: 
+        logger.error(f"文件处理失败: {str(e)}", exc_info=True) # 打印详细 traceback
+        flash(f'文件处理失败: {str(e)}', 'error') 
+        return redirect(request.url) 
+
+def process_case_upload(request, app): 
+    logger.info("开始处理立案登记表上传请求") 
+    if 'case_file' not in request.files: 
+        logger.error("未选择立案登记表文件") 
+        flash('未选择文件', 'error') 
+        return redirect(request.url) 
+    file = request.files['case_file'] 
+    if file.filename == '': 
+        logger.error("立案登记表文件名为空") 
+        flash('任务已处理完毕', 'info') 
+        return redirect(request.url) 
+    
+    if not any(file.filename.lower().endswith(ext) for ext in Config.ALLOWED_EXTENSIONS): 
+        logger.error(f"立案登记表文件格式错误: {file.filename}") 
+        flash('上传文件格式不对', 'error') 
+        return redirect(request.url) 
+    if "立案登记表" not in file.filename: 
+        logger.error(f"立案登记表文件名不符合要求: {file.filename}") 
+        flash('文件名必须包含立案登记', 'error') 
+        return redirect(request.url) 
+
+    file_path = os.path.join(Config.CASE_FOLDER, file.filename) 
+    logger.info(f"立案登记表文件保存路径: {file_path}") 
+    os.makedirs(os.path.dirname(file_path), exist_ok=True) 
     try:
-        df = pd.read_excel(file_path)
-        required_headers = Config.CASE_REQUIRED_HEADERS  # 使用立案登记表的表头
-        if not all(header in df.columns for header in required_headers):
-            logger.error(f"立案登记表缺少必要表头: {required_headers}")
-            flash('Excel文件缺少必要的表头', 'error')
-            return redirect(request.url)
+        file.save(file_path) 
+    except Exception as e:
+        logger.error(f"文件保存失败: {file_path} - {e}")
+        flash(f'文件保存失败: {e}', 'error')
+        return redirect(request.url)
 
-        # 验证字段关系
-        # *** 关键修改：现在接收所有十个返回值 ***
-        mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices = validate_case_relationships(df)
+    if not os.path.exists(file_path): 
+        logger.error(f"立案登记表文件保存失败: {file_path} 不存在") 
+        flash(f'文件保存失败: {file_path} 不存在', 'error') 
+        return redirect(request.url) 
+    logger.info(f"立案登记表文件保存成功: {file_path}") 
+
+    try: 
+        df = pd.read_excel(file_path) 
+        required_headers = Config.CASE_REQUIRED_HEADERS 
+        # 新增：确保“案件编码”和“涉案人员编码”也在必要表头中
+        required_headers.extend(["案件编码", "涉案人员编码"])
+
+        if not all(header in df.columns for header in required_headers): 
+            logger.error(f"立案登记表缺少必要表头: {required_headers}") 
+            flash('Excel文件缺少必要的表头', 'error') 
+            return redirect(request.url) 
+
+        # 验证字段关系 - 接收所有10个返回值，这部分在您的代码中是正确的
+        mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices = validate_case_relationships(df) 
         
-        # *** 关键修改：现在传递 brief_case_details_mismatch_indices 给 generate_case_files ***
-        copy_path, case_num_path = generate_case_files(
-            df, 
-            file.filename, 
-            Config.BASE_UPLOAD_FOLDER, 
-            mismatch_indices, 
-            gender_mismatch_indices, 
-            issues_list,
-            age_mismatch_indices,
-            birth_date_mismatch_indices,
-            education_mismatch_indices,
-            ethnicity_mismatch_indices,
-            party_member_mismatch_indices,
-            party_joining_date_mismatch_indices,
-            brief_case_details_mismatch_indices # 新增的参数
-        )
+        # 生成副本和立案编号文件 - 传递所有10个参数
+        copy_path, case_num_path = generate_case_files( 
+            df,  
+            file.filename,  
+            Config.BASE_UPLOAD_FOLDER,  
+            mismatch_indices,  
+            gender_mismatch_indices,  
+            issues_list, # issues_list 现在包含 (index, case_code, person_code, issue_description)
+            age_mismatch_indices, 
+            birth_date_mismatch_indices, 
+            education_mismatch_indices, 
+            ethnicity_mismatch_indices, 
+            party_member_mismatch_indices, 
+            party_joining_date_mismatch_indices, 
+            brief_case_details_mismatch_indices 
+        ) 
 
-        flash('文件上传处理成功！', 'success')  # 添加成功提示
-        logger.info("立案登记表处理成功")
+        flash('文件上传处理成功！', 'success') 
+        logger.info("立案登记表处理成功") 
 
-        return redirect(request.url)
-    except Exception as e:
-        logger.error(f"立案登记表处理失败: {str(e)}")
-        flash(f'文件处理失败: {str(e)}', 'error')
+        return redirect(request.url) 
+    except Exception as e: 
+        logger.error(f"立案登记表处理失败: {str(e)}", exc_info=True) # 打印详细 traceback
+        flash(f'文件处理失败: {str(e)}', 'error') 
         return redirect(request.url)
