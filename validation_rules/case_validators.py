@@ -1,17 +1,21 @@
 import logging
 import pandas as pd
 from datetime import datetime
-# Assuming Config class exists in config.py
-# If not, you need to ensure Config class is accessible or redefine it.
 from config import Config
 
-# Import all extractor functions from the new case_extractors.py
-from validation_rules.case_extractors import (
+# 从新的拆分文件中导入所有提取器函数
+from validation_rules.case_extractors_names import (
     extract_name_from_case_report,
+    extract_name_from_decision,
+    extract_name_from_trial_report
+)
+from validation_rules.case_extractors_gender import (
     extract_gender_from_case_report,
     extract_gender_from_decision_report,
     extract_gender_from_investigation_report,
-    extract_gender_from_trial_report,
+    extract_gender_from_trial_report
+)
+from validation_rules.case_extractors_birth_info import (
     extract_birth_year_from_case_report,
     extract_birth_year_from_decision_report,
     extract_birth_year_from_investigation_report,
@@ -19,17 +23,19 @@ from validation_rules.case_extractors import (
     extract_birth_date_from_case_report,
     extract_birth_date_from_decision_report,
     extract_birth_date_from_investigation_report,
-    extract_birth_date_from_trial_report,
+    extract_birth_date_from_trial_report
+)
+from validation_rules.case_extractors_demographics import (
     extract_education_from_case_report,
     extract_ethnicity_from_case_report,
     extract_ethnicity_from_decision_report,
     extract_ethnicity_from_investigation_report,
-    extract_ethnicity_from_trial_report,
+    extract_ethnicity_from_trial_report
+)
+from validation_rules.case_extractors_party_info import (
     extract_party_member_from_case_report,
     extract_party_member_from_decision_report,
-    extract_party_joining_date_from_case_report,
-    extract_name_from_decision,
-    extract_name_from_trial_report
+    extract_party_joining_date_from_case_report
 )
 
 logger = logging.getLogger(__name__)
