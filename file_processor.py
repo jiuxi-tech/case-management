@@ -69,14 +69,28 @@ def process_upload(request, app):
 
 
         # 这一部分是处理线索登记表的逻辑，与本次修改的立案登记表无关，但保留原样
+        # get_validation_issues 现在返回 (mismatch_indices, issues_list)
+        # issues_list 中的每个元素现在是 (original_df_index, clue_code_value, issue_description)
         mismatch_indices, issues_list = get_validation_issues(df)
 
         if issues_list:
-            issues_df = pd.DataFrame(columns=['序号', '问题'])
-            current_index = 1
-            for i, (index, issue) in enumerate(issues_list, 1):
-                issues_df = pd.concat([issues_df, pd.DataFrame({'序号': [current_index], '问题': [issue]})], ignore_index=True)
-                current_index += 1
+            # 为 issues_df 准备数据，现在 issues_list 已经包含了受理线索编码
+            data_for_issues_df = []
+            
+            # 关键修改：确保这里能够解包三个值 (original_df_index, clue_code_value, issue_description)
+            # 之前的错误是因为这里只预期解包两个值 (index, issue)
+            for i, (original_df_index, clue_code_value, issue_description) in enumerate(issues_list):
+                current_serial_number = i + 1
+                
+                data_for_issues_df.append({
+                    '序号': current_serial_number,
+                    '受理线索编码': clue_code_value, # 直接使用从 get_validation_issues 传过来的值
+                    '问题': issue_description
+                })
+            
+            # 使用列表推导式高效创建 DataFrame
+            issues_df = pd.DataFrame(data_for_issues_df)
+            
             issue_filename = f"线索编号{datetime.now().strftime('%Y%m%d')}.xlsx"
             issue_path = os.path.join(Config.CLUE_FOLDER, issue_filename)
             issues_df.to_excel(issue_path, index=False)
@@ -84,6 +98,8 @@ def process_upload(request, app):
 
         original_filename = file.filename.replace('.xlsx', '_副本.xlsx').replace('.xls', '_副本.xlsx')
         original_path = os.path.join(Config.CLUE_FOLDER, original_filename)
+        # format_excel 函数可能也需要调整其对 issues_list 中元组结构的预期
+        # 这里仅传入 issues_list，如果 format_excel 有问题，需要进一步检查
         format_excel(df, mismatch_indices, original_path, issues_list)
 
         if not all(header in df.columns for header in required_headers) or \

@@ -27,7 +27,7 @@ def normalize_date(date_str, full_date=False):
     msg = f"标准化日期: 原始 '{date_str}'"
     logger.debug(msg)
     print(msg)
-    # 匹配 YYYY/M、YYYY年M月、YYYY年M月D日、YYYY年M月生
+    # 匹配YYYY/M、YYYY年M月、YYYY年M月D日、YYYY年M月生
     match = re.match(r'(\d{4})[年/-](\d{1,2})(?:[月/-](\d{1,2})[日]?)?(?:生)?', date_str)
     if match:
         year, month, day = match.groups()
@@ -224,6 +224,10 @@ def validate_ethnicity(ethnicity, report_text):
 def get_validation_issues(df):
     mismatch_indices = set()
     issues_list = []
+    
+    # 获取受理线索编码的列名，如果Config中没有定义，则默认为"受理线索编码"
+    accepted_clue_code_col = Config.COLUMN_MAPPINGS.get("accepted_clue_code", "受理线索编码")
+
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute('SELECT authority, agency FROM authority_agency_dict WHERE category = ?', ('NSL',))
@@ -237,11 +241,16 @@ def get_validation_issues(df):
         msg = f"处理行 {index + 1}"
         logger.debug(msg)
         print(msg)
+        
+        # 获取当前行的受理线索编码
+        clue_code = row[accepted_clue_code_col] if accepted_clue_code_col in df.columns else "N/A"
+        
         authority = str(row["办理机关"]).strip().lower() if pd.notna(row["办理机关"]) else ''
         agency = str(row["填报单位名称"]).strip().lower() if pd.notna(row["填报单位名称"]) else ''
         if validate_agency(authority, agency, db_dict):
             mismatch_indices.add(index)
-            issues_list.append((index, Config.VALIDATION_RULES["inconsistent_agency"]))
+            # 在 issues_list 中添加受理线索编码
+            issues_list.append((index, clue_code, Config.VALIDATION_RULES["inconsistent_agency"]))
             msg = f"行 {index + 1} - 办理机关: {authority}, 填报单位名称: {agency} 不匹配"
             logger.info(msg)
             print(msg)
@@ -250,25 +259,25 @@ def get_validation_issues(df):
         report_text = row["处置情况报告"] if "处置情况报告" in df.columns else ''
         report_name = extract_name_from_report(report_text)
         if pd.isna(report_text):
-            issues_list.append((index, Config.VALIDATION_RULES["empty_report"]))
+            issues_list.append((index, clue_code, Config.VALIDATION_RULES["empty_report"]))
             msg = f"行 {index + 1} - 处置情况报告为空"
             logger.info(msg)
             print(msg)
         elif validate_name(reported_person, report_name):
-            issues_list.append((index, Config.VALIDATION_RULES["inconsistent_name"]))
+            issues_list.append((index, clue_code, Config.VALIDATION_RULES["inconsistent_name"]))
             msg = f"行 {index + 1} - 被反映人与报告姓名不一致"
             logger.info(msg)
             print(msg)
 
         if Config.COLUMN_MAPPINGS["acceptance_time"] in df.columns and validate_acceptance_time(row[Config.COLUMN_MAPPINGS["acceptance_time"]]):
-            issues_list.append((index, Config.VALIDATION_RULES["confirm_acceptance_time"]))
+            issues_list.append((index, clue_code, Config.VALIDATION_RULES["confirm_acceptance_time"]))
             msg = f"行 {index + 1} - 受理时间需确认"
             logger.info(msg)
             print(msg)
 
         organization_measure = str(row[Config.COLUMN_MAPPINGS["organization_measure"]]).strip() if pd.notna(row[Config.COLUMN_MAPPINGS["organization_measure"]]) else ''
         if validate_organization_measure(organization_measure, report_text):
-            issues_list.append((index, Config.VALIDATION_RULES["inconsistent_organization_measure"]))
+            issues_list.append((index, clue_code, Config.VALIDATION_RULES["inconsistent_organization_measure"]))
             msg = f"行 {index + 1} - 组织措施与报告不一致: {organization_measure}"
             logger.info(msg)
             print(msg)
@@ -281,7 +290,7 @@ def get_validation_issues(df):
             if join_match:
                 report_jt = normalize_date(join_match.group(1))
         if normalized_jt and report_jt and normalized_jt != report_jt:
-            issues_list.append((index, Config.VALIDATION_RULES["inconsistent_joining_party_time"]))
+            issues_list.append((index, clue_code, Config.VALIDATION_RULES["inconsistent_joining_party_time"]))
             msg = f"行 {index + 1} - 入党时间与报告不一致: {joining_party_time}"
             logger.info(msg)
             print(msg)
@@ -291,7 +300,7 @@ def get_validation_issues(df):
             normalized_bd = normalize_date(birth_date)
             report_bd = extract_birth_date_from_report(report_text)
             if not normalized_bd or not report_bd or normalized_bd != report_bd:
-                issues_list.append((index, Config.VALIDATION_RULES["highlight_birth_date"]))
+                issues_list.append((index, clue_code, Config.VALIDATION_RULES["highlight_birth_date"]))
                 msg = f"行 {index + 1} - 出生年月与报告不一致: {birth_date}"
                 logger.info(msg)
                 print(msg)
@@ -304,42 +313,42 @@ def get_validation_issues(df):
             logger.debug(msg)
             print(msg)
             if normalized_ct and report_ct and normalized_ct != report_ct:
-                issues_list.append((index, Config.VALIDATION_RULES["highlight_completion_time"]))
+                issues_list.append((index, clue_code, Config.VALIDATION_RULES["highlight_completion_time"]))
                 msg = f"行 {index + 1} - 办结时间与报告落款不一致: {completion_time}"
                 logger.info(msg)
                 print(msg)
 
         if Config.COLUMN_MAPPINGS["disposal_method_1"] in df.columns:
             disposal_method = row[Config.COLUMN_MAPPINGS["disposal_method_1"]]
-            issues_list.append((index, Config.VALIDATION_RULES["highlight_disposal_method_1"]))
+            issues_list.append((index, clue_code, Config.VALIDATION_RULES["highlight_disposal_method_1"]))
             msg = f"行 {index + 1} - 处置方式1二级需确认: {disposal_method}"
             logger.info(msg)
             print(msg)
 
         if "收缴金额（万元）" in df.columns and validate_collection_amount(report_text):
-            issues_list.append((index, Config.VALIDATION_RULES["highlight_collection_amount"]))
+            issues_list.append((index, clue_code, Config.VALIDATION_RULES["highlight_collection_amount"]))
 
         if "没收金额" in df.columns and validate_confiscation_amount(report_text):
-            issues_list.append((index, Config.VALIDATION_RULES["highlight_confiscation_amount"]))
+            issues_list.append((index, clue_code, Config.VALIDATION_RULES["highlight_confiscation_amount"]))
 
         if "责令退赔金额" in df.columns and validate_compensation_amount(report_text):
-            issues_list.append((index, Config.VALIDATION_RULES["highlight_compensation_amount"]))
+            issues_list.append((index, clue_code, Config.VALIDATION_RULES["highlight_compensation_amount"]))
 
         if "登记上交金额" in df.columns and validate_registration_amount(report_text):
-            issues_list.append((index, Config.VALIDATION_RULES["highlight_registration_amount"]))
+            issues_list.append((index, clue_code, Config.VALIDATION_RULES["highlight_registration_amount"]))
 
         if "追缴失职渎职滥用职权造成的损失金额" in df.columns and validate_recovery_amount(report_text):
-            issues_list.append((index, Config.VALIDATION_RULES["highlight_recovery_amount"]))
+            issues_list.append((index, clue_code, Config.VALIDATION_RULES["highlight_recovery_amount"]))
 
         if Config.COLUMN_MAPPINGS["ethnicity"] in df.columns:
             ethnicity = row[Config.COLUMN_MAPPINGS["ethnicity"]]
             if validate_ethnicity(ethnicity, report_text):
-                issues_list.append((index, Config.VALIDATION_RULES["inconsistent_ethnicity"]))
+                issues_list.append((index, clue_code, Config.VALIDATION_RULES["inconsistent_ethnicity"]))
                 msg = f"行 {index + 1} - 民族不一致: 字段值 '{ethnicity}', 报告值 '{extract_ethnicity_from_report(report_text)}'"
                 logger.info(msg)
                 print(msg)
 
-        msg = f"行 {index + 1} issues_list: {[(i, issue) for i, issue in issues_list if i == index]}"
+        msg = f"行 {index + 1} issues_list: {[(i, c, issue) for i, c, issue in issues_list if i == index]}"
         logger.debug(msg)
         print(msg)
 

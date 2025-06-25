@@ -1,4 +1,4 @@
-# 配置文件
+# config.py
 import os
 from datetime import datetime
 
@@ -19,7 +19,9 @@ class Config:
         "ethnicity": "民族",
         "birth_date": "出生年月",
         "completion_time": "办结时间",
-        "disposal_method_1": "处置方式1二级"
+        "disposal_method_1": "处置方式1二级",
+        "disposal_report": "处置情况报告", # 确保这里也有
+        "accepted_clue_code": "受理线索编码" # 新增的受理线索编码字段
     }
     
     # Excel 格式
