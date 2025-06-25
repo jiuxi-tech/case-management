@@ -128,10 +128,10 @@ def process_case_upload(request, app):
             return redirect(request.url)
 
         # 验证字段关系
-        # 接收所有九个返回值
-        mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices = validate_case_relationships(df)
+        # *** 关键修改：现在接收所有十个返回值 ***
+        mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices = validate_case_relationships(df)
         
-        # 传递所有九个索引列表给 generate_case_files
+        # *** 关键修改：现在传递 brief_case_details_mismatch_indices 给 generate_case_files ***
         copy_path, case_num_path = generate_case_files(
             df, 
             file.filename, 
@@ -144,7 +144,8 @@ def process_case_upload(request, app):
             education_mismatch_indices,
             ethnicity_mismatch_indices,
             party_member_mismatch_indices,
-            party_joining_date_mismatch_indices
+            party_joining_date_mismatch_indices,
+            brief_case_details_mismatch_indices # 新增的参数
         )
 
         flash('文件上传处理成功！', 'success')  # 添加成功提示

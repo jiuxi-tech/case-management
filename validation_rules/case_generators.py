@@ -7,24 +7,53 @@ from config import Config # Assuming Config class exists in config.py
 
 logger = logging.getLogger(__name__)
 
-def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices):
-    """Generate copy and case number Excel files based on analysis."""
+def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices, brief_case_details_mismatch_indices): # 新增 brief_case_details_mismatch_indices
+    """
+    根据分析结果生成副本和立案编号Excel文件。
+    该函数将原始DataFrame写入一个副本文件，对不匹配的单元格进行标红。
+    同时，它会生成一个立案编号文件，其中包含所有发现的问题列表。
+
+    参数:
+    df (pd.DataFrame): 原始Excel数据的DataFrame。
+    original_filename (str): 原始上传的文件名。
+    upload_dir (str): 上传文件的根目录。
+    mismatch_indices (set): 姓名不匹配的行索引集合。
+    gender_mismatch_indices (set): 性别不匹配的行索引集合。
+    age_mismatch_indices (set): 年龄不匹配的行索引集合。
+    issues_list (list): 包含所有问题的列表，每个问题是一个(索引, 问题描述)元组。
+    brief_case_details_mismatch_indices (set): 简要案情不匹配的行索引集合。
+    birth_date_mismatch_indices (set): 出生年月不匹配的行索引集合。
+    education_mismatch_indices (set): 学历不匹配的行索引集合。
+    ethnicity_mismatch_indices (set): 民族不匹配的行索引集合。
+    party_member_mismatch_indices (set): 是否中共党员不匹配的行索引集合。
+    party_joining_date_mismatch_indices (set): 入党时间不匹配的行索引集合。
+
+    返回:
+    tuple: (copy_path, case_num_path) 生成的副本文件路径和立案编号文件路径。
+           如果生成失败，返回 (None, None)。
+    """
     today = datetime.now().strftime('%Y%m%d')
     case_dir = os.path.join(upload_dir, today, 'case')
-    os.makedirs(case_dir, exist_ok=True)
+    os.makedirs(case_dir, exist_ok=True) # 确保目录存在
 
     copy_filename = original_filename.replace('.xlsx', '_副本.xlsx').replace('.xls', '_副本.xlsx')
     copy_path = os.path.join(case_dir, copy_filename)
+    
+    # 使用xlsxwriter引擎创建ExcelWriter，以便进行高级格式设置
     with pd.ExcelWriter(copy_path, engine='xlsxwriter') as writer:
-        df.to_excel(writer, sheet_name='Sheet1', index=False)
+        df.to_excel(writer, sheet_name='Sheet1', index=False) # 将DataFrame写入Excel
         workbook = writer.book
         worksheet = writer.sheets['Sheet1']
+        
+        # 定义红色背景格式
         red_format = workbook.add_format({'bg_color': Config.FORMATS["red"]})
 
         try:
+            # 获取需要标红的列的索引
             col_index_investigated_person = df.columns.get_loc("被调查人")
             col_index_gender = df.columns.get_loc("性别")
             col_index_age = df.columns.get_loc("年龄")
+            col_index_brief_case_details = df.columns.get_loc("简要案情") 
             col_index_birth_date = df.columns.get_loc("出生年月")
             col_index_education = df.columns.get_loc("学历") 
             col_index_ethnicity = df.columns.get_loc("民族") 
@@ -35,6 +64,7 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
             print(f"Excel 文件缺少必要的列: {e}")
             return None, None 
 
+        # 遍历DataFrame的每一行，根据不匹配的索引进行标红
         for idx in range(len(df)):
             if idx in mismatch_indices:
                 worksheet.write(idx + 1, col_index_investigated_person, 
@@ -47,6 +77,10 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
             if idx in age_mismatch_indices:
                 worksheet.write(idx + 1, col_index_age,
                                 df.iloc[idx]["年龄"] if pd.notna(df.iloc[idx]["年龄"]) else '', red_format)
+
+            if idx in brief_case_details_mismatch_indices: # 对简要案情进行标红
+                worksheet.write(idx + 1, col_index_brief_case_details,
+                                df.iloc[idx]["简要案情"] if pd.notna(df.iloc[idx]["简要案情"]) else '', red_format)
 
             if idx in birth_date_mismatch_indices:
                 worksheet.write(idx + 1, col_index_birth_date,
@@ -68,7 +102,6 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
                 worksheet.write(idx + 1, col_index_party_joining_date,
                                 df.iloc[idx]["入党时间"] if pd.notna(df.iloc[idx]["入党时间"]) else '', red_format)
 
-
     logger.info(f"Generated copy file with highlights: {copy_path}")
     print(f"生成高亮后的副本文件: {copy_path}")
 
@@ -77,12 +110,13 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     case_num_path = os.path.join(case_dir, case_num_filename)
     issues_df = pd.DataFrame(columns=['序号', '问题'])
     if not issues_list:
-        issues_df = pd.DataFrame({'序号': [1], '问题': ['无问题']})
+        issues_df = pd.DataFrame({'序号': [1], '问题': ['无问题']}) # 如果没有问题，则显示“无问题”
     else:
+        # 将issues_list转换为DataFrame，以便写入Excel
         data = [{'序号': i + 1, '问题': issue} for i, (index, issue) in enumerate(issues_list)]
         issues_df = pd.DataFrame(data)
 
-    issues_df.to_excel(case_num_path, index=False)
+    issues_df.to_excel(case_num_path, index=False) # 写入立案编号文件
     logger.info(f"Generated case number file: {case_num_path}")
     print(f"生成立案编号表: {case_num_path}")
 

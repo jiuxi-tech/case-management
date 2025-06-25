@@ -2,6 +2,7 @@ import logging
 import pandas as pd
 from datetime import datetime
 from config import Config
+import re # 导入 re 模块用于去除空白符
 
 # 从新的拆分文件中导入所有提取器函数
 from validation_rules.case_extractors_names import (
@@ -30,7 +31,9 @@ from validation_rules.case_extractors_demographics import (
     extract_ethnicity_from_case_report,
     extract_ethnicity_from_decision_report,
     extract_ethnicity_from_investigation_report,
-    extract_ethnicity_from_trial_report
+    extract_ethnicity_from_trial_report,
+    extract_suspected_violation_from_case_report, # 新增导入
+    extract_suspected_violation_from_decision # 新增导入
 )
 from validation_rules.case_extractors_party_info import (
     extract_party_member_from_case_report,
@@ -45,6 +48,7 @@ def validate_case_relationships(df):
     mismatch_indices = set()
     gender_mismatch_indices = set()
     age_mismatch_indices = set()
+    brief_case_details_mismatch_indices = set() # 新增简要案情不一致索引集合
     birth_date_mismatch_indices = set()
     education_mismatch_indices = set()
     ethnicity_mismatch_indices = set()
@@ -56,12 +60,13 @@ def validate_case_relationships(df):
     required_headers = [
         "被调查人", "性别", "年龄", "出生年月", "学历", "民族", 
         "是否中共党员", "入党时间", "立案报告", "处分决定", 
-        "审查调查报告", "审理报告"
+        "审查调查报告", "审理报告", "简要案情" # 新增简要案情列
     ]
     if not all(header in df.columns for header in required_headers):
         logger.error(f"Missing required headers for case registration: {required_headers}")
         print(f"缺少必要的表头: {required_headers}")
         return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list, \
+               brief_case_details_mismatch_indices, \
                birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, \
                party_member_mismatch_indices, party_joining_date_mismatch_indices
 
@@ -89,6 +94,7 @@ def validate_case_relationships(df):
                 age_mismatch_indices.add(index)
                 issues_list.append((index, "N2年龄字段格式不正确"))
 
+        excel_brief_case_details = str(row["简要案情"]).strip() if pd.notna(row["简要案情"]) else '' # 获取简要案情
         excel_birth_date = str(row["出生年月"]).strip() if pd.notna(row["出生年月"]) else ''
         excel_education = str(row["学历"]).strip() if pd.notna(row["学历"]) else '' 
         excel_ethnicity = str(row["民族"]).strip() if pd.notna(row["民族"]) else ''
@@ -174,6 +180,44 @@ def validate_case_relationships(df):
             issues_list.append((index, "N2年龄与CY2审理报告不一致"))
             logger.info(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 审理报告计算年龄 ('{calculated_age_from_trial}')")
             print(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 审理报告计算年龄 ('{calculated_age_from_trial}')")
+
+        # --- Brief Case Details matching rules ---
+        is_brief_case_details_mismatch = False
+        extracted_brief_case_details = None
+
+        if pd.isna(row["处分决定"]) or decision_text_raw == '':
+            # 当处分决定字段为空时，与立案报告的涉嫌违纪问题段落进行对比
+            extracted_brief_case_details = extract_suspected_violation_from_case_report(report_text_raw)
+            logger.info(f"行 {index + 1} - 处分决定为空，从立案报告提取简要案情：'{extracted_brief_case_details}'")
+            print(f"行 {index + 1} - 处分决定为空，从立案报告提取简要案情：'{extracted_brief_case_details}'")
+        else:
+            # 当处分决定不为空时，与处分决定的涉嫌违纪问题段落进行对比
+            # 需要提供被调查人姓名，这里使用excel_investigated_person
+            extracted_brief_case_details = extract_suspected_violation_from_decision(decision_text_raw, investigated_person)
+            logger.info(f"行 {index + 1} - 处分决定不为空，从处分决定提取简要案情：'{extracted_brief_case_details}'")
+            print(f"行 {index + 1} - 处分决定不为空，从处分决定提取简要案情：'{extracted_brief_case_details}'")
+
+        # 对比逻辑
+        if extracted_brief_case_details is None:
+            # 如果未能从任何报告中提取到内容，但Excel有值，则认为不一致
+            if excel_brief_case_details:
+                is_brief_case_details_mismatch = True
+                issues_list.append((index, "BE简要案情与相关报告不一致（未能提取到内容）"))
+                logger.info(f"行 {index + 1} - 简要案情不匹配: Excel有值 ('{excel_brief_case_details}') 但未能从报告中提取。")
+                print(f"行 {index + 1} - 简要案情不匹配: Excel有值 ('{excel_brief_case_details}') 但未能从报告中提取。")
+        else:
+            # 清理Excel中的简要案情，移除所有空白符进行精准匹配
+            cleaned_excel_brief_case_details = re.sub(r'\s+', '', excel_brief_case_details)
+            
+            if cleaned_excel_brief_case_details != extracted_brief_case_details:
+                is_brief_case_details_mismatch = True
+                issues_list.append((index, "BE简要案情与CU处分决定不一致")) # 统一问题描述
+                logger.info(f"行 {index + 1} - 简要案情不匹配: Excel简要案情 ('{cleaned_excel_brief_case_details}') vs 提取简要案情 ('{extracted_brief_case_details}')")
+                print(f"行 {index + 1} - 简要案情不匹配: Excel简要案情 ('{cleaned_excel_brief_case_details}') vs 提取简要案情 ('{extracted_brief_case_details}')")
+
+        if is_brief_case_details_mismatch:
+            brief_case_details_mismatch_indices.add(index)
+
 
         # --- Birth Date matching rules ---
         extracted_birth_date_from_report = extract_birth_date_from_case_report(report_text_raw)
@@ -440,6 +484,6 @@ def validate_case_relationships(df):
             logger.info(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
             print(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
 
-    return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, issues_list, \
+    return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, \
            birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, \
            party_member_mismatch_indices, party_joining_date_mismatch_indices
