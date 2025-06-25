@@ -53,6 +53,21 @@ def process_upload(request, app):
             flash('Excel文件缺少必要的表头“填报单位名称”、“办理机关”、“被反映人”、“处置情况报告”、“受理时间”或“组织措施”', 'error')
             return redirect(request.url)
 
+        # 新增的逻辑：检查“处置情况报告”字段是否为空
+        # Ensure 'disposal_report' key exists in COLUMN_MAPPINGS for robustness
+        disposal_report_column = Config.COLUMN_MAPPINGS.get("disposal_report", "处置情况报告") # Default to "处置情况报告" if not found
+        if disposal_report_column not in df.columns:
+            logger.error(f"Excel文件缺少必要表头: {disposal_report_column}")
+            flash(f'Excel文件缺少必要的表头“{disposal_report_column}”', 'error')
+            return redirect(request.url)
+            
+        if df[disposal_report_column].isnull().all():
+            logger.error(f"线索登记表“{disposal_report_column}”字段为空")
+            flash(f'线索登记表“{disposal_report_column}”字段为空', 'error')
+            # If the column is empty, stop further processing and do not generate files
+            return redirect(request.url)
+
+
         # 这一部分是处理线索登记表的逻辑，与本次修改的立案登记表无关，但保留原样
         mismatch_indices, issues_list = get_validation_issues(df)
 
