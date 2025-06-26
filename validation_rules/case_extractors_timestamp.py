@@ -11,7 +11,7 @@ def extract_timestamp_from_filing_decision(decision_text):
     if not decision_text or not isinstance(decision_text, str):
         msg = f"extract_timestamp_from_filing_decision: decision_text is empty or invalid: {decision_text}"
         logger.info(msg)
-        print(msg)
+        print(msg) # Added print statement
         return None, None # 返回两个None
 
     # 匹配“YYYY年M月D日”或“YYYY年MM月DD日”等形式的日期
@@ -31,10 +31,10 @@ def extract_timestamp_from_filing_decision(decision_text):
         
         msg = f"extract_timestamp_from_filing_decision: Extracted original '{original_matched_string}', standardized to '{standardized_date}'."
         logger.info(msg)
-        print(msg)
+        print(msg) # Added print statement
         return original_matched_string, standardized_date
     else:
         msg = f"extract_timestamp_from_filing_decision: No timestamp found in filing decision document: {decision_text[:100]}..."
         logger.warning(msg)
-        print(msg)
+        print(msg) # Added print statement
         return None, None # 返回两个None
