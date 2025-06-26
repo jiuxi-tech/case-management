@@ -144,18 +144,18 @@ def process_case_upload(request, app):
     try: 
         df = pd.read_excel(file_path) 
         required_headers = Config.CASE_REQUIRED_HEADERS 
-        # 新增：确保“案件编码”、“涉案人员编码”、“立案时间”、“立案决定书”、“纪委立案时间”、“纪委立案机关”和“填报单位名称”都在必要表头中
-        required_headers.extend(["案件编码", "涉案人员编码", "立案时间", "立案决定书", "纪委立案时间", "纪委立案机关", "填报单位名称"])
+        # 新增：确保“案件编码”、“涉案人员编码”、“立案时间”、“立案决定书”、“纪委立案时间”、“纪委立案机关”、“监委立案时间”、“监委立案机关”和“填报单位名称”都在必要表头中
+        required_headers.extend(["案件编码", "涉案人员编码", "立案时间", "立案决定书", "纪委立案时间", "纪委立案机关", "监委立案时间", "监委立案机关", "填报单位名称"])
 
         if not all(header in df.columns for header in required_headers): 
             logger.error(f"立案登记表缺少必要表头: {required_headers}") 
             flash('Excel文件缺少必要的表头', 'error') 
             return redirect(request.url) 
 
-        # 验证字段关系 - 接收所有13个返回值 (原来11个 + 新增的 2 个)
-        mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices = validate_case_relationships(df) 
+        # 验证字段关系 - 接收所有15个返回值 (原来13个 + 新增的 2 个)
+        mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices = validate_case_relationships(df) 
         
-        # 生成副本和立案编号文件 - 传递所有13个参数
+        # 生成副本和立案编号文件 - 传递所有15个参数
         copy_path, case_num_path = generate_case_files( 
             df,  
             file.filename,  
@@ -171,8 +171,10 @@ def process_case_upload(request, app):
             party_joining_date_mismatch_indices, 
             brief_case_details_mismatch_indices,
             filing_time_mismatch_indices,
-            disciplinary_committee_filing_time_mismatch_indices, # 新增的参数
-            disciplinary_committee_filing_authority_mismatch_indices # 新增的参数
+            disciplinary_committee_filing_time_mismatch_indices,
+            disciplinary_committee_filing_authority_mismatch_indices,
+            supervisory_committee_filing_time_mismatch_indices, # 新增的参数
+            supervisory_committee_filing_authority_mismatch_indices # 新增的参数
         ) 
 
         flash('文件上传处理成功！', 'success') 

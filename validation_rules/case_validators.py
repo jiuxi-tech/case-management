@@ -60,6 +60,8 @@ def validate_case_relationships(df):
     filing_time_mismatch_indices = set() # 新增立案时间不一致索引集合
     disciplinary_committee_filing_time_mismatch_indices = set() # 新增纪委立案时间不一致索引集合
     disciplinary_committee_filing_authority_mismatch_indices = set() # 新增纪委立案机关不一致索引集合
+    supervisory_committee_filing_time_mismatch_indices = set() # 新增监委立案时间不一致索引集合
+    supervisory_committee_filing_authority_mismatch_indices = set() # 新增监委立案机关不一致索引集合
 
     # issues_list 现在将包含 (index, case_code, person_code, issue_description)
     issues_list = [] 
@@ -71,7 +73,7 @@ def validate_case_relationships(df):
         "审查调查报告", "审理报告", "简要案情", # 现有字段
         "案件编码", "涉案人员编码", # 新增字段
         "立案时间", "立案决定书", # 现有立案时间相关字段
-        "纪委立案时间", "纪委立案机关", "填报单位名称" # 新增立案时间/机关相关字段
+        "纪委立案时间", "纪委立案机关", "监委立案时间", "监委立案机关", "填报单位名称" # 新增立案时间/机关相关字段
     ]
     if not all(header in df.columns for header in required_headers):
         logger.error(f"Missing required headers for case registration: {required_headers}")
@@ -80,7 +82,8 @@ def validate_case_relationships(df):
         return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, \
                birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, \
                party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, \
-               disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices # 添加新的返回值
+               disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, \
+               supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices # 添加新的返回值
 
     current_year = datetime.now().year
 
@@ -520,13 +523,16 @@ def validate_case_relationships(df):
             logger.info(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
             print(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
 
-    # 调用新的立案时间规则验证函数
+    # 调用立案时间规则验证函数
     validate_filing_time(df, issues_list, filing_time_mismatch_indices,
                            disciplinary_committee_filing_time_mismatch_indices,
-                           disciplinary_committee_filing_authority_mismatch_indices) # 传递新增的集合
+                           disciplinary_committee_filing_authority_mismatch_indices,
+                           supervisory_committee_filing_time_mismatch_indices, # 传递新增的集合
+                           supervisory_committee_filing_authority_mismatch_indices) # 传递新增的集合
 
     # 返回所有可能的不一致索引集以及更新后的 issues_list
     return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, \
            birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, \
            party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, \
-           disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices # 添加新的返回值
+           disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, \
+           supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices # 添加新的返回值
