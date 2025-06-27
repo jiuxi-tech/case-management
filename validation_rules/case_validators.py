@@ -66,6 +66,7 @@ def validate_case_relationships(df):
     supervisory_committee_filing_authority_mismatch_indices = set() # 新增监委立案机关不一致索引集合
     case_report_keyword_mismatch_indices = set() # 新增立案报告关键字不一致索引集合
     disposal_spirit_mismatch_indices = set() # 新增是否违反中央八项规定精神不一致索引集合
+    voluntary_confession_highlight_indices = set() # 新增是否主动交代问题标黄索引集合
 
     # issues_list 现在将包含 (index, case_code, person_code, issue_description)
     issues_list = [] 
@@ -78,7 +79,8 @@ def validate_case_relationships(df):
         "案件编码", "涉案人员编码", # 新增字段
         "立案时间", "立案决定书", # 现有立案时间相关字段
         "纪委立案时间", "纪委立案机关", "监委立案时间", "监委立案机关", "填报单位名称", # 新增立案时间/机关相关字段
-        "是否违反中央八项规定精神" # 新增字段
+        "是否违反中央八项规定精神", # 新增字段
+        "是否主动交代问题" # 新增字段
     ]
     if not all(header in df.columns for header in required_headers):
         logger.error(f"Missing required headers for case registration: {required_headers}")
@@ -89,7 +91,7 @@ def validate_case_relationships(df):
                party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, \
                disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, \
                supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices, \
-               case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices # 添加新的返回值
+               case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, voluntary_confession_highlight_indices # 添加新的返回值
 
     current_year = datetime.now().year
 
@@ -560,6 +562,16 @@ def validate_case_relationships(df):
             logger.info(f"行 {index + 1} - 立案报告中未发现指定关键字。")
             print(f"行 {index + 1} - 立案报告中未发现指定关键字。")
 
+        # --- 新增“是否主动交代问题”规则 ---
+        if "主动交代" in trial_text_raw:
+            voluntary_confession_highlight_indices.add(index)
+            issues_list.append((index, excel_case_code, excel_person_code, "请基于CY审理报告进行人工确认主动交代"))
+            logger.warning(f"行 {index + 1} - 规则触发: 审理报告中发现“主动交代”，请人工确认“是否主动交代问题”字段。")
+            print(f"行 {index + 1} - 规则触发: 审理报告中发现“主动交代”，请人工确认“是否主动交代问题”字段。")
+        else:
+            logger.info(f"行 {index + 1} - 审理报告中未发现“主动交代”关键字。")
+            print(f"行 {index + 1} - 审理报告中未发现“主动交代”关键字。")
+
 
     # 调用立案时间规则验证函数
     validate_filing_time(df, issues_list, filing_time_mismatch_indices,
@@ -577,4 +589,4 @@ def validate_case_relationships(df):
            party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, \
            disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, \
            supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices, \
-           case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices
+           case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, voluntary_confession_highlight_indices
