@@ -67,6 +67,7 @@ def validate_case_relationships(df):
     case_report_keyword_mismatch_indices = set() # 新增立案报告关键字不一致索引集合
     disposal_spirit_mismatch_indices = set() # 新增是否违反中央八项规定精神不一致索引集合
     voluntary_confession_highlight_indices = set() # 新增是否主动交代问题标黄索引集合
+    closing_time_mismatch_indices = set() # 新增结案时间不一致索引集合
 
     # issues_list 现在将包含 (index, case_code, person_code, issue_description)
     issues_list = [] 
@@ -80,7 +81,8 @@ def validate_case_relationships(df):
         "立案时间", "立案决定书", # 现有立案时间相关字段
         "纪委立案时间", "纪委立案机关", "监委立案时间", "监委立案机关", "填报单位名称", # 新增立案时间/机关相关字段
         "是否违反中央八项规定精神", # 新增字段
-        "是否主动交代问题" # 新增字段
+        "是否主动交代问题", # 新增字段
+        "结案时间" # 新增字段
     ]
     if not all(header in df.columns for header in required_headers):
         logger.error(f"Missing required headers for case registration: {required_headers}")
@@ -91,7 +93,8 @@ def validate_case_relationships(df):
                party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, \
                disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, \
                supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices, \
-               case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, voluntary_confession_highlight_indices # 添加新的返回值
+               case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, voluntary_confession_highlight_indices, \
+               closing_time_mismatch_indices # 添加新的返回值
 
     current_year = datetime.now().year
 
@@ -459,7 +462,7 @@ def validate_case_relationships(df):
                 logger.info(f"行 {index + 1} - 是否中共党员不匹配: Excel字段为空，但处分决定中提取到“是”。")
                 print(f"行 {index + 1} - 是否中共党员不匹配: Excel字段为空，但处分决定中提取到“是”。")
             elif extracted_party_member_from_decision == "否":
-                pass
+                pass # 如果Excel为空且处分决定提取为否，则认为一致
         elif extracted_party_member_from_decision is None:
             is_party_member_mismatch_decision = True
             issues_list.append((index, excel_case_code, excel_person_code, "T2是否中共党员与CU2处分决定不一致"))
@@ -469,11 +472,13 @@ def validate_case_relationships(df):
             is_party_member_mismatch_decision = True
             issues_list.append((index, excel_case_code, excel_person_code, "T2是否中共党员与CU2处分决定不一致"))
             logger.info(f"行 {index + 1} - 是否中共党员不匹配: Excel字段 ('{excel_party_member}') vs 处分决定提取 ('{extracted_party_member_from_decision}')。")
-            print(f"行 {index + 1} - 是否中共党员不匹配: Excel字段 ('{excel_party_member}') vs 处分决定提取 ('{extracted_party_member_from_decision}'))。")
+            print(f"行 {index + 1} - 是否中共党员不匹配: Excel字段 ('{excel_party_member}') vs 处分决定提取 ('{extracted_party_member_from_decision}')。")
         if is_party_member_mismatch_decision:
             party_member_mismatch_indices.add(index)
 
-        # --- Party Joining Date matching rule ---
+        # 这里省略了 Party_Member_Investigation 和 Party_Member_Trial 的比对，如果需要请自行添加
+
+        # --- Party Joining Date matching rules ---
         extracted_party_joining_date_from_report = extract_party_joining_date_from_case_report(report_text_raw)
         is_party_joining_date_mismatch = False
 
@@ -563,25 +568,28 @@ def validate_case_relationships(df):
             print(f"行 {index + 1} - 立案报告中未发现指定关键字。")
 
         # --- 新增“是否主动交代问题”规则 ---
-        if "主动交代" in trial_text_raw:
+        excel_voluntary_confession = str(row["是否主动交代问题"]).strip() if pd.notna(row["是否主动交代问题"]) else ''
+        trial_report_contains_confession = "主动交代" in trial_text_raw
+
+        logger.info(f"行 {index + 1} - 字段 '是否主动交代问题' Excel值: '{excel_voluntary_confession}'。审理报告中'主动交代'匹配结果: {trial_report_contains_confession}。")
+        print(f"行 {index + 1} - 字段 '是否主动交代问题' Excel值: '{excel_voluntary_confession}'。审理报告中'主动交代'匹配结果: {trial_report_contains_confession}。")
+
+        if trial_report_contains_confession:
             voluntary_confession_highlight_indices.add(index)
             issues_list.append((index, excel_case_code, excel_person_code, "请基于CY审理报告进行人工确认主动交代"))
-            logger.warning(f"行 {index + 1} - 规则触发: 审理报告中发现“主动交代”，请人工确认“是否主动交代问题”字段。")
-            print(f"行 {index + 1} - 规则触发: 审理报告中发现“主动交代”，请人工确认“是否主动交代问题”字段。")
-        else:
-            logger.info(f"行 {index + 1} - 审理报告中未发现“主动交代”关键字。")
-            print(f"行 {index + 1} - 审理报告中未发现“主动交代”关键字。")
+            logger.warning(f"行 {index + 1} - 规则触发: 审理报告中发现“主动交代”，已标记“是否主动交代问题”字段为黄色并添加问题描述。")
+            print(f"行 {index + 1} - 规则触发: 审理报告中发现“主动交代”，已标记“是否主动交代问题”字段为黄色并添加问题描述。")
 
 
     # 调用立案时间规则验证函数
     validate_filing_time(df, issues_list, filing_time_mismatch_indices,
-                           disciplinary_committee_filing_time_mismatch_indices,
-                           disciplinary_committee_filing_authority_mismatch_indices,
-                           supervisory_committee_filing_time_mismatch_indices,
-                           supervisory_committee_filing_authority_mismatch_indices)
+                         disciplinary_committee_filing_time_mismatch_indices,
+                         disciplinary_committee_filing_authority_mismatch_indices,
+                         supervisory_committee_filing_time_mismatch_indices,
+                         supervisory_committee_filing_authority_mismatch_indices)
 
-    # 调用处分和金额相关规则验证函数
-    validate_disposal_and_amount_rules(df, issues_list, disposal_spirit_mismatch_indices)
+    # 调用处分和金额相关规则验证函数，现在也传递 closing_time_mismatch_indices
+    validate_disposal_and_amount_rules(df, issues_list, disposal_spirit_mismatch_indices, closing_time_mismatch_indices)
 
     # 返回所有可能的不一致索引集以及更新后的 issues_list
     return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, \
@@ -589,4 +597,5 @@ def validate_case_relationships(df):
            party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, \
            disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, \
            supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices, \
-           case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, voluntary_confession_highlight_indices
+           case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, voluntary_confession_highlight_indices, \
+           closing_time_mismatch_indices

@@ -3,11 +3,20 @@ import pandas as pd
 import os
 from datetime import datetime
 import xlsxwriter
-from config import Config # Assuming Config class exists in config.py
+from config import Config
 
 logger = logging.getLogger(__name__)
 
-def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices, brief_case_details_mismatch_indices, filing_time_mismatch_indices, disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices, case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, voluntary_confession_highlight_indices): # 新增立案报告关键字不一致索引和是否违反中央八项规定精神不一致索引，以及是否主动交代问题标黄索引
+def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, 
+                       age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices, 
+                       ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices, 
+                       brief_case_details_mismatch_indices, filing_time_mismatch_indices, 
+                       disciplinary_committee_filing_time_mismatch_indices, 
+                       disciplinary_committee_filing_authority_mismatch_indices, 
+                       supervisory_committee_filing_time_mismatch_indices, 
+                       supervisory_committee_filing_authority_mismatch_indices, 
+                       case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, 
+                       voluntary_confession_highlight_indices, closing_time_mismatch_indices):
     """
     根据分析结果生成副本和立案编号Excel文件。
     该函数将原始DataFrame写入一个副本文件，对不匹配的单元格进行标红。
@@ -32,9 +41,10 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     disciplinary_committee_filing_authority_mismatch_indices (set): 纪委立案机关不匹配的行索引集合。
     supervisory_committee_filing_time_mismatch_indices (set): 监委立案时间不一致的行索引集合。
     supervisory_committee_filing_authority_mismatch_indices (set): 监委立案机关不一致的行索引集合。
-    case_report_keyword_mismatch_indices (set): 立案报告关键字不一致的行索引集合。（新增参数）
-    disposal_spirit_mismatch_indices (set): 是否违反中央八项规定精神不一致的行索引集合。（新增参数）
-    voluntary_confession_highlight_indices (set): 是否主动交代问题标黄索引集合。（新增参数）
+    case_report_keyword_mismatch_indices (set): 立案报告关键字不一致的行索引集合。
+    disposal_spirit_mismatch_indices (set): 是否违反中央八项规定精神不一致的行索引集合。
+    voluntary_confession_highlight_indices (set): 是否主动交代问题标黄索引集合。
+    closing_time_mismatch_indices (set): 结案时间不一致的行索引集合。
 
     返回:
     tuple: (copy_path, case_num_path) 生成的副本文件路径和立案编号文件路径。
@@ -42,49 +52,44 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     """
     today = datetime.now().strftime('%Y%m%d')
     case_dir = os.path.join(upload_dir, today, 'case')
-    os.makedirs(case_dir, exist_ok=True) # 确保目录存在
+    os.makedirs(case_dir, exist_ok=True)
 
     copy_filename = original_filename.replace('.xlsx', '_副本.xlsx').replace('.xls', '_副本.xlsx')
     copy_path = os.path.join(case_dir, copy_filename)
     
-    # 使用xlsxwriter引擎创建ExcelWriter，以便进行高级格式设置
     with pd.ExcelWriter(copy_path, engine='xlsxwriter') as writer:
-        df.to_excel(writer, sheet_name='Sheet1', index=False) # 将DataFrame写入Excel
+        df.to_excel(writer, sheet_name='Sheet1', index=False)
         workbook = writer.book
         worksheet = writer.sheets['Sheet1']
         
-        # 定义红色背景格式
         red_format = workbook.add_format({'bg_color': Config.FORMATS["red"]})
-        # 定义黄色背景格式
-        yellow_format = workbook.add_format({'bg_color': '#FFFF00'}) # 标准黄色
+        yellow_format = workbook.add_format({'bg_color': '#FFFF00'})
 
         try:
-            # 获取需要标红的列的索引
             col_index_investigated_person = df.columns.get_loc("被调查人")
             col_index_gender = df.columns.get_loc("性别")
             col_index_age = df.columns.get_loc("年龄")
-            col_index_brief_case_details = df.columns.get_loc("简要案情") 
+            col_index_brief_case_details = df.columns.get_loc("简要案情")
             col_index_birth_date = df.columns.get_loc("出生年月")
-            col_index_education = df.columns.get_loc("学历") 
-            col_index_ethnicity = df.columns.get_loc("民族") 
-            col_index_party_member = df.columns.get_loc("是否中共党员") 
+            col_index_education = df.columns.get_loc("学历")
+            col_index_ethnicity = df.columns.get_loc("民族")
+            col_index_party_member = df.columns.get_loc("是否中共党员")
             col_index_party_joining_date = df.columns.get_loc("入党时间")
-            col_index_filing_time = df.columns.get_loc("立案时间") 
+            col_index_filing_time = df.columns.get_loc("立案时间")
             col_index_disciplinary_committee_filing_time = df.columns.get_loc("纪委立案时间")
             col_index_disciplinary_committee_filing_authority = df.columns.get_loc("纪委立案机关")
             col_index_supervisory_committee_filing_time = df.columns.get_loc("监委立案时间")
             col_index_supervisory_committee_filing_authority = df.columns.get_loc("监委立案机关")
-            col_index_case_report = df.columns.get_loc("立案报告") # 获取“立案报告”列索引
-            col_index_disposal_spirit = df.columns.get_loc("是否违反中央八项规定精神") # 获取“是否违反中央八项规定精神”列索引
-            col_index_voluntary_confession = df.columns.get_loc("是否主动交代问题") # 获取“是否主动交代问题”列索引
-
+            col_index_case_report = df.columns.get_loc("立案报告")
+            col_index_disposal_spirit = df.columns.get_loc("是否违反中央八项规定精神")
+            col_index_voluntary_confession = df.columns.get_loc("是否主动交代问题")
+            col_index_closing_time = df.columns.get_loc("结案时间")
 
         except KeyError as e:
             logger.error(f"Excel 文件缺少必要的列: {e}")
             print(f"Excel 文件缺少必要的列: {e}")
-            return None, None 
+            return None, None
 
-        # 遍历DataFrame的每一行，根据不匹配的索引进行标红
         for idx in range(len(df)):
             if idx in mismatch_indices:
                 worksheet.write(idx + 1, col_index_investigated_person, 
@@ -98,7 +103,7 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
                 worksheet.write(idx + 1, col_index_age,
                                 df.iloc[idx]["年龄"] if pd.notna(df.iloc[idx]["年龄"]) else '', red_format)
 
-            if idx in brief_case_details_mismatch_indices: # 对简要案情进行标红
+            if idx in brief_case_details_mismatch_indices:
                 worksheet.write(idx + 1, col_index_brief_case_details,
                                 df.iloc[idx]["简要案情"] if pd.notna(df.iloc[idx]["简要案情"]) else '', red_format)
 
@@ -122,62 +127,59 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
                 worksheet.write(idx + 1, col_index_party_joining_date,
                                 df.iloc[idx]["入党时间"] if pd.notna(df.iloc[idx]["入党时间"]) else '', red_format)
 
-            if idx in filing_time_mismatch_indices: # 对“立案时间”进行标红
+            if idx in filing_time_mismatch_indices:
                 worksheet.write(idx + 1, col_index_filing_time,
                                 df.iloc[idx]["立案时间"] if pd.notna(df.iloc[idx]["立案时间"]) else '', red_format)
             
-            if idx in disciplinary_committee_filing_time_mismatch_indices: # 对“纪委立案时间”进行标红
+            if idx in disciplinary_committee_filing_time_mismatch_indices:
                 worksheet.write(idx + 1, col_index_disciplinary_committee_filing_time,
                                 df.iloc[idx]["纪委立案时间"] if pd.notna(df.iloc[idx]["纪委立案时间"]) else '', red_format)
 
-            if idx in disciplinary_committee_filing_authority_mismatch_indices: # 对“纪委立案机关”进行标红
+            if idx in disciplinary_committee_filing_authority_mismatch_indices:
                 worksheet.write(idx + 1, col_index_disciplinary_committee_filing_authority,
                                 df.iloc[idx]["纪委立案机关"] if pd.notna(df.iloc[idx]["纪委立案机关"]) else '', red_format)
 
-            if idx in supervisory_committee_filing_time_mismatch_indices: # 对“监委立案时间”进行标红
+            if idx in supervisory_committee_filing_time_mismatch_indices:
                 worksheet.write(idx + 1, col_index_supervisory_committee_filing_time,
                                 df.iloc[idx]["监委立案时间"] if pd.notna(df.iloc[idx]["监委立案时间"]) else '', red_format)
 
-            if idx in supervisory_committee_filing_authority_mismatch_indices: # 对“监委立案机关”进行标红
+            if idx in supervisory_committee_filing_authority_mismatch_indices:
                 worksheet.write(idx + 1, col_index_supervisory_committee_filing_authority,
                                 df.iloc[idx]["监委立案机关"] if pd.notna(df.iloc[idx]["监委立案机关"]) else '', red_format)
             
-            if idx in case_report_keyword_mismatch_indices: # 对“立案报告”进行标红
+            if idx in case_report_keyword_mismatch_indices:
                 worksheet.write(idx + 1, col_index_case_report,
                                 df.iloc[idx]["立案报告"] if pd.notna(df.iloc[idx]["立案报告"]) else '', red_format)
             
-            if idx in disposal_spirit_mismatch_indices: # 对“是否违反中央八项规定精神”进行标红
+            if idx in disposal_spirit_mismatch_indices:
                 worksheet.write(idx + 1, col_index_disposal_spirit,
                                 df.iloc[idx]["是否违反中央八项规定精神"] if pd.notna(df.iloc[idx]["是否违反中央八项规定精神"]) else '', red_format)
 
-            if idx in voluntary_confession_highlight_indices: # 对“是否主动交代问题”进行标黄
+            if idx in voluntary_confession_highlight_indices:
                 worksheet.write(idx + 1, col_index_voluntary_confession,
                                 df.iloc[idx]["是否主动交代问题"] if pd.notna(df.iloc[idx]["是否主动交代问题"]) else '', yellow_format)
 
+            if idx in closing_time_mismatch_indices:
+                worksheet.write(idx + 1, col_index_closing_time,
+                                df.iloc[idx]["结案时间"] if pd.notna(df.iloc[idx]["结案时间"]) else '', red_format)
 
     logger.info(f"Generated copy file with highlights: {copy_path}")
     print(f"生成高亮后的副本文件: {copy_path}")
 
-
     case_num_filename = f"立案编号{today}.xlsx"
     case_num_path = os.path.join(case_dir, case_num_filename)
     
-    # 更改：现在 issues_df 包含“序号”、“案件编码”、“涉案人员编码”和“问题”字段
     issues_df = pd.DataFrame(columns=['序号', '案件编码', '涉案人员编码', '问题'])
     
     if not issues_list:
-        # 如果没有问题，则显示“无问题”，并为新字段填充空字符串
         issues_df = pd.DataFrame({'序号': [1], '案件编码': [''], '涉案人员编码': [''], '问题': ['无问题']})
     else:
-        # 将issues_list转换为DataFrame，并从每个元组中解包出编码字段
-        # issues_list中的每个元素现在是 (index, case_code, person_code, issue_description)
         data = []
-        # *** 关键修改：将 (index, issue) 解包为 (original_index, case_code, person_code, issue_description) ***
         for i, (original_index, case_code, person_code, issue_description) in enumerate(issues_list):
             data.append({'序号': i + 1, '案件编码': case_code, '涉案人员编码': person_code, '问题': issue_description})
         issues_df = pd.DataFrame(data)
 
-    issues_df.to_excel(case_num_path, index=False) # 写入立案编号文件
+    issues_df.to_excel(case_num_path, index=False)
     logger.info(f"Generated case number file: {case_num_path}")
     print(f"生成立案编号表: {case_num_path}")
 
