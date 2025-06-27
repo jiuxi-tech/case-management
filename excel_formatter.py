@@ -22,16 +22,16 @@ def apply_format(worksheet, row_idx, col_letter, value, condition_met, format_ob
         # 如果条件不满足，写入不带格式的值
         worksheet.write(f'{col_letter}{excel_row}', value if pd.notna(value) else '')
 
-def format_excel(df, mismatch_indices, output_path, issues_list, gender_mismatch_indices=None, age_mismatch_indices=None,
-                 birth_date_mismatch_indices=None, education_mismatch_indices=None, ethnicity_mismatch_indices=None,
-                 party_member_mismatch_indices=None, party_joining_date_mismatch_indices=None,
-                 brief_case_details_mismatch_indices=None, filing_time_mismatch_indices=None,
-                 disciplinary_committee_filing_time_mismatch_indices=None,
-                 disciplinary_committee_filing_authority_mismatch_indices=None,
-                 supervisory_committee_filing_time_mismatch_indices=None,
-                 supervisory_committee_filing_authority_mismatch_indices=None,
-                 case_report_keyword_mismatch_indices=None, disposal_spirit_mismatch_indices=None,
-                 voluntary_confession_highlight_indices=None, closing_time_mismatch_indices=None):
+def format_excel(df, mismatch_indices, output_path, issues_list, gender_mismatch_indices=set(), age_mismatch_indices=set(),
+                 birth_date_mismatch_indices=set(), education_mismatch_indices=set(), ethnicity_mismatch_indices=set(),
+                 party_member_mismatch_indices=set(), party_joining_date_mismatch_indices=set(),
+                 brief_case_details_mismatch_indices=set(), filing_time_mismatch_indices=set(),
+                 disciplinary_committee_filing_time_mismatch_indices=set(),
+                 disciplinary_committee_filing_authority_mismatch_indices=set(),
+                 supervisory_committee_filing_time_mismatch_indices=set(),
+                 supervisory_committee_filing_authority_mismatch_indices=set(),
+                 case_report_keyword_mismatch_indices=set(), disposal_spirit_mismatch_indices=set(),
+                 voluntary_confession_highlight_indices=set(), closing_time_mismatch_indices=set()):
     """
     格式化Excel文件，根据验证问题对单元格进行着色。
     df: 原始DataFrame
