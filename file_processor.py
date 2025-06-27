@@ -152,7 +152,7 @@ def process_case_upload(request, app):
             flash('Excel文件缺少必要的表头', 'error') 
             return redirect(request.url) 
 
-        # 验证字段关系 - 接收所有15个返回值 (原来13个 + 新增的 2 个)
+        # 验证字段关系 - 接收所有15个返回值
         mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices = validate_case_relationships(df) 
         
         # 生成副本和立案编号文件 - 传递所有15个参数
@@ -173,8 +173,8 @@ def process_case_upload(request, app):
             filing_time_mismatch_indices,
             disciplinary_committee_filing_time_mismatch_indices,
             disciplinary_committee_filing_authority_mismatch_indices,
-            supervisory_committee_filing_time_mismatch_indices, # 新增的参数
-            supervisory_committee_filing_authority_mismatch_indices # 新增的参数
+            supervisory_committee_filing_time_mismatch_indices,
+            supervisory_committee_filing_authority_mismatch_indices
         ) 
 
         flash('文件上传处理成功！', 'success') 

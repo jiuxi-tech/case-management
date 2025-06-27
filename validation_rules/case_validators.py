@@ -366,7 +366,7 @@ def validate_case_relationships(df):
             is_ethnicity_mismatch_decision = True
             issues_list.append((index, excel_case_code, excel_person_code, "Q2民族与CU2处分决定不一致"))
             logger.info(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') 有值，但处分决定中未提取到民族。")
-            print(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') 有值，但处分决定中未提取到民族。")
+            print(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') 有值，但处分决定中未提取到民族。") # FIXED INDENTATION
         elif excel_ethnicity != extracted_ethnicity_from_decision:
             is_ethnicity_mismatch_decision = True
             issues_list.append((index, excel_case_code, excel_person_code, "Q2民族与CU2处分决定不一致"))
@@ -458,7 +458,7 @@ def validate_case_relationships(df):
             is_party_member_mismatch_decision = True
             issues_list.append((index, excel_case_code, excel_person_code, "T2是否中共党员与CU2处分决定不一致"))
             logger.info(f"行 {index + 1} - 是否中共党员不匹配: Excel字段 ('{excel_party_member}') vs 处分决定提取 ('{extracted_party_member_from_decision}')。")
-            print(f"行 {index + 1} - 是否中共党员不匹配: Excel字段 ('{excel_party_member}') vs 处分决定提取 ('{extracted_party_member_from_decision}')。")
+            print(f"行 {index + 1} - 是否中共党员不匹配: Excel字段 ('{excel_party_member}') vs 处分决定提取 ('{extracted_party_member_from_decision}'))。")
         if is_party_member_mismatch_decision:
             party_member_mismatch_indices.add(index)
 
@@ -527,12 +527,12 @@ def validate_case_relationships(df):
     validate_filing_time(df, issues_list, filing_time_mismatch_indices,
                            disciplinary_committee_filing_time_mismatch_indices,
                            disciplinary_committee_filing_authority_mismatch_indices,
-                           supervisory_committee_filing_time_mismatch_indices, # 传递新增的集合
-                           supervisory_committee_filing_authority_mismatch_indices) # 传递新增的集合
+                           supervisory_committee_filing_time_mismatch_indices,
+                           supervisory_committee_filing_authority_mismatch_indices)
 
     # 返回所有可能的不一致索引集以及更新后的 issues_list
     return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, \
            birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, \
            party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, \
            disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, \
-           supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices # 添加新的返回值
+           supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices

@@ -7,7 +7,7 @@ from config import Config # Assuming Config class exists in config.py
 
 logger = logging.getLogger(__name__)
 
-def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices, brief_case_details_mismatch_indices, filing_time_mismatch_indices, disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices): # 新增监委立案时间及机关不一致索引
+def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices, brief_case_details_mismatch_indices, filing_time_mismatch_indices, disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices):
     """
     根据分析结果生成副本和立案编号Excel文件。
     该函数将原始DataFrame写入一个副本文件，对不匹配的单元格进行标红。
@@ -30,8 +30,8 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     filing_time_mismatch_indices (set): 立案时间不匹配的行索引集合。
     disciplinary_committee_filing_time_mismatch_indices (set): 纪委立案时间不匹配的行索引集合。
     disciplinary_committee_filing_authority_mismatch_indices (set): 纪委立案机关不匹配的行索引集合。
-    supervisory_committee_filing_time_mismatch_indices (set): 监委立案时间不匹配的行索引集合。（新增参数）
-    supervisory_committee_filing_authority_mismatch_indices (set): 监委立案机关不匹配的行索引集合。（新增参数）
+    supervisory_committee_filing_time_mismatch_indices (set): 监委立案时间不匹配的行索引集合。
+    supervisory_committee_filing_authority_mismatch_indices (set): 监委立案机关不匹配的行索引集合。
 
     返回:
     tuple: (copy_path, case_num_path) 生成的副本文件路径和立案编号文件路径。
@@ -67,8 +67,8 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
             col_index_filing_time = df.columns.get_loc("立案时间") 
             col_index_disciplinary_committee_filing_time = df.columns.get_loc("纪委立案时间")
             col_index_disciplinary_committee_filing_authority = df.columns.get_loc("纪委立案机关")
-            col_index_supervisory_committee_filing_time = df.columns.get_loc("监委立案时间") # 获取“监委立案时间”列索引
-            col_index_supervisory_committee_filing_authority = df.columns.get_loc("监委立案机关") # 获取“监委立案机关”列索引
+            col_index_supervisory_committee_filing_time = df.columns.get_loc("监委立案时间")
+            col_index_supervisory_committee_filing_authority = df.columns.get_loc("监委立案机关")
 
 
         except KeyError as e:
