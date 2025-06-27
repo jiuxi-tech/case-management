@@ -42,6 +42,8 @@ from validation_rules.case_extractors_party_info import (
 )
 # 新增导入立案时间规则
 from validation_rules.case_timestamp_rules import validate_filing_time
+# 新增导入处分和金额相关规则
+from validation_rules.case_disposal_amount_rules import validate_disposal_and_amount_rules
 
 
 logger = logging.getLogger(__name__)
@@ -63,6 +65,7 @@ def validate_case_relationships(df):
     supervisory_committee_filing_time_mismatch_indices = set() # 新增监委立案时间不一致索引集合
     supervisory_committee_filing_authority_mismatch_indices = set() # 新增监委立案机关不一致索引集合
     case_report_keyword_mismatch_indices = set() # 新增立案报告关键字不一致索引集合
+    disposal_spirit_mismatch_indices = set() # 新增是否违反中央八项规定精神不一致索引集合
 
     # issues_list 现在将包含 (index, case_code, person_code, issue_description)
     issues_list = [] 
@@ -74,7 +77,8 @@ def validate_case_relationships(df):
         "审查调查报告", "审理报告", "简要案情", # 现有字段
         "案件编码", "涉案人员编码", # 新增字段
         "立案时间", "立案决定书", # 现有立案时间相关字段
-        "纪委立案时间", "纪委立案机关", "监委立案时间", "监委立案机关", "填报单位名称" # 新增立案时间/机关相关字段
+        "纪委立案时间", "纪委立案机关", "监委立案时间", "监委立案机关", "填报单位名称", # 新增立案时间/机关相关字段
+        "是否违反中央八项规定精神" # 新增字段
     ]
     if not all(header in df.columns for header in required_headers):
         logger.error(f"Missing required headers for case registration: {required_headers}")
@@ -85,7 +89,7 @@ def validate_case_relationships(df):
                party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, \
                disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, \
                supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices, \
-               case_report_keyword_mismatch_indices # 添加新的返回值
+               case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices # 添加新的返回值
 
     current_year = datetime.now().year
 
@@ -564,10 +568,13 @@ def validate_case_relationships(df):
                            supervisory_committee_filing_time_mismatch_indices,
                            supervisory_committee_filing_authority_mismatch_indices)
 
+    # 调用处分和金额相关规则验证函数
+    validate_disposal_and_amount_rules(df, issues_list, disposal_spirit_mismatch_indices)
+
     # 返回所有可能的不一致索引集以及更新后的 issues_list
     return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, \
            birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, \
            party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, \
            disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, \
            supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices, \
-           case_report_keyword_mismatch_indices
+           case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices

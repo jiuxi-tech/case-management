@@ -7,7 +7,7 @@ from config import Config # Assuming Config class exists in config.py
 
 logger = logging.getLogger(__name__)
 
-def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices, brief_case_details_mismatch_indices, filing_time_mismatch_indices, disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices, case_report_keyword_mismatch_indices): # 新增立案报告关键字不一致索引
+def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices, brief_case_details_mismatch_indices, filing_time_mismatch_indices, disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices, case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices): # 新增立案报告关键字不一致索引和是否违反中央八项规定精神不一致索引
     """
     根据分析结果生成副本和立案编号Excel文件。
     该函数将原始DataFrame写入一个副本文件，对不匹配的单元格进行标红。
@@ -30,9 +30,10 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     filing_time_mismatch_indices (set): 立案时间不匹配的行索引集合。
     disciplinary_committee_filing_time_mismatch_indices (set): 纪委立案时间不匹配的行索引集合。
     disciplinary_committee_filing_authority_mismatch_indices (set): 纪委立案机关不匹配的行索引集合。
-    supervisory_committee_filing_time_mismatch_indices (set): 监委立案时间不匹配的行索引集合。
-    supervisory_committee_filing_authority_mismatch_indices (set): 监委立案机关不匹配的行索引集合。
+    supervisory_committee_filing_time_mismatch_indices (set): 监委立案时间不一致的行索引集合。
+    supervisory_committee_filing_authority_mismatch_indices (set): 监委立案机关不一致的行索引集合。
     case_report_keyword_mismatch_indices (set): 立案报告关键字不一致的行索引集合。（新增参数）
+    disposal_spirit_mismatch_indices (set): 是否违反中央八项规定精神不一致的行索引集合。（新增参数）
 
     返回:
     tuple: (copy_path, case_num_path) 生成的副本文件路径和立案编号文件路径。
@@ -71,6 +72,7 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
             col_index_supervisory_committee_filing_time = df.columns.get_loc("监委立案时间")
             col_index_supervisory_committee_filing_authority = df.columns.get_loc("监委立案机关")
             col_index_case_report = df.columns.get_loc("立案报告") # 获取“立案报告”列索引
+            col_index_disposal_spirit = df.columns.get_loc("是否违反中央八项规定精神") # 获取“是否违反中央八项规定精神”列索引
 
 
         except KeyError as e:
@@ -139,6 +141,10 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
             if idx in case_report_keyword_mismatch_indices: # 对“立案报告”进行标红
                 worksheet.write(idx + 1, col_index_case_report,
                                 df.iloc[idx]["立案报告"] if pd.notna(df.iloc[idx]["立案报告"]) else '', red_format)
+            
+            if idx in disposal_spirit_mismatch_indices: # 对“是否违反中央八项规定精神”进行标红
+                worksheet.write(idx + 1, col_index_disposal_spirit,
+                                df.iloc[idx]["是否违反中央八项规定精神"] if pd.notna(df.iloc[idx]["是否违反中央八项规定精神"]) else '', red_format)
 
 
     logger.info(f"Generated copy file with highlights: {copy_path}")
