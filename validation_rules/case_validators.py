@@ -62,6 +62,7 @@ def validate_case_relationships(df):
     disciplinary_committee_filing_authority_mismatch_indices = set() # 新增纪委立案机关不一致索引集合
     supervisory_committee_filing_time_mismatch_indices = set() # 新增监委立案时间不一致索引集合
     supervisory_committee_filing_authority_mismatch_indices = set() # 新增监委立案机关不一致索引集合
+    case_report_keyword_mismatch_indices = set() # 新增立案报告关键字不一致索引集合
 
     # issues_list 现在将包含 (index, case_code, person_code, issue_description)
     issues_list = [] 
@@ -83,9 +84,13 @@ def validate_case_relationships(df):
                birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, \
                party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, \
                disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, \
-               supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices # 添加新的返回值
+               supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices, \
+               case_report_keyword_mismatch_indices # 添加新的返回值
 
     current_year = datetime.now().year
+
+    # 定义立案报告中需要检查的关键字
+    case_report_keywords_to_check = ["人大代表", "政协委员", "党委委员", "中共党代表", "纪委委员"]
 
     for index, row in df.iterrows():
         logger.debug(f"Processing row {index + 1}")
@@ -366,7 +371,7 @@ def validate_case_relationships(df):
             is_ethnicity_mismatch_decision = True
             issues_list.append((index, excel_case_code, excel_person_code, "Q2民族与CU2处分决定不一致"))
             logger.info(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') 有值，但处分决定中未提取到民族。")
-            print(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') 有值，但处分决定中未提取到民族。") # FIXED INDENTATION
+            print(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') 有值，但处分决定中未提取到民族。")
         elif excel_ethnicity != extracted_ethnicity_from_decision:
             is_ethnicity_mismatch_decision = True
             issues_list.append((index, excel_case_code, excel_person_code, "Q2民族与CU2处分决定不一致"))
@@ -523,6 +528,35 @@ def validate_case_relationships(df):
             logger.info(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
             print(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
 
+        # --- 新增“立案报告”关键字规则 ---
+        # 检查立案报告中是否包含任何一个关键字
+        found_keywords_in_case_report = [kw for kw in case_report_keywords_to_check if kw in report_text_raw]
+        
+        if found_keywords_in_case_report:
+            logger.info(f"行 {index + 1} - 立案报告中发现关键字: {found_keywords_in_case_report}")
+            print(f"行 {index + 1} - 立案报告中发现关键字: {found_keywords_in_case_report}")
+
+            keyword_mismatch_in_other_reports = False
+            for keyword in found_keywords_in_case_report:
+                if not (keyword in decision_text_raw and keyword in trial_text_raw and keyword in investigation_text_raw):
+                    keyword_mismatch_in_other_reports = True
+                    logger.info(f"行 {index + 1} - 关键字 '{keyword}' 在处分决定、审理报告或审查调查报告中缺失。")
+                    print(f"行 {index + 1} - 关键字 '{keyword}' 在处分决定、审理报告或审查调查报告中缺失。")
+                    break # 只要有一个关键字不匹配就标记为不一致
+
+            if keyword_mismatch_in_other_reports:
+                case_report_keyword_mismatch_indices.add(index)
+                issues_list.append((index, excel_case_code, excel_person_code, "BF立案报告与CU处分决定、CY审理报告、CX审查调查报告不一致"))
+                logger.warning(f"行 {index + 1} - 规则违规: 立案报告中关键字与处分决定、审理报告、审查调查报告不一致。")
+                print(f"行 {index + 1} - 规则违规: 立案报告中关键字与处分决定、审理报告、审查调查报告不一致。")
+            else:
+                logger.info(f"行 {index + 1} - 立案报告中所有关键字在处分决定、审理报告和审查调查报告中均存在。")
+                print(f"行 {index + 1} - 立案报告中所有关键字在处分决定、审理报告和审查调查报告中均存在。")
+        else:
+            logger.info(f"行 {index + 1} - 立案报告中未发现指定关键字。")
+            print(f"行 {index + 1} - 立案报告中未发现指定关键字。")
+
+
     # 调用立案时间规则验证函数
     validate_filing_time(df, issues_list, filing_time_mismatch_indices,
                            disciplinary_committee_filing_time_mismatch_indices,
@@ -535,4 +569,5 @@ def validate_case_relationships(df):
            birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, \
            party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, \
            disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, \
-           supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices
+           supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices, \
+           case_report_keyword_mismatch_indices
