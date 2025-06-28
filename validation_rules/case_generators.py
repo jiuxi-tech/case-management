@@ -19,7 +19,8 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
                         voluntary_confession_highlight_indices, closing_time_mismatch_indices,
                         no_party_position_warning_mismatch_indices,
                         recovery_amount_highlight_indices,
-                        trial_acceptance_time_mismatch_indices): # 【新增】接收 trial_acceptance_time_mismatch_indices
+                        trial_acceptance_time_mismatch_indices,
+                        trial_closing_time_mismatch_indices): # 【新增】接收 trial_closing_time_mismatch_indices
     """
     根据分析结果生成副本和立案编号Excel文件。
     该函数将原始DataFrame写入一个副本文件，对不匹配的单元格进行标红。
@@ -50,7 +51,8 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     closing_time_mismatch_indices (set): 结案时间不一致的行索引集合。
     no_party_position_warning_mismatch_indices (set): 是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分不一致的行索引集合。
     recovery_amount_highlight_indices (set): 追缴失职渎职滥用职权造成的损失金额标黄索引集合。
-    trial_acceptance_time_mismatch_indices (set): 【新增参数】审理受理时间不一致的行索引集合。
+    trial_acceptance_time_mismatch_indices (set): 审理受理时间不一致的行索引集合。
+    trial_closing_time_mismatch_indices (set): 【新增参数】审结时间与审理报告落款时间不一致的行索引集合。
 
     返回:
     tuple: (copy_path, case_num_path) 生成的副本文件路径和立案编号文件路径。
@@ -92,8 +94,9 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
             col_index_closing_time = df.columns.get_loc("结案时间")
             col_index_no_party_position_warning = df.columns.get_loc("是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分")
             col_index_recovery_amount = df.columns.get_loc("追缴失职渎职滥用职权造成的损失金额")
-            # 【新增】获取“审理受理时间”的列索引
             col_index_trial_acceptance_time = df.columns.get_loc("审理受理时间")
+            # 【新增】获取“审结时间”的列索引
+            col_index_trial_closing_time = df.columns.get_loc("审结时间")
 
         except KeyError as e:
             logger.error(f"Excel 文件缺少必要的列: {e}")
@@ -181,10 +184,15 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
                 worksheet.write(idx + 1, col_index_recovery_amount,
                                  df.iloc[idx]["追缴失职渎职滥用职权造成的损失金额"] if pd.notna(df.iloc[idx]["追缴失职渎职滥用职权造成的损失金额"]) else '', yellow_format)
 
-            # 【新增逻辑】如果当前行索引在 trial_acceptance_time_mismatch_indices 中，则标红
             if idx in trial_acceptance_time_mismatch_indices:
                 worksheet.write(idx + 1, col_index_trial_acceptance_time,
                                  df.iloc[idx]["审理受理时间"] if pd.notna(df.iloc[idx]["审理受理时间"]) else '', red_format)
+
+            # 【新增逻辑】如果当前行索引在 trial_closing_time_mismatch_indices 中，则标红
+            if idx in trial_closing_time_mismatch_indices:
+                worksheet.write(idx + 1, col_index_trial_closing_time,
+                                 df.iloc[idx]["审结时间"] if pd.notna(df.iloc[idx]["审结时间"]) else '', red_format)
+
 
     logger.info(f"Generated copy file with highlights: {copy_path}")
     print(f"生成高亮后的副本文件: {copy_path}")
