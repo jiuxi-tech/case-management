@@ -104,6 +104,10 @@ def process_upload(request, app):
         flash(f'文件处理失败: {str(e)}', 'error')
         return redirect(request.url)
 
+#-------------------------------------------------------------------------------------------------------
+# 注意：以下是 `process_case_upload` 函数的修正，修复了之前由于我引入的`---`语法错误和参数不匹配问题。
+#-------------------------------------------------------------------------------------------------------
+
 def process_case_upload(request, app):
     logger.info("开始处理立案登记表上传请求")
     if 'case_file' not in request.files:
@@ -164,17 +168,20 @@ def process_case_upload(request, app):
             return redirect(request.url)
 
         # 验证字段关系 - 接收所有返回值
+        # 核心修改：在解包时添加 disposal_decision_keyword_mismatch_indices
         (mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, 
-        birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, 
-        party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, 
-        disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, 
-        supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices, 
-        case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, voluntary_confession_highlight_indices, 
-        closing_time_mismatch_indices, no_party_position_warning_mismatch_indices,
-        recovery_amount_highlight_indices, trial_acceptance_time_mismatch_indices, 
-        trial_closing_time_mismatch_indices, trial_authority_agency_mismatch_indices) = validate_case_relationships(df)
-        
+         birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, 
+         party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, 
+         disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, 
+         supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices, 
+         case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, voluntary_confession_highlight_indices, 
+         closing_time_mismatch_indices, no_party_position_warning_mismatch_indices,
+         recovery_amount_highlight_indices, trial_acceptance_time_mismatch_indices, 
+         trial_closing_time_mismatch_indices, trial_authority_agency_mismatch_indices,
+         disposal_decision_keyword_mismatch_indices) = validate_case_relationships(df) # 增加了新的返回值
+
         # 生成副本和立案编号文件 - 传递所有参数
+        # 核心修改：在调用 generate_case_files 时添加 disposal_decision_keyword_mismatch_indices
         copy_path, case_num_path = generate_case_files(
             df, 
             file.filename, 
@@ -202,7 +209,8 @@ def process_case_upload(request, app):
             recovery_amount_highlight_indices,
             trial_acceptance_time_mismatch_indices,
             trial_closing_time_mismatch_indices,
-            trial_authority_agency_mismatch_indices
+            trial_authority_agency_mismatch_indices,
+            disposal_decision_keyword_mismatch_indices # 增加了新的参数
         )
 
         flash('文件上传处理成功！', 'success')

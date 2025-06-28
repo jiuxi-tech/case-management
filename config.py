@@ -20,8 +20,8 @@ class Config:
         "birth_date": "出生年月",
         "completion_time": "办结时间",
         "disposal_method_1": "处置方式1二级",
-        "disposal_report": "处置情况报告", # 确保这里也有
-        "accepted_clue_code": "受理线索编码" # 新增的受理线索编码字段
+        "disposal_report": "处置情况报告", 
+        "accepted_clue_code": "受理线索编码" 
     }
     
     # Excel 格式
@@ -50,7 +50,9 @@ class Config:
         "inconsistent_case_name_report": "C2被调查人与BF2立案报告不一致",
         "inconsistent_case_name_decision": "C2被调查人与CU2处分决定不一致",
         "inconsistent_case_name_investigation": "C2被调查人与CX2审查调查报告不一致",
-        "inconsistent_case_name_trial": "C2被调查人与CY2审理报告不一致"
+        "inconsistent_case_name_trial": "C2被调查人与CY2审理报告不一致",
+        # 【新增】处分决定关键词检查规则
+        "disposal_decision_keyword_highlight": "CU处分决定中出现非人大代表、非政协委员、非党委委员、非中共党代表、非纪委委员等字样"
     }
     
     # 组织措施关键词
@@ -58,6 +60,11 @@ class Config:
         "谈话提醒", "提醒谈话", "批评教育", "责令检查", "责令其做出书面检查", 
         "责令其做出检查", "诫勉", "警示谈话", "通报批评", "责令公开道歉（检查）", 
         "责令具结悔过"
+    ]
+
+    # 【新增】处分决定中的特殊关键词
+    DISPOSAL_DECISION_KEYWORDS = [
+        "非人大代表", "非政协委员", "非党委委员", "非中共党代表", "非纪委委员"
     ]
     
     # 线索登记表必需的表头
@@ -70,7 +77,7 @@ class Config:
     DATABASE_PATH = os.path.join(os.path.dirname(__file__), 'case_management.db')
     
     # 安全密钥
-    SECRET_KEY = os.urandom(24)  # 生成一个24字节的随机密钥
+    SECRET_KEY = os.urandom(24) 
 
     # 创建目录
     if not os.path.exists(CLUE_FOLDER):

@@ -12,7 +12,7 @@ def apply_format(worksheet, row_idx, col_letter, value, condition_met, format_ob
     根据条件判断是否应用格式。
     row_idx 是 DataFrame 的索引 (0-based)，Excel 行号是 row_idx + 2 (因为有表头和Pandas的默认0行)
     """
-    excel_row = row_idx + 2  # Excel行号从1开始，且有表头，所以加2
+    excel_row = row_idx + 2   # Excel行号从1开始，且有表头，所以加2
     if condition_met:
         # 如果条件满足，写入带格式的值
         worksheet.write(f'{col_letter}{excel_row}', value if pd.notna(value) else '', format_obj)
@@ -21,22 +21,23 @@ def apply_format(worksheet, row_idx, col_letter, value, condition_met, format_ob
         worksheet.write(f'{col_letter}{excel_row}', value if pd.notna(value) else '')
 
 def format_excel(df, mismatch_indices, output_path, issues_list,
-                 gender_mismatch_indices=set(), age_mismatch_indices=set(),
-                 birth_date_mismatch_indices=set(), education_mismatch_indices=set(), ethnicity_mismatch_indices=set(),
-                 party_member_mismatch_indices=set(), party_joining_date_mismatch_indices=set(),
-                 brief_case_details_mismatch_indices=set(), filing_time_mismatch_indices=set(),
-                 disciplinary_committee_filing_time_mismatch_indices=set(),
-                 disciplinary_committee_filing_authority_mismatch_indices=set(),
-                 supervisory_committee_filing_time_mismatch_indices=set(),
-                 supervisory_committee_filing_authority_mismatch_indices=set(),
-                 case_report_keyword_mismatch_indices=set(), disposal_spirit_mismatch_indices=set(),
-                 voluntary_confession_highlight_indices=set(), closing_time_mismatch_indices=set(),
-                 no_party_position_warning_mismatch_indices=set(), 
-                 recovery_amount_highlight_indices=set(), 
-                 trial_acceptance_time_mismatch_indices=set(), 
-                 trial_closing_time_mismatch_indices=set(), 
-                 trial_authority_agency_mismatch_indices=set() 
-                 ):
+                     gender_mismatch_indices=set(), age_mismatch_indices=set(),
+                     birth_date_mismatch_indices=set(), education_mismatch_indices=set(), ethnicity_mismatch_indices=set(),
+                     party_member_mismatch_indices=set(), party_joining_date_mismatch_indices=set(),
+                     brief_case_details_mismatch_indices=set(), filing_time_mismatch_indices=set(),
+                     disciplinary_committee_filing_time_mismatch_indices=set(),
+                     disciplinary_committee_filing_authority_mismatch_indices=set(),
+                     supervisory_committee_filing_time_mismatch_indices=set(),
+                     supervisory_committee_filing_authority_mismatch_indices=set(),
+                     case_report_keyword_mismatch_indices=set(), disposal_spirit_mismatch_indices=set(),
+                     voluntary_confession_highlight_indices=set(), closing_time_mismatch_indices=set(),
+                     no_party_position_warning_mismatch_indices=set(), 
+                     recovery_amount_highlight_indices=set(), 
+                     trial_acceptance_time_mismatch_indices=set(), 
+                     trial_closing_time_mismatch_indices=set(), 
+                     trial_authority_agency_mismatch_indices=set(),
+                     disposal_decision_keyword_mismatch_indices=set() # 【新增】处分决定关键词不一致的索引
+                     ):
     """
     格式化Excel文件，根据验证问题对单元格进行着色。
     df: 原始DataFrame
@@ -263,3 +264,7 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
             if "审理机关" in df.columns and "填报单位名称" in df.columns and idx in trial_authority_agency_mismatch_indices:
                 apply_format(worksheet, idx, get_column_letter(df, "审理机关"), row.get("审理机关"), True, red_format)
                 apply_format(worksheet, idx, get_column_letter(df, "填报单位名称"), row.get("填报单位名称"), True, red_format)
+
+            # 【新增】处分决定关键词高亮 (red)
+            if "处分决定" in df.columns and idx in disposal_decision_keyword_mismatch_indices:
+                apply_format(worksheet, idx, get_column_letter(df, "处分决定"), row.get("处分决定"), True, red_format)

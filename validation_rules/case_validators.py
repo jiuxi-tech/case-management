@@ -3,7 +3,6 @@ import pandas as pd
 from datetime import datetime
 from config import Config
 import re
-# 【修改】导入 db_utils 以获取数据库中的机关单位字典
 from db_utils import get_authority_agency_dict
 
 # 从 case_validation_helpers 导入核心验证函数
@@ -81,7 +80,9 @@ def validate_case_relationships(df):
     recovery_amount_highlight_indices = set()
     trial_acceptance_time_mismatch_indices = set()
     trial_closing_time_mismatch_indices = set()
-    trial_authority_agency_mismatch_indices = set() # 审理机关与填报单位不一致的行索引集合
+    trial_authority_agency_mismatch_indices = set()
+    # 【新增】处分决定关键词不一致的行索引集合
+    disposal_decision_keyword_mismatch_indices = set() 
 
     issues_list = [] 
     
@@ -90,19 +91,18 @@ def validate_case_relationships(df):
         "是否中共党员", "入党时间", "立案报告", "处分决定", 
         "审查调查报告", "审理报告", "简要案情",
         "案件编码", "涉案人员编码",
-        "立案时间", "立案决定书", # 确保这里没有多余空格
-        "纪委立案时间", "纪委立案机关", "监委立案时间", "监委立案机关", "填报单位名称", # 【修正】这里已经使用了正确的“填报单位名称”
+        "立案时间", "立案决定书", 
+        "纪委立案时间", "纪委立案机关", "监委立案时间", "监委立案机关", "填报单位名称", 
         "是否违反中央八项规定精神",
         "是否主动交代问题",
-        "结案时间", # 确保这里没有多余空格
+        "结案时间", 
         "是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分",
         "追缴失职渎职滥用职权造成的损失金额",
         "审理受理时间",
         "审结时间",
-        "审理机关", "填报单位名称" # 【关键修正】这里将“填报单位”改为“填报单位名称”
+        "审理机关"
     ]
     if not all(header in df.columns for header in required_headers):
-        # 找出缺少的表头并只报告缺少的
         missing_headers = [header for header in required_headers if header not in df.columns]
         msg = f"缺少必要的表头: {missing_headers}"
         logger.error(msg)
@@ -115,13 +115,14 @@ def validate_case_relationships(df):
                 case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, voluntary_confession_highlight_indices, 
                 closing_time_mismatch_indices, no_party_position_warning_mismatch_indices,
                 recovery_amount_highlight_indices, trial_acceptance_time_mismatch_indices, 
-                trial_closing_time_mismatch_indices, trial_authority_agency_mismatch_indices) 
+                trial_closing_time_mismatch_indices, trial_authority_agency_mismatch_indices,
+                disposal_decision_keyword_mismatch_indices) # 【新增】返回新的索引集合
 
     current_year = datetime.now().year
 
     case_report_keywords_to_check = ["人大代表", "政协委员", "党委委员", "中共党代表", "纪委委员"]
 
-    # 【新增】从数据库获取机关单位字典数据
+    # 从数据库获取机关单位字典数据
     authority_agency_db_data = get_authority_agency_dict()
     # 将数据库查询结果转换为更易于查找的列表，只包含SL类别的
     sl_authority_agency_mappings = []
@@ -166,8 +167,7 @@ def validate_case_relationships(df):
         excel_trial_acceptance_time = row.get("审理受理时间")
         excel_trial_closing_time = row.get("审结时间") 
         excel_trial_authority = str(row.get("审理机关", "")).strip()
-        excel_reporting_agency = str(row.get("填报单位名称", "")).strip() # 【关键修正】这里将“填报单位”改为“填报单位名称”
-
+        excel_reporting_agency = str(row.get("填报单位名称", "")).strip()
 
         excel_case_code = str(row.get("案件编码", "")).strip()
         excel_person_code = str(row.get("涉案人员编码", "")).strip()
@@ -213,7 +213,7 @@ def validate_case_relationships(df):
                                             excel_voluntary_confession, trial_text_raw)
 
         validate_no_party_position_warning_rules(row, index, excel_case_code, excel_person_code, issues_list, no_party_position_warning_mismatch_indices,
-                                                 excel_no_party_position_warning, decision_text_raw)
+                                                  excel_no_party_position_warning, decision_text_raw)
 
         if pd.notna(row.get("追缴失职渎职滥用职权造成的损失金额")) and str(row.get("追缴失职渎职滥用职权造成的损失金额", "")).strip() != '':
             recovery_amount_highlight_indices.add(index)
@@ -342,10 +342,9 @@ def validate_case_relationships(df):
         # 审理机关与填报单位比对
         if excel_trial_authority and excel_reporting_agency:
             found_match = False
-            # 【修改】遍历从数据库获取的 sl_authority_agency_mappings
             for mapping in sl_authority_agency_mappings:
                 if (mapping["authority"] == excel_trial_authority and
-                    mapping["agency"] == excel_reporting_agency): # category 已经在过滤时处理
+                    mapping["agency"] == excel_reporting_agency):
                     found_match = True
                     logger.info(f"行 {index + 1} - 审理机关 '{excel_trial_authority}' 和 填报单位名称 '{excel_reporting_agency}' 匹配成功 (Category: SL)。")
                     print(f"行 {index + 1} - 审理机关 '{excel_trial_authority}' 和 填报单位名称 '{excel_reporting_agency}' 匹配成功 (Category: SL)。")
@@ -353,14 +352,29 @@ def validate_case_relationships(df):
             
             if not found_match:
                 trial_authority_agency_mismatch_indices.add(index)
-                issues_list.append((index, excel_case_code, excel_person_code, "CR审理机关与A填报单位不一致")) # 这里的A填报单位在问题描述中代表填报单位名称
+                issues_list.append((index, excel_case_code, excel_person_code, "CR审理机关与A填报单位不一致"))
                 logger.warning(f"行 {index + 1} - 审理机关 '{excel_trial_authority}' 和 填报单位名称 '{excel_reporting_agency}' 不匹配或Category不为SL。")
                 print(f"行 {index + 1} - 审理机关 '{excel_trial_authority}' 和 填报单位名称 '{excel_reporting_agency}' 不匹配或Category不为SL。")
         else:
             logger.info(f"行 {index + 1} - '审理机关' 或 '填报单位名称' 为空，跳过比对。审理机关: '{excel_trial_authority}', 填报单位名称: '{excel_reporting_agency}'")
             print(f"行 {index + 1} - '审理机关' 或 '填报单位名称' 为空，跳过比对。")
             trial_authority_agency_mismatch_indices.add(index)
-            issues_list.append((index, excel_case_code, excel_person_code, "CR审理机关或A填报单位名称为空，无法比对")) # 问题描述中也保持一致
+            issues_list.append((index, excel_case_code, excel_person_code, "CR审理机关或A填报单位名称为空，无法比对"))
+
+        # 【新增】处分决定关键词检查
+        if "处分决定" in df.columns and pd.notna(decision_text_raw) and decision_text_raw.strip() != '':
+            found_disposal_keyword = False
+            for keyword in Config.DISPOSAL_DECISION_KEYWORDS:
+                if keyword in decision_text_raw:
+                    disposal_decision_keyword_mismatch_indices.add(index)
+                    issues_list.append((index, excel_case_code, excel_person_code, Config.VALIDATION_RULES["disposal_decision_keyword_highlight"]))
+                    logger.warning(f"行 {index + 1} - '处分决定' 字段包含禁用关键词: '{keyword}'。")
+                    print(f"行 {index + 1} - '处分决定' 字段包含禁用关键词: '{keyword}'。")
+                    found_disposal_keyword = True
+                    break # 找到一个关键词就退出循环，避免重复添加
+            if not found_disposal_keyword:
+                logger.info(f"行 {index + 1} - '处分决定' 字段不包含禁用关键词。")
+                print(f"行 {index + 1} - '处分决定' 字段不包含禁用关键词。")
 
 
     # 调用立案时间规则验证函数
@@ -382,4 +396,5 @@ def validate_case_relationships(df):
             case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, voluntary_confession_highlight_indices, 
             closing_time_mismatch_indices, no_party_position_warning_mismatch_indices,
             recovery_amount_highlight_indices, trial_acceptance_time_mismatch_indices, 
-            trial_closing_time_mismatch_indices, trial_authority_agency_mismatch_indices)
+            trial_closing_time_mismatch_indices, trial_authority_agency_mismatch_indices,
+            disposal_decision_keyword_mismatch_indices) # 【新增】返回新的索引集合

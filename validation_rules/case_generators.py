@@ -2,28 +2,28 @@ import logging
 import pandas as pd
 import os
 from datetime import datetime
-import xlsxwriter # 即使不用直接写入，但pd.ExcelWriter可能间接使用，保留
+import xlsxwriter 
 from config import Config
-# 【关键修改】导入 excel_formatter 模块
 from excel_formatter import format_excel
 
 logger = logging.getLogger(__name__)
 
 def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, 
-                        age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices, 
-                        ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices, 
-                        brief_case_details_mismatch_indices, filing_time_mismatch_indices, 
-                        disciplinary_committee_filing_time_mismatch_indices, 
-                        disciplinary_committee_filing_authority_mismatch_indices, 
-                        supervisory_committee_filing_time_mismatch_indices, 
-                        supervisory_committee_filing_authority_mismatch_indices, 
-                        case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, 
-                        voluntary_confession_highlight_indices, closing_time_mismatch_indices,
-                        no_party_position_warning_mismatch_indices,
-                        recovery_amount_highlight_indices,
-                        trial_acceptance_time_mismatch_indices,
-                        trial_closing_time_mismatch_indices,
-                        trial_authority_agency_mismatch_indices): # 接收 trial_authority_agency_mismatch_indices
+                            age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices, 
+                            ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices, 
+                            brief_case_details_mismatch_indices, filing_time_mismatch_indices, 
+                            disciplinary_committee_filing_time_mismatch_indices, 
+                            disciplinary_committee_filing_authority_mismatch_indices, 
+                            supervisory_committee_filing_time_mismatch_indices, 
+                            supervisory_committee_filing_authority_mismatch_indices, 
+                            case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, 
+                            voluntary_confession_highlight_indices, closing_time_mismatch_indices,
+                            no_party_position_warning_mismatch_indices,
+                            recovery_amount_highlight_indices,
+                            trial_acceptance_time_mismatch_indices,
+                            trial_closing_time_mismatch_indices,
+                            trial_authority_agency_mismatch_indices,
+                            disposal_decision_keyword_mismatch_indices): # 【新增】接收 disposal_decision_keyword_mismatch_indices
     """
     根据分析结果生成副本和立案编号Excel文件。
     该函数将原始DataFrame写入一个副本文件，对不匹配的单元格进行标红。
@@ -57,6 +57,7 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     trial_acceptance_time_mismatch_indices (set): 审理受理时间不一致的行索引集合。
     trial_closing_time_mismatch_indices (set): 审结时间与审理报告落款时间不一致的行索引集合。
     trial_authority_agency_mismatch_indices (set): 审理机关与填报单位不一致的行索引集合。
+    disposal_decision_keyword_mismatch_indices (set): 处分决定关键词不一致的行索引集合。
 
     返回:
     tuple: (copy_path, case_num_path) 生成的副本文件路径和立案编号文件路径。
@@ -69,8 +70,6 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     copy_filename = original_filename.replace('.xlsx', '_副本.xlsx').replace('.xls', '_副本.xlsx')
     copy_path = os.path.join(case_dir, copy_filename)
     
-    # 【关键修改】直接调用 excel_formatter.py 中的 format_excel 函数
-    # format_excel 将负责写入 DataFrame 并应用所有格式
     try:
         format_excel(
             df, 
@@ -94,11 +93,12 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
             disposal_spirit_mismatch_indices,
             voluntary_confession_highlight_indices, 
             closing_time_mismatch_indices,
-            no_party_position_warning_mismatch_indices, # 传递新参数
-            recovery_amount_highlight_indices, # 传递新参数
-            trial_acceptance_time_mismatch_indices, # 传递新参数
-            trial_closing_time_mismatch_indices, # 传递新参数
-            trial_authority_agency_mismatch_indices # 传递新参数
+            no_party_position_warning_mismatch_indices,
+            recovery_amount_highlight_indices,
+            trial_acceptance_time_mismatch_indices,
+            trial_closing_time_mismatch_indices,
+            trial_authority_agency_mismatch_indices,
+            disposal_decision_keyword_mismatch_indices # 【新增】传递新参数
         )
         logger.info(f"Generated copy file with highlights: {copy_path}")
         print(f"生成高亮后的副本文件: {copy_path}")
@@ -127,6 +127,6 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     except Exception as e:
         logger.error(f"生成立案编号文件失败: {e}", exc_info=True)
         print(f"生成立案编号文件失败: {e}")
-        return copy_path, None # 返回副本路径，但编号文件生成失败
+        return copy_path, None 
 
     return copy_path, case_num_path
