@@ -16,7 +16,8 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
                        supervisory_committee_filing_time_mismatch_indices, 
                        supervisory_committee_filing_authority_mismatch_indices, 
                        case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, 
-                       voluntary_confession_highlight_indices, closing_time_mismatch_indices):
+                       voluntary_confession_highlight_indices, closing_time_mismatch_indices,
+                       no_party_position_warning_mismatch_indices):
     """
     根据分析结果生成副本和立案编号Excel文件。
     该函数将原始DataFrame写入一个副本文件，对不匹配的单元格进行标红。
@@ -28,14 +29,14 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     upload_dir (str): 上传文件的根目录。
     mismatch_indices (set): 姓名不匹配的行索引集合。
     gender_mismatch_indices (set): 性别不匹配的行索引集合。
-    age_mismatch_indices (set): 年龄不匹配的行索引集合。
     issues_list (list): 包含所有问题的列表，每个问题是一个(索引, 案件编码, 涉案人员编码, 问题描述)元组。
-    brief_case_details_mismatch_indices (set): 简要案情不匹配的行索引集合。
+    age_mismatch_indices (set): 年龄不匹配的行索引集合。
     birth_date_mismatch_indices (set): 出生年月不匹配的行索引集合。
     education_mismatch_indices (set): 学历不匹配的行索引集合。
     ethnicity_mismatch_indices (set): 民族不匹配的行索引集合。
     party_member_mismatch_indices (set): 是否中共党员不匹配的行索引集合。
     party_joining_date_mismatch_indices (set): 入党时间不匹配的行索引集合。
+    brief_case_details_mismatch_indices (set): 简要案情不匹配的行索引集合。
     filing_time_mismatch_indices (set): 立案时间不匹配的行索引集合。
     disciplinary_committee_filing_time_mismatch_indices (set): 纪委立案时间不匹配的行索引集合。
     disciplinary_committee_filing_authority_mismatch_indices (set): 纪委立案机关不匹配的行索引集合。
@@ -45,6 +46,7 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     disposal_spirit_mismatch_indices (set): 是否违反中央八项规定精神不一致的行索引集合。
     voluntary_confession_highlight_indices (set): 是否主动交代问题标黄索引集合。
     closing_time_mismatch_indices (set): 结案时间不一致的行索引集合。
+    no_party_position_warning_mismatch_indices (set): 是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分不一致的行索引集合。
 
     返回:
     tuple: (copy_path, case_num_path) 生成的副本文件路径和立案编号文件路径。
@@ -84,6 +86,7 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
             col_index_disposal_spirit = df.columns.get_loc("是否违反中央八项规定精神")
             col_index_voluntary_confession = df.columns.get_loc("是否主动交代问题")
             col_index_closing_time = df.columns.get_loc("结案时间")
+            col_index_no_party_position_warning = df.columns.get_loc("是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分")
 
         except KeyError as e:
             logger.error(f"Excel 文件缺少必要的列: {e}")
@@ -162,6 +165,10 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
             if idx in closing_time_mismatch_indices:
                 worksheet.write(idx + 1, col_index_closing_time,
                                 df.iloc[idx]["结案时间"] if pd.notna(df.iloc[idx]["结案时间"]) else '', red_format)
+
+            if idx in no_party_position_warning_mismatch_indices:
+                worksheet.write(idx + 1, col_index_no_party_position_warning,
+                                df.iloc[idx]["是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分"] if pd.notna(df.iloc[idx]["是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分"]) else '', red_format)
 
     logger.info(f"Generated copy file with highlights: {copy_path}")
     print(f"生成高亮后的副本文件: {copy_path}")

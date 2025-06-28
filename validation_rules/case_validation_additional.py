@@ -84,3 +84,24 @@ def validate_voluntary_confession_rules(row, index, excel_case_code, excel_perso
         issues_list.append((index, excel_case_code, excel_person_code, "请基于CY审理报告进行人工确认主动交代"))
         logger.warning(f"行 {index + 1} - 规则触发: 审理报告中发现“主动交代”，已标记“是否主动交代问题”字段为黄色并添加问题描述。")
         print(f"行 {index + 1} - 规则触发: 审理报告中发现“主动交代”，已标记“是否主动交代问题”字段为黄色并添加问题描述。")
+
+def validate_no_party_position_warning_rules(row, index, excel_case_code, excel_person_code, issues_list, no_party_position_warning_mismatch_indices,
+                                            excel_no_party_position_warning, decision_text_raw):
+    """验证是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分规则。"""
+    
+    target_string = "属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分"
+    decision_contains_warning = target_string in decision_text_raw
+    extracted_no_party_position_warning = "是" if decision_contains_warning else "否"
+    
+    # 处理 Excel 值，确保空值、NaN 或 'nan' 视为“否”
+    excel_value = str(row.get("是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分", "")).strip()
+    excel_no_party_position_warning = "否" if not excel_value or excel_value.lower() == 'nan' else excel_value
+
+    logger.info(f"行 {index + 1} - 字段 '是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分' Excel值: '{excel_no_party_position_warning}'。处分决定中匹配结果: {decision_contains_warning} (提取值: '{extracted_no_party_position_warning}')。")
+    print(f"行 {index + 1} - 字段 '是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分' Excel值: '{excel_no_party_position_warning}'。处分决定中匹配结果: {decision_contains_warning} (提取值: '{extracted_no_party_position_warning}')。")
+
+    if excel_no_party_position_warning != extracted_no_party_position_warning:
+        no_party_position_warning_mismatch_indices.add(index)
+        issues_list.append((index, excel_case_code, excel_person_code, "BP是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分与CU处分决定不一致"))
+        logger.warning(f"行 {index + 1} - 规则违规: Excel值 ('{excel_no_party_position_warning}') 与处分决定提取值 ('{extracted_no_party_position_warning}') 不一致，已标记字段为红色。")
+        print(f"行 {index + 1} - 规则违规: Excel值 ('{excel_no_party_position_warning}') 与处分决定提取值 ('{extracted_no_party_position_warning}') 不一致，已标记字段为红色。")
