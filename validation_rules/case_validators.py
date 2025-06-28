@@ -4,16 +4,24 @@ from datetime import datetime
 from config import Config
 import re
 
-# 新增导入 case_validation_helpers 中的函数
+# 从 case_validation_helpers 导入核心验证函数
 from validation_rules.case_validation_helpers import (
     validate_gender_rules,
     validate_age_rules,
-    validate_brief_case_details_rules,
+    validate_brief_case_details_rules
+)
+
+# 从 case_validation_extended 导入扩展验证函数
+from validation_rules.case_validation_extended import (
     validate_birth_date_rules,
     validate_education_rules,
     validate_ethnicity_rules,
     validate_party_member_rules,
-    validate_party_joining_date_rules,
+    validate_party_joining_date_rules
+)
+
+# 从 case_validation_additional 导入其他验证函数
+from validation_rules.case_validation_additional import (
     validate_name_rules,
     validate_case_report_keywords_rules,
     validate_voluntary_confession_rules
@@ -23,7 +31,6 @@ from validation_rules.case_validation_helpers import (
 from validation_rules.case_timestamp_rules import validate_filing_time
 # 导入处分和金额相关规则
 from validation_rules.case_disposal_amount_rules import validate_disposal_and_amount_rules
-
 
 logger = logging.getLogger(__name__)
 
@@ -118,48 +125,47 @@ def validate_case_relationships(df):
         trial_text_raw = row.get("审理报告", "") if pd.notna(row.get("审理报告")) else '' # 使用 .get()
         filing_decision_doc_raw = row.get("立案决定书", "") if pd.notna(row.get("立案决定书")) else '' # 使用 .get()
 
-
         # --- 调用辅助函数进行验证 ---
         validate_gender_rules(row, index, excel_case_code, excel_person_code, issues_list, gender_mismatch_indices,
-                              excel_gender, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
+                             excel_gender, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
 
         validate_age_rules(row, index, excel_case_code, excel_person_code, issues_list, age_mismatch_indices,
-                           excel_age, current_year, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
+                          excel_age, current_year, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
 
         validate_brief_case_details_rules(row, index, excel_case_code, excel_person_code, issues_list, brief_case_details_mismatch_indices,
-                                          excel_brief_case_details, investigated_person, report_text_raw, decision_text_raw)
+                                         excel_brief_case_details, investigated_person, report_text_raw, decision_text_raw)
 
         validate_birth_date_rules(row, index, excel_case_code, excel_person_code, issues_list, birth_date_mismatch_indices,
-                                  excel_birth_date, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
+                                 excel_birth_date, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
 
         validate_education_rules(row, index, excel_case_code, excel_person_code, issues_list, education_mismatch_indices,
-                                 excel_education, report_text_raw)
+                                excel_education, report_text_raw)
 
         validate_ethnicity_rules(row, index, excel_case_code, excel_person_code, issues_list, ethnicity_mismatch_indices,
-                                 excel_ethnicity, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
+                                excel_ethnicity, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
 
         validate_party_member_rules(row, index, excel_case_code, excel_person_code, issues_list, party_member_mismatch_indices,
-                                    excel_party_member, report_text_raw, decision_text_raw)
+                                   excel_party_member, report_text_raw, decision_text_raw)
 
         validate_party_joining_date_rules(row, index, excel_case_code, excel_person_code, issues_list, party_joining_date_mismatch_indices,
-                                         excel_party_member, excel_party_joining_date, report_text_raw)
+                                        excel_party_member, excel_party_joining_date, report_text_raw)
 
         validate_name_rules(row, index, excel_case_code, excel_person_code, issues_list, mismatch_indices,
-                            investigated_person, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
+                           investigated_person, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
 
         validate_case_report_keywords_rules(row, index, excel_case_code, excel_person_code, issues_list, case_report_keyword_mismatch_indices,
-                                            case_report_keywords_to_check, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
+                                           case_report_keywords_to_check, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
         
         validate_voluntary_confession_rules(row, index, excel_case_code, excel_person_code, issues_list, voluntary_confession_highlight_indices,
-                                            excel_voluntary_confession, trial_text_raw)
+                                           excel_voluntary_confession, trial_text_raw)
 
     # 调用立案时间规则验证函数
     # 修正：validate_filing_time 函数目前接受 7 个参数，因此移除末尾的两个额外参数。
     validate_filing_time(df, issues_list, filing_time_mismatch_indices,
-                         disciplinary_committee_filing_time_mismatch_indices,
-                         disciplinary_committee_filing_authority_mismatch_indices,
-                         supervisory_committee_filing_time_mismatch_indices,
-                         supervisory_committee_filing_authority_mismatch_indices)
+                        disciplinary_committee_filing_time_mismatch_indices,
+                        disciplinary_committee_filing_authority_mismatch_indices,
+                        supervisory_committee_filing_time_mismatch_indices,
+                        supervisory_committee_filing_authority_mismatch_indices)
 
     # 调用处分和金额相关规则验证函数，现在也传递 closing_time_mismatch_indices
     validate_disposal_and_amount_rules(df, issues_list, disposal_spirit_mismatch_indices, closing_time_mismatch_indices)

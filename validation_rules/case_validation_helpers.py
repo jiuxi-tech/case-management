@@ -3,7 +3,7 @@ import pandas as pd
 import re
 from datetime import datetime
 
-# 导入所有必要的提取器函数
+# 导入必要的提取器函数
 from validation_rules.case_extractors_names import (
     extract_name_from_case_report,
     extract_name_from_decision,
@@ -19,31 +19,17 @@ from validation_rules.case_extractors_birth_info import (
     extract_birth_year_from_case_report,
     extract_birth_year_from_decision_report,
     extract_birth_year_from_investigation_report,
-    extract_birth_year_from_trial_report,
-    extract_birth_date_from_case_report,
-    extract_birth_date_from_decision_report,
-    extract_birth_date_from_investigation_report,
-    extract_birth_date_from_trial_report
+    extract_birth_year_from_trial_report
 )
 from validation_rules.case_extractors_demographics import (
-    extract_education_from_case_report,
-    extract_ethnicity_from_case_report,
-    extract_ethnicity_from_decision_report,
-    extract_ethnicity_from_investigation_report,
-    extract_ethnicity_from_trial_report,
     extract_suspected_violation_from_case_report,
     extract_suspected_violation_from_decision
-)
-from validation_rules.case_extractors_party_info import (
-    extract_party_member_from_case_report,
-    extract_party_member_from_decision_report,
-    extract_party_joining_date_from_case_report
 )
 
 logger = logging.getLogger(__name__)
 
 def validate_gender_rules(row, index, excel_case_code, excel_person_code, issues_list, gender_mismatch_indices,
-                          excel_gender, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw):
+                         excel_gender, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw):
     """验证性别相关规则。"""
     
     extracted_gender_from_report = extract_gender_from_case_report(report_text_raw)
@@ -75,7 +61,7 @@ def validate_gender_rules(row, index, excel_case_code, excel_person_code, issues
         print(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 审理报告提取性别 ('{extracted_gender_from_trial}')")
 
 def validate_age_rules(row, index, excel_case_code, excel_person_code, issues_list, age_mismatch_indices,
-                       excel_age, current_year, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw):
+                      excel_age, current_year, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw):
     """验证年龄相关规则。"""
     
     extracted_birth_year_from_report = extract_birth_year_from_case_report(report_text_raw)
@@ -123,7 +109,7 @@ def validate_age_rules(row, index, excel_case_code, excel_person_code, issues_li
         print(f"行 {index + 1} - 年龄不匹配: Excel年龄 ('{excel_age}') vs 审理报告计算年龄 ('{calculated_age_from_trial}')")
 
 def validate_brief_case_details_rules(row, index, excel_case_code, excel_person_code, issues_list, brief_case_details_mismatch_indices,
-                                      excel_brief_case_details, investigated_person, report_text_raw, decision_text_raw):
+                                     excel_brief_case_details, investigated_person, report_text_raw, decision_text_raw):
     """验证简要案情相关规则。"""
     is_brief_case_details_mismatch = False
     extracted_brief_case_details = None
@@ -154,348 +140,3 @@ def validate_brief_case_details_rules(row, index, excel_case_code, excel_person_
 
     if is_brief_case_details_mismatch:
         brief_case_details_mismatch_indices.add(index)
-
-def validate_birth_date_rules(row, index, excel_case_code, excel_person_code, issues_list, birth_date_mismatch_indices,
-                              excel_birth_date, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw):
-    """验证出生年月相关规则。"""
-    
-    extracted_birth_date_from_report = extract_birth_date_from_case_report(report_text_raw)
-    is_birth_date_mismatch_report = False
-    if pd.isna(row["出生年月"]) or excel_birth_date == '':
-        if extracted_birth_date_from_report is not None:
-            is_birth_date_mismatch_report = True
-    elif extracted_birth_date_from_report is None:
-        is_birth_date_mismatch_report = True
-    elif excel_birth_date != extracted_birth_date_from_report:
-        is_birth_date_mismatch_report = True
-    if is_birth_date_mismatch_report:
-        birth_date_mismatch_indices.add(index)
-        issues_list.append((index, excel_case_code, excel_person_code, "O2出生年月与BF2立案报告不一致"))
-        logger.info(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 立案报告提取出生年月 ('{extracted_birth_date_from_report}')")
-        print(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 立案报告提取出生年月 ('{extracted_birth_date_from_report}')")
-
-    extracted_birth_date_from_decision = extract_birth_date_from_decision_report(decision_text_raw)
-    is_birth_date_mismatch_decision = False
-    if pd.isna(row["出生年月"]) or excel_birth_date == '':
-        if extracted_birth_date_from_decision is not None:
-            is_birth_date_mismatch_decision = True
-    elif extracted_birth_date_from_decision is None:
-        is_birth_date_mismatch_decision = True
-    elif excel_birth_date != extracted_birth_date_from_decision:
-        is_birth_date_mismatch_decision = True
-    if is_birth_date_mismatch_decision:
-        birth_date_mismatch_indices.add(index)
-        issues_list.append((index, excel_case_code, excel_person_code, "O2出生年月与CU2处分决定不一致"))
-        logger.info(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 处分决定提取出生年月 ('{extracted_birth_date_from_decision}')")
-        print(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 处分决定提取出生年月 ('{extracted_birth_date_from_decision}')")
-
-    extracted_birth_date_from_investigation = extract_birth_date_from_investigation_report(investigation_text_raw)
-    is_birth_date_mismatch_investigation = False
-    if pd.isna(row["出生年月"]) or excel_birth_date == '':
-        if extracted_birth_date_from_investigation is not None:
-            is_birth_date_mismatch_investigation = True
-    elif extracted_birth_date_from_investigation is None:
-        is_birth_date_mismatch_investigation = True
-    elif excel_birth_date != extracted_birth_date_from_investigation:
-        is_birth_date_mismatch_investigation = True
-    if is_birth_date_mismatch_investigation:
-        birth_date_mismatch_indices.add(index)
-        issues_list.append((index, excel_case_code, excel_person_code, "O2出生年月与CX2审查调查报告不一致"))
-        logger.info(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 审查调查报告提取出生年月 ('{extracted_birth_date_from_investigation}')")
-        print(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 审查调查报告提取出生年月 ('{extracted_birth_date_from_investigation}')")
-
-    extracted_birth_date_from_trial = extract_birth_date_from_trial_report(trial_text_raw)
-    is_birth_date_mismatch_trial = False
-    if pd.isna(row["出生年月"]) or excel_birth_date == '':
-        if extracted_birth_date_from_trial is not None:
-            is_birth_date_mismatch_trial = True
-    elif extracted_birth_date_from_trial is None:
-        is_birth_date_mismatch_trial = True
-    elif excel_birth_date != extracted_birth_date_from_trial:
-        is_birth_date_mismatch_trial = True
-    if is_birth_date_mismatch_trial:
-        birth_date_mismatch_indices.add(index)
-        issues_list.append((index, excel_case_code, excel_person_code, "O2出生年月与CY2审理报告不一致"))
-        logger.info(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 审理报告提取出生年月 ('{extracted_birth_date_from_trial}')")
-        print(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 审理报告提取出生年月 ('{extracted_birth_date_from_trial}')")
-
-def validate_education_rules(row, index, excel_case_code, excel_person_code, issues_list, education_mismatch_indices,
-                             excel_education, report_text_raw):
-    """验证学历相关规则。"""
-    
-    extracted_education_from_report = extract_education_from_case_report(report_text_raw)
-    is_education_mismatch_report = False
-    excel_education_normalized = excel_education
-    if excel_education == "大学本科":
-        excel_education_normalized = "本科"
-    extracted_education_normalized = extracted_education_from_report
-    if extracted_education_from_report == "大学本科":
-        extracted_education_normalized = "本科"
-
-    if not excel_education:
-        if extracted_education_from_report is not None:
-            is_education_mismatch_report = True
-            issues_list.append((index, excel_case_code, excel_person_code, "P2学历与BF2立案报告不一致"))
-            logger.info(f"行 {index + 1} - 学历不匹配: Excel学历为空，但立案报告中提取到学历 ('{extracted_education_from_report}')。")
-            print(f"行 {index + 1} - 学历不匹配: Excel学历为空，但立案报告中提取到学历 ('{extracted_education_from_report}')。")
-    else:
-        if extracted_education_from_report is None:
-            is_education_mismatch_report = True
-            issues_list.append((index, excel_case_code, excel_person_code, "P2学历与BF2立案报告不一致"))
-            logger.info(f"行 {index + 1} - 学历不匹配: Excel学历 ('{excel_education}') 有值，但立案报告中未提取到学历。")
-            print(f"行 {index + 1} - 学历不匹配: Excel学历 ('{excel_education}') 有值，但立案报告中未提取到学历。")
-        elif excel_education_normalized != extracted_education_normalized:
-            is_education_mismatch_report = True
-            issues_list.append((index, excel_case_code, excel_person_code, "P2学历与BF2立案报告不一致"))
-            logger.info(f"行 {index + 1} - 学历不匹配: Excel学历 ('{excel_education}') vs 立案报告提取学历 ('{extracted_education_from_report}')。")
-            print(f"行 {index + 1} - 学历不匹配: Excel学历 ('{excel_education}') vs 立案报告提取学历 ('{extracted_education_from_report}')")
-    if is_education_mismatch_report:
-        education_mismatch_indices.add(index)
-
-def validate_ethnicity_rules(row, index, excel_case_code, excel_person_code, issues_list, ethnicity_mismatch_indices,
-                             excel_ethnicity, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw):
-    """验证民族相关规则。"""
-    
-    extracted_ethnicity_from_report = extract_ethnicity_from_case_report(report_text_raw)
-    is_ethnicity_mismatch_report = False
-    if not excel_ethnicity:
-        if extracted_ethnicity_from_report is not None:
-            is_ethnicity_mismatch_report = True
-            issues_list.append((index, excel_case_code, excel_person_code, "Q2民族与BF2立案报告不一致"))
-            logger.info(f"行 {index + 1} - 民族不匹配: Excel民族为空，但立案报告中提取到民族 ('{extracted_ethnicity_from_report}')。")
-            print(f"行 {index + 1} - 民族不匹配: Excel民族为空，但立案报告中提取到民族 ('{extracted_ethnicity_from_report}'))。")
-    elif extracted_ethnicity_from_report is None:
-        is_ethnicity_mismatch_report = True
-        issues_list.append((index, excel_case_code, excel_person_code, "Q2民族与BF2立案报告不一致"))
-        logger.info(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') 有值，但立案报告中未提取到民族。")
-        print(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') 有值，但立案报告中未提取到民族。")
-    elif excel_ethnicity != extracted_ethnicity_from_report:
-        is_ethnicity_mismatch_report = True
-        issues_list.append((index, excel_case_code, excel_person_code, "Q2民族与BF2立案报告不一致"))
-        logger.info(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') vs 立案报告提取民族 ('{extracted_ethnicity_from_report}')。")
-        print(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') vs 立案报告提取民族 ('{extracted_ethnicity_from_report}')")
-    if is_ethnicity_mismatch_report:
-        ethnicity_mismatch_indices.add(index)
-    
-    extracted_ethnicity_from_decision = extract_ethnicity_from_decision_report(decision_text_raw)
-    is_ethnicity_mismatch_decision = False
-    if not excel_ethnicity:
-        if extracted_ethnicity_from_decision is not None:
-            is_ethnicity_mismatch_decision = True
-            issues_list.append((index, excel_case_code, excel_person_code, "Q2民族与CU2处分决定不一致"))
-            logger.info(f"行 {index + 1} - 民族不匹配: Excel民族为空，但处分决定中提取到民族 ('{extracted_ethnicity_from_decision}')。")
-            print(f"行 {index + 1} - 民族不匹配: Excel民族为空，但处分决定中提取到民族 ('{extracted_ethnicity_from_decision}')。")
-    elif extracted_ethnicity_from_decision is None:
-        is_ethnicity_mismatch_decision = True
-        issues_list.append((index, excel_case_code, excel_person_code, "Q2民族与CU2处分决定不一致"))
-        logger.info(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') 有值，但处分决定中未提取到民族。")
-        print(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') 有值，但处分决定中未提取到民族。")
-    elif excel_ethnicity != extracted_ethnicity_from_decision:
-        is_ethnicity_mismatch_decision = True
-        issues_list.append((index, excel_case_code, excel_person_code, "Q2民族与CU2处分决定不一致"))
-        logger.info(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') vs 处分决定提取民族 ('{extracted_ethnicity_from_decision}')。")
-        print(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') vs 处分决定提取民族 ('{extracted_ethnicity_from_decision}')")
-    if is_ethnicity_mismatch_decision:
-        ethnicity_mismatch_indices.add(index)
-
-    extracted_ethnicity_from_investigation = extract_ethnicity_from_investigation_report(investigation_text_raw)
-    is_ethnicity_mismatch_investigation = False
-    if not excel_ethnicity:
-        if extracted_ethnicity_from_investigation is not None:
-            is_ethnicity_mismatch_investigation = True
-            issues_list.append((index, excel_case_code, excel_person_code, "Q2民族与CX2审查调查报告不一致"))
-            logger.info(f"行 {index + 1} - 民族不匹配: Excel民族为空，但审查调查报告中提取到民族 ('{extracted_ethnicity_from_investigation}')。")
-            print(f"行 {index + 1} - 民族不匹配: Excel民族为空，但审查调查报告中提取到民族 ('{extracted_ethnicity_from_investigation}')。")
-    elif extracted_ethnicity_from_investigation is None:
-        is_ethnicity_mismatch_investigation = True
-        issues_list.append((index, excel_case_code, excel_person_code, "Q2民族与CX2审查调查报告不一致"))
-        logger.info(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') 有值，但审查调查报告中未提取到民族。")
-        print(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') 有值，但审查调查报告中未提取到民族。")
-    elif excel_ethnicity != extracted_ethnicity_from_investigation:
-        is_ethnicity_mismatch_investigation = True
-        issues_list.append((index, excel_case_code, excel_person_code, "Q2民族与CX2审查调查报告不一致"))
-        logger.info(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') vs 审查调查报告提取民族 ('{extracted_ethnicity_from_investigation}')。")
-        print(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') vs 审查调查报告提取民族 ('{extracted_ethnicity_from_investigation}')")
-    if is_ethnicity_mismatch_investigation:
-        ethnicity_mismatch_indices.add(index)
-
-    extracted_ethnicity_from_trial = extract_ethnicity_from_trial_report(trial_text_raw)
-    is_ethnicity_mismatch_trial = False
-    if not excel_ethnicity:
-        if extracted_ethnicity_from_trial is not None:
-            is_ethnicity_mismatch_trial = True
-            issues_list.append((index, excel_case_code, excel_person_code, "Q2民族与CY2审理报告不一致"))
-            logger.info(f"行 {index + 1} - 民族不匹配: Excel民族为空，但审理报告中提取到民族 ('{extracted_ethnicity_from_trial}')。")
-            print(f"行 {index + 1} - 民族不匹配: Excel民族为空，但审理报告中提取到民族 ('{extracted_ethnicity_from_trial}')。")
-    elif extracted_ethnicity_from_trial is None:
-        is_ethnicity_mismatch_trial = True
-        issues_list.append((index, excel_case_code, excel_person_code, "Q2民族与CY2审理报告不一致"))
-        logger.info(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') 有值，但审理报告中未提取到民族。")
-        print(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') 有值，但审理报告中未提取到民族。")
-    elif excel_ethnicity != extracted_ethnicity_from_trial:
-        is_ethnicity_mismatch_trial = True
-        issues_list.append((index, excel_case_code, excel_person_code, "Q2民族与CY2审理报告不一致"))
-        logger.info(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') vs 审理报告提取民族 ('{extracted_ethnicity_from_trial}')。")
-        print(f"行 {index + 1} - 民族不匹配: Excel民族 ('{excel_ethnicity}') vs 审理报告提取民族 ('{extracted_ethnicity_from_trial}')")
-    if is_ethnicity_mismatch_trial:
-        ethnicity_mismatch_indices.add(index)
-
-def validate_party_member_rules(row, index, excel_case_code, excel_person_code, issues_list, party_member_mismatch_indices,
-                                excel_party_member, report_text_raw, decision_text_raw):
-    """验证是否中共党员相关规则。"""
-    
-    extracted_party_member_from_report = extract_party_member_from_case_report(report_text_raw)
-    is_party_member_mismatch_report = False
-    if not excel_party_member:
-        if extracted_party_member_from_report == "是":
-            is_party_member_mismatch_report = True
-            issues_list.append((index, excel_case_code, excel_person_code, "T2是否中共党员与BF2立案报告不一致"))
-            logger.info(f"行 {index + 1} - 是否中共党员不匹配: Excel字段为空，但立案报告中提取到“是”。")
-            print(f"行 {index + 1} - 是否中共党员不匹配: Excel字段为空，但立案报告中提取到“是”。")
-    elif extracted_party_member_from_report is None:
-        is_party_member_mismatch_report = True
-        issues_list.append((index, excel_case_code, excel_person_code, "T2是否中共党员与BF2立案报告不一致"))
-        logger.info(f"行 {index + 1} - 是否中共党员不匹配: Excel字段 ('{excel_party_member}') 有值，但立案报告中未明确提取到党员信息。")
-        print(f"行 {index + 1} - 是否中共党员不匹配: Excel字段 ('{excel_party_member}') 有值，但立案报告中未明确提取到党员信息。")
-    elif excel_party_member != extracted_party_member_from_report:
-        is_party_member_mismatch_report = True
-        issues_list.append((index, excel_case_code, excel_person_code, "T2是否中共党员与BF2立案报告不一致"))
-        logger.info(f"行 {index + 1} - 是否中共党员不匹配: Excel字段 ('{excel_party_member}') vs 立案报告提取 ('{extracted_party_member_from_report}')。")
-        print(f"行 {index + 1} - 是否中共党员不匹配: Excel字段 ('{excel_party_member}') vs 立案报告提取 ('{extracted_party_member_from_report}')。")
-    if is_party_member_mismatch_report:
-        party_member_mismatch_indices.add(index)
-
-    extracted_party_member_from_decision = extract_party_member_from_decision_report(decision_text_raw)
-    is_party_member_mismatch_decision = False
-    if not excel_party_member:
-        if extracted_party_member_from_decision == "是":
-            is_party_member_mismatch_decision = True
-            issues_list.append((index, excel_case_code, excel_person_code, "T2是否中共党员与CU2处分决定不一致"))
-            logger.info(f"行 {index + 1} - 是否中共党员不匹配: Excel字段为空，但处分决定中提取到“是”。")
-            print(f"行 {index + 1} - 是否中共党员不匹配: Excel字段为空，但处分决定中提取到“是”。")
-        elif extracted_party_member_from_decision == "否":
-            pass # 如果Excel为空且处分决定提取为否，则认为一致
-    elif extracted_party_member_from_decision is None:
-        is_party_member_mismatch_decision = True
-        issues_list.append((index, excel_case_code, excel_person_code, "T2是否中共党员与CU2处分决定不一致"))
-        logger.info(f"行 {index + 1} - 是否中共党员不匹配: Excel字段 ('{excel_party_member}') 有值，但处分决定中未明确提取到党员信息。")
-        print(f"行 {index + 1} - 是否中共党员不匹配: Excel字段 ('{excel_party_member}') 有值，但处分决定中未明确提取到党员信息。")
-    elif excel_party_member != extracted_party_member_from_decision:
-        is_party_member_mismatch_decision = True
-        issues_list.append((index, excel_case_code, excel_person_code, "T2是否中共党员与CU2处分决定不一致"))
-        logger.info(f"行 {index + 1} - 是否中共党员不匹配: Excel字段 ('{excel_party_member}') vs 处分决定提取 ('{extracted_party_member_from_decision}')。")
-        print(f"行 {index + 1} - 是否中共党员不匹配: Excel字段 ('{excel_party_member}') vs 处分决定提取 ('{extracted_party_member_from_decision}')。")
-    if is_party_member_mismatch_decision:
-        party_member_mismatch_indices.add(index)
-
-def validate_party_joining_date_rules(row, index, excel_case_code, excel_person_code, issues_list, party_joining_date_mismatch_indices,
-                                     excel_party_member, excel_party_joining_date, report_text_raw):
-    """验证入党时间相关规则。"""
-    
-    extracted_party_joining_date_from_report = extract_party_joining_date_from_case_report(report_text_raw)
-    is_party_joining_date_mismatch = False
-
-    if excel_party_member == "是":
-        if not excel_party_joining_date:
-            if extracted_party_joining_date_from_report is not None:
-                is_party_joining_date_mismatch = True
-                issues_list.append((index, excel_case_code, excel_person_code, "V2入党时间与BF2立案报告不一致"))
-                logger.info(f"行 {index + 1} - 入党时间不匹配: Excel入党时间为空，但立案报告中提取到 ('{extracted_party_joining_date_from_report}')。")
-                print(f"行 {index + 1} - 入党时间不匹配: Excel入党时间为空，但立案报告中提取到 ('{extracted_party_joining_date_from_report}')。")
-        elif extracted_party_joining_date_from_report is None:
-            is_party_joining_date_mismatch = True
-            issues_list.append((index, excel_case_code, excel_person_code, "V2入党时间与BF2立案报告不一致"))
-            logger.info(f"行 {index + 1} - 入党时间不匹配: Excel入党时间 ('{excel_party_joining_date}') 有值，但立案报告中未提取到。")
-            print(f"行 {index + 1} - 入党时间不匹配: Excel入党时间 ('{excel_party_joining_date}') 有值，但立案报告中未提取到。")
-        elif excel_party_joining_date != extracted_party_joining_date_from_report:
-            is_party_joining_date_mismatch = True
-            issues_list.append((index, excel_case_code, excel_person_code, "V2入党时间与BF2立案报告不一致"))
-            logger.info(f"行 {index + 1} - 入党时间不匹配: Excel入党时间 ('{excel_party_joining_date}') vs 立案报告提取 ('{extracted_party_joining_date_from_report}')。")
-            print(f"行 {index + 1} - 入党时间不匹配: Excel入党时间 ('{excel_party_joining_date}') vs 立案报告提取 ('{extracted_party_joining_date_from_report}')。")
-    elif excel_party_member == "否":
-        if excel_party_joining_date:
-            is_party_joining_date_mismatch = True
-            issues_list.append((index, excel_case_code, excel_person_code, "V2入党时间与BF2立案报告不一致"))
-            logger.info(f"行 {index + 1} - 入党时间不匹配: Excel是否中共党员为“否”，但入党时间字段不为空 ('{excel_party_joining_date}')。")
-            print(f"行 {index + 1} - 入党时间不匹配: Excel是否中共党员为“否”，但入党时间字段不为空 ('{excel_party_joining_date}')。")
-
-    if is_party_joining_date_mismatch:
-        party_joining_date_mismatch_indices.add(index)
-
-def validate_name_rules(row, index, excel_case_code, excel_person_code, issues_list, mismatch_indices,
-                        investigated_person, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw):
-    """验证姓名相关规则。"""
-    
-    report_name = extract_name_from_case_report(report_text_raw)
-    if report_name and investigated_person != report_name:
-        mismatch_indices.add(index)
-        issues_list.append((index, excel_case_code, excel_person_code, "C2被调查人与BF2立案报告不一致"))
-        logger.info(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs BF2立案报告 ('{report_name}')")
-        print(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs BF2立案报告 ('{report_name}')")
-
-    decision_name = extract_name_from_decision(decision_text_raw)
-    if not decision_name or (decision_name and investigated_person != decision_name):
-        mismatch_indices.add(index)
-        issues_list.append((index, excel_case_code, excel_person_code, "C2被调查人与CU2处分决定不一致"))
-        logger.info(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CU2处分决定 ('{decision_name}')")
-        print(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CU2处分决定 ('{decision_name}')")
-
-    investigation_name = extract_name_from_case_report(investigation_text_raw)
-    if investigation_name and investigated_person != investigation_name:
-        mismatch_indices.add(index)
-        issues_list.append((index, excel_case_code, excel_person_code, "C2被调查人与CX2审查调查报告不一致"))
-        logger.info(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CX2审查调查报告 ('{investigation_name}')")
-        print(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CX2审查调查报告 ('{investigation_name}')")
-
-    trial_name = extract_name_from_trial_report(trial_text_raw)
-    if not trial_name or (trial_name and investigated_person != trial_name):
-        mismatch_indices.add(index)
-        issues_list.append((index, excel_case_code, excel_person_code, "C2被调查人与CY2审理报告不一致"))
-        logger.info(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
-        print(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
-
-def validate_case_report_keywords_rules(row, index, excel_case_code, excel_person_code, issues_list, case_report_keyword_mismatch_indices,
-                                        case_report_keywords_to_check, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw):
-    """验证立案报告关键字规则。"""
-    
-    found_keywords_in_case_report = [kw for kw in case_report_keywords_to_check if kw in report_text_raw]
-    
-    if found_keywords_in_case_report:
-        logger.info(f"行 {index + 1} - 立案报告中发现关键字: {found_keywords_in_case_report}")
-        print(f"行 {index + 1} - 立案报告中发现关键字: {found_keywords_in_case_report}")
-
-        keyword_mismatch_in_other_reports = False
-        for keyword in found_keywords_in_case_report:
-            if not (keyword in decision_text_raw and keyword in trial_text_raw and keyword in investigation_text_raw):
-                keyword_mismatch_in_other_reports = True
-                logger.info(f"行 {index + 1} - 关键字 '{keyword}' 在处分决定、审理报告或审查调查报告中缺失。")
-                print(f"行 {index + 1} - 关键字 '{keyword}' 在处分决定、审理报告或审查调查报告中缺失。")
-                break
-
-        if keyword_mismatch_in_other_reports:
-            case_report_keyword_mismatch_indices.add(index)
-            issues_list.append((index, excel_case_code, excel_person_code, "BF立案报告与CU处分决定、CY审理报告、CX审查调查报告不一致"))
-            logger.warning(f"行 {index + 1} - 规则违规: 立案报告中关键字与处分决定、审理报告、审查调查报告不一致。")
-            print(f"行 {index + 1} - 规则违规: 立案报告中关键字与处分决定、审理报告、审查调查报告不一致。")
-        else:
-            logger.info(f"行 {index + 1} - 立案报告中所有关键字在处分决定、审理报告和审查调查报告中均存在。")
-            print(f"行 {index + 1} - 立案报告中所有关键字在处分决定、审理报告和审查调查报告中均存在。")
-    else:
-        logger.info(f"行 {index + 1} - 立案报告中未发现指定关键字。")
-        print(f"行 {index + 1} - 立案报告中未发现指定关键字。")
-
-def validate_voluntary_confession_rules(row, index, excel_case_code, excel_person_code, issues_list, voluntary_confession_highlight_indices,
-                                        excel_voluntary_confession, trial_text_raw):
-    """验证是否主动交代问题规则。"""
-    
-    trial_report_contains_confession = "主动交代" in trial_text_raw
-
-    logger.info(f"行 {index + 1} - 字段 '是否主动交代问题' Excel值: '{excel_voluntary_confession}'。审理报告中'主动交代'匹配结果: {trial_report_contains_confession}。")
-    print(f"行 {index + 1} - 字段 '是否主动交代问题' Excel值: '{excel_voluntary_confession}'。审理报告中'主动交代'匹配结果: {trial_report_contains_confession}。")
-
-    if trial_report_contains_confession:
-        voluntary_confession_highlight_indices.add(index)
-        issues_list.append((index, excel_case_code, excel_person_code, "请基于CY审理报告进行人工确认主动交代"))
-        logger.warning(f"行 {index + 1} - 规则触发: 审理报告中发现“主动交代”，已标记“是否主动交代问题”字段为黄色并添加问题描述。")
-        print(f"行 {index + 1} - 规则触发: 审理报告中发现“主动交代”，已标记“是否主动交代问题”字段为黄色并添加问题描述。")
-
