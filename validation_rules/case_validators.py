@@ -56,6 +56,8 @@ def validate_case_relationships(df):
     voluntary_confession_highlight_indices = set()
     closing_time_mismatch_indices = set()
     no_party_position_warning_mismatch_indices = set()
+    # 【新增】追缴失职渎职滥用职权造成的损失金额标黄索引集合
+    recovery_amount_highlight_indices = set()
 
     issues_list = [] 
     
@@ -69,19 +71,22 @@ def validate_case_relationships(df):
         "是否违反中央八项规定精神",
         "是否主动交代问题",
         "结案时间",
-        "是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分"
+        "是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分",
+        # 【新增】将“追缴失职渎职滥用职权造成的损失金额”添加到必要表头，确保其存在
+        "追缴失职渎职滥用职权造成的损失金额" 
     ]
     if not all(header in df.columns for header in required_headers):
         msg = f"缺少必要的表头: {required_headers}"
         logger.error(msg)
         print(msg)
-        return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, \
-               birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, \
-               party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, \
-               disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, \
-               supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices, \
-               case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, voluntary_confession_highlight_indices, \
-               closing_time_mismatch_indices, no_party_position_warning_mismatch_indices
+        return (mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, 
+                birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, 
+                party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, 
+                disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, 
+                supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices, 
+                case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, voluntary_confession_highlight_indices, 
+                closing_time_mismatch_indices, no_party_position_warning_mismatch_indices,
+                recovery_amount_highlight_indices) # 【新增】返回 recovery_amount_highlight_indices
 
     current_year = datetime.now().year
 
@@ -117,6 +122,9 @@ def validate_case_relationships(df):
         excel_party_member = str(row.get("是否中共党员", "")).strip()
         excel_party_joining_date = str(row.get("入党时间", "")).strip()
         excel_no_party_position_warning = str(row.get("是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分", "")).strip()
+        
+        # 【新增】获取“追缴失职渎职滥用职权造成的损失金额”字段值
+        excel_recovery_amount = str(row.get("追缴失职渎职滥用职权造成的损失金额", "")).strip()
 
         excel_case_code = str(row.get("案件编码", "")).strip()
         excel_person_code = str(row.get("涉案人员编码", "")).strip()
@@ -129,56 +137,65 @@ def validate_case_relationships(df):
 
         # --- 调用辅助函数进行验证 ---
         validate_gender_rules(row, index, excel_case_code, excel_person_code, issues_list, gender_mismatch_indices,
-                             excel_gender, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
+                              excel_gender, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
 
         validate_age_rules(row, index, excel_case_code, excel_person_code, issues_list, age_mismatch_indices,
-                          excel_age, current_year, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
+                           excel_age, current_year, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
 
         validate_brief_case_details_rules(row, index, excel_case_code, excel_person_code, issues_list, brief_case_details_mismatch_indices,
-                                         excel_brief_case_details, investigated_person, report_text_raw, decision_text_raw)
+                                          excel_brief_case_details, investigated_person, report_text_raw, decision_text_raw)
 
         validate_birth_date_rules(row, index, excel_case_code, excel_person_code, issues_list, birth_date_mismatch_indices,
-                                 excel_birth_date, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
+                                  excel_birth_date, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
 
         validate_education_rules(row, index, excel_case_code, excel_person_code, issues_list, education_mismatch_indices,
-                                excel_education, report_text_raw)
+                                 excel_education, report_text_raw)
 
         validate_ethnicity_rules(row, index, excel_case_code, excel_person_code, issues_list, ethnicity_mismatch_indices,
-                                excel_ethnicity, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
+                                 excel_ethnicity, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
 
         validate_party_member_rules(row, index, excel_case_code, excel_person_code, issues_list, party_member_mismatch_indices,
-                                   excel_party_member, report_text_raw, decision_text_raw)
+                                    excel_party_member, report_text_raw, decision_text_raw)
 
         validate_party_joining_date_rules(row, index, excel_case_code, excel_person_code, issues_list, party_joining_date_mismatch_indices,
-                                        excel_party_member, excel_party_joining_date, report_text_raw)
+                                          excel_party_member, excel_party_joining_date, report_text_raw)
 
         validate_name_rules(row, index, excel_case_code, excel_person_code, issues_list, mismatch_indices,
-                           investigated_person, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
+                            investigated_person, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
 
         validate_case_report_keywords_rules(row, index, excel_case_code, excel_person_code, issues_list, case_report_keyword_mismatch_indices,
-                                           case_report_keywords_to_check, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
+                                            case_report_keywords_to_check, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw)
         
         validate_voluntary_confession_rules(row, index, excel_case_code, excel_person_code, issues_list, voluntary_confession_highlight_indices,
-                                           excel_voluntary_confession, trial_text_raw)
+                                            excel_voluntary_confession, trial_text_raw)
 
         validate_no_party_position_warning_rules(row, index, excel_case_code, excel_person_code, issues_list, no_party_position_warning_mismatch_indices,
-                                                excel_no_party_position_warning, decision_text_raw)
+                                                 excel_no_party_position_warning, decision_text_raw)
+
+        # 【新增逻辑】处理“追缴失职渎职滥用职权造成的损失金额”字段
+        if pd.notna(row.get("追缴失职渎职滥用职权造成的损失金额")) and str(row.get("追缴失职渎职滥用职权造成的损失金额", "")).strip() != '':
+            recovery_amount_highlight_indices.add(index)
+            # 使用 Config 中定义的规则描述
+            issues_list.append((index, excel_case_code, excel_person_code, Config.VALIDATION_RULES["highlight_recovery_amount"]))
+
 
     # 调用立案时间规则验证函数
     validate_filing_time(df, issues_list, filing_time_mismatch_indices,
-                        disciplinary_committee_filing_time_mismatch_indices,
-                        disciplinary_committee_filing_authority_mismatch_indices,
-                        supervisory_committee_filing_time_mismatch_indices,
-                        supervisory_committee_filing_authority_mismatch_indices)
+                         disciplinary_committee_filing_time_mismatch_indices,
+                         disciplinary_committee_filing_authority_mismatch_indices,
+                         supervisory_committee_filing_time_mismatch_indices,
+                         supervisory_committee_filing_authority_mismatch_indices)
 
     # 调用处分和金额相关规则验证函数
     validate_disposal_and_amount_rules(df, issues_list, disposal_spirit_mismatch_indices, closing_time_mismatch_indices)
 
     # 返回所有可能的不一致索引集以及更新后的 issues_list
-    return mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, \
-           birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, \
-           party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, \
-           disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, \
-           supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices, \
-           case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, voluntary_confession_highlight_indices, \
-           closing_time_mismatch_indices, no_party_position_warning_mismatch_indices
+    # 【修改】在返回列表中加入 recovery_amount_highlight_indices
+    return (mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, 
+            birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, 
+            party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, 
+            disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, 
+            supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices, 
+            case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, voluntary_confession_highlight_indices, 
+            closing_time_mismatch_indices, no_party_position_warning_mismatch_indices,
+            recovery_amount_highlight_indices)

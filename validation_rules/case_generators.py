@@ -8,16 +8,17 @@ from config import Config
 logger = logging.getLogger(__name__)
 
 def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, 
-                       age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices, 
-                       ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices, 
-                       brief_case_details_mismatch_indices, filing_time_mismatch_indices, 
-                       disciplinary_committee_filing_time_mismatch_indices, 
-                       disciplinary_committee_filing_authority_mismatch_indices, 
-                       supervisory_committee_filing_time_mismatch_indices, 
-                       supervisory_committee_filing_authority_mismatch_indices, 
-                       case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, 
-                       voluntary_confession_highlight_indices, closing_time_mismatch_indices,
-                       no_party_position_warning_mismatch_indices):
+                        age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices, 
+                        ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices, 
+                        brief_case_details_mismatch_indices, filing_time_mismatch_indices, 
+                        disciplinary_committee_filing_time_mismatch_indices, 
+                        disciplinary_committee_filing_authority_mismatch_indices, 
+                        supervisory_committee_filing_time_mismatch_indices, 
+                        supervisory_committee_filing_authority_mismatch_indices, 
+                        case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, 
+                        voluntary_confession_highlight_indices, closing_time_mismatch_indices,
+                        no_party_position_warning_mismatch_indices,
+                        recovery_amount_highlight_indices): # 【新增】接收 recovery_amount_highlight_indices
     """
     根据分析结果生成副本和立案编号Excel文件。
     该函数将原始DataFrame写入一个副本文件，对不匹配的单元格进行标红。
@@ -47,10 +48,12 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     voluntary_confession_highlight_indices (set): 是否主动交代问题标黄索引集合。
     closing_time_mismatch_indices (set): 结案时间不一致的行索引集合。
     no_party_position_warning_mismatch_indices (set): 是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分不一致的行索引集合。
+    recovery_amount_highlight_indices (set): 【新增参数】追缴失职渎职滥用职权造成的损失金额标黄索引集合。
+
 
     返回:
     tuple: (copy_path, case_num_path) 生成的副本文件路径和立案编号文件路径。
-           如果生成失败，返回 (None, None)。
+            如果生成失败，返回 (None, None)。
     """
     today = datetime.now().strftime('%Y%m%d')
     case_dir = os.path.join(upload_dir, today, 'case')
@@ -65,7 +68,8 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
         worksheet = writer.sheets['Sheet1']
         
         red_format = workbook.add_format({'bg_color': Config.FORMATS["red"]})
-        yellow_format = workbook.add_format({'bg_color': '#FFFF00'})
+        # 【修改】使用 Config 中定义的黄色格式
+        yellow_format = workbook.add_format({'bg_color': Config.FORMATS["yellow"]}) 
 
         try:
             col_index_investigated_person = df.columns.get_loc("被调查人")
@@ -87,6 +91,8 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
             col_index_voluntary_confession = df.columns.get_loc("是否主动交代问题")
             col_index_closing_time = df.columns.get_loc("结案时间")
             col_index_no_party_position_warning = df.columns.get_loc("是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分")
+            # 【新增】获取“追缴失职渎职滥用职权造成的损失金额”的列索引
+            col_index_recovery_amount = df.columns.get_loc("追缴失职渎职滥用职权造成的损失金额")
 
         except KeyError as e:
             logger.error(f"Excel 文件缺少必要的列: {e}")
@@ -96,79 +102,84 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
         for idx in range(len(df)):
             if idx in mismatch_indices:
                 worksheet.write(idx + 1, col_index_investigated_person, 
-                                df.iloc[idx]["被调查人"] if pd.notna(df.iloc[idx]["被调查人"]) else '', red_format)
+                                 df.iloc[idx]["被调查人"] if pd.notna(df.iloc[idx]["被调查人"]) else '', red_format)
             
             if idx in gender_mismatch_indices:
                 worksheet.write(idx + 1, col_index_gender,
-                                df.iloc[idx]["性别"] if pd.notna(df.iloc[idx]["性别"]) else '', red_format)
+                                 df.iloc[idx]["性别"] if pd.notna(df.iloc[idx]["性别"]) else '', red_format)
 
             if idx in age_mismatch_indices:
                 worksheet.write(idx + 1, col_index_age,
-                                df.iloc[idx]["年龄"] if pd.notna(df.iloc[idx]["年龄"]) else '', red_format)
+                                 df.iloc[idx]["年龄"] if pd.notna(df.iloc[idx]["年龄"]) else '', red_format)
 
             if idx in brief_case_details_mismatch_indices:
                 worksheet.write(idx + 1, col_index_brief_case_details,
-                                df.iloc[idx]["简要案情"] if pd.notna(df.iloc[idx]["简要案情"]) else '', red_format)
+                                 df.iloc[idx]["简要案情"] if pd.notna(df.iloc[idx]["简要案情"]) else '', red_format)
 
             if idx in birth_date_mismatch_indices:
                 worksheet.write(idx + 1, col_index_birth_date,
-                                df.iloc[idx]["出生年月"] if pd.notna(df.iloc[idx]["出生年月"]) else '', red_format)
+                                 df.iloc[idx]["出生年月"] if pd.notna(df.iloc[idx]["出生年月"]) else '', red_format)
 
             if idx in education_mismatch_indices:
                 worksheet.write(idx + 1, col_index_education,
-                                df.iloc[idx]["学历"] if pd.notna(df.iloc[idx]["学历"]) else '', red_format)
+                                 df.iloc[idx]["学历"] if pd.notna(df.iloc[idx]["学历"]) else '', red_format)
 
             if idx in ethnicity_mismatch_indices:
                 worksheet.write(idx + 1, col_index_ethnicity,
-                                df.iloc[idx]["民族"] if pd.notna(df.iloc[idx]["民族"]) else '', red_format)
+                                 df.iloc[idx]["民族"] if pd.notna(df.iloc[idx]["民族"]) else '', red_format)
 
             if idx in party_member_mismatch_indices:
                 worksheet.write(idx + 1, col_index_party_member,
-                                df.iloc[idx]["是否中共党员"] if pd.notna(df.iloc[idx]["是否中共党员"]) else '', red_format)
+                                 df.iloc[idx]["是否中共党员"] if pd.notna(df.iloc[idx]["是否中共党员"]) else '', red_format)
 
             if idx in party_joining_date_mismatch_indices:
                 worksheet.write(idx + 1, col_index_party_joining_date,
-                                df.iloc[idx]["入党时间"] if pd.notna(df.iloc[idx]["入党时间"]) else '', red_format)
+                                 df.iloc[idx]["入党时间"] if pd.notna(df.iloc[idx]["入党时间"]) else '', red_format)
 
             if idx in filing_time_mismatch_indices:
                 worksheet.write(idx + 1, col_index_filing_time,
-                                df.iloc[idx]["立案时间"] if pd.notna(df.iloc[idx]["立案时间"]) else '', red_format)
+                                 df.iloc[idx]["立案时间"] if pd.notna(df.iloc[idx]["立案时间"]) else '', red_format)
             
             if idx in disciplinary_committee_filing_time_mismatch_indices:
                 worksheet.write(idx + 1, col_index_disciplinary_committee_filing_time,
-                                df.iloc[idx]["纪委立案时间"] if pd.notna(df.iloc[idx]["纪委立案时间"]) else '', red_format)
+                                 df.iloc[idx]["纪委立案时间"] if pd.notna(df.iloc[idx]["纪委立案时间"]) else '', red_format)
 
             if idx in disciplinary_committee_filing_authority_mismatch_indices:
                 worksheet.write(idx + 1, col_index_disciplinary_committee_filing_authority,
-                                df.iloc[idx]["纪委立案机关"] if pd.notna(df.iloc[idx]["纪委立案机关"]) else '', red_format)
+                                 df.iloc[idx]["纪委立案机关"] if pd.notna(df.iloc[idx]["纪委立案机关"]) else '', red_format)
 
             if idx in supervisory_committee_filing_time_mismatch_indices:
                 worksheet.write(idx + 1, col_index_supervisory_committee_filing_time,
-                                df.iloc[idx]["监委立案时间"] if pd.notna(df.iloc[idx]["监委立案时间"]) else '', red_format)
+                                 df.iloc[idx]["监委立案时间"] if pd.notna(df.iloc[idx]["监委立案时间"]) else '', red_format)
 
             if idx in supervisory_committee_filing_authority_mismatch_indices:
                 worksheet.write(idx + 1, col_index_supervisory_committee_filing_authority,
-                                df.iloc[idx]["监委立案机关"] if pd.notna(df.iloc[idx]["监委立案机关"]) else '', red_format)
+                                 df.iloc[idx]["监委立案机关"] if pd.notna(df.iloc[idx]["监委立案机关"]) else '', red_format)
             
             if idx in case_report_keyword_mismatch_indices:
                 worksheet.write(idx + 1, col_index_case_report,
-                                df.iloc[idx]["立案报告"] if pd.notna(df.iloc[idx]["立案报告"]) else '', red_format)
+                                 df.iloc[idx]["立案报告"] if pd.notna(df.iloc[idx]["立案报告"]) else '', red_format)
             
             if idx in disposal_spirit_mismatch_indices:
                 worksheet.write(idx + 1, col_index_disposal_spirit,
-                                df.iloc[idx]["是否违反中央八项规定精神"] if pd.notna(df.iloc[idx]["是否违反中央八项规定精神"]) else '', red_format)
+                                 df.iloc[idx]["是否违反中央八项规定精神"] if pd.notna(df.iloc[idx]["是否违反中央八项规定精神"]) else '', red_format)
 
             if idx in voluntary_confession_highlight_indices:
                 worksheet.write(idx + 1, col_index_voluntary_confession,
-                                df.iloc[idx]["是否主动交代问题"] if pd.notna(df.iloc[idx]["是否主动交代问题"]) else '', yellow_format)
+                                 df.iloc[idx]["是否主动交代问题"] if pd.notna(df.iloc[idx]["是否主动交代问题"]) else '', yellow_format)
 
             if idx in closing_time_mismatch_indices:
                 worksheet.write(idx + 1, col_index_closing_time,
-                                df.iloc[idx]["结案时间"] if pd.notna(df.iloc[idx]["结案时间"]) else '', red_format)
+                                 df.iloc[idx]["结案时间"] if pd.notna(df.iloc[idx]["结案时间"]) else '', red_format)
 
             if idx in no_party_position_warning_mismatch_indices:
                 worksheet.write(idx + 1, col_index_no_party_position_warning,
-                                df.iloc[idx]["是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分"] if pd.notna(df.iloc[idx]["是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分"]) else '', red_format)
+                                 df.iloc[idx]["是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分"] if pd.notna(df.iloc[idx]["是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分"]) else '', red_format)
+
+            # 【新增逻辑】如果当前行索引在 recovery_amount_highlight_indices 中，则标黄
+            if idx in recovery_amount_highlight_indices:
+                worksheet.write(idx + 1, col_index_recovery_amount,
+                                 df.iloc[idx]["追缴失职渎职滥用职权造成的损失金额"] if pd.notna(df.iloc[idx]["追缴失职渎职滥用职权造成的损失金额"]) else '', yellow_format)
 
     logger.info(f"Generated copy file with highlights: {copy_path}")
     print(f"生成高亮后的副本文件: {copy_path}")
