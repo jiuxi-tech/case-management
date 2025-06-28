@@ -145,14 +145,14 @@ def process_case_upload(request, app):
         df = pd.read_excel(file_path)
         required_headers = Config.CASE_REQUIRED_HEADERS
         # 新增：确保“案件编码”、“涉案人员编码”、“立案时间”、“立案决定书”、“纪委立案时间”、“纪委立案机关”、“监委立案时间”、“监委立案机关”、“填报单位名称”和“是否违反中央八项规定精神”以及“是否主动交代问题”都在必要表头中
-        required_headers.extend(["案件编码", "涉案人员编码", "立案时间", "立案决定书", "纪委立案时间", "纪委立案机关", "监委立案时间", "监委立案机关", "填报单位名称", "是否违反中央八项规定精神", "是否主动交代问题", "结案时间", "是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分", "追缴失职渎职滥用职权造成的损失金额"]) # 确保包含新字段
+        required_headers.extend(["案件编码", "涉案人员编码", "立案时间", "立案决定书", "纪委立案时间", "纪委立案机关", "监委立案时间", "监委立案机关", "填报单位名称", "是否违反中央八项规定精神", "是否主动交代问题", "结案时间", "是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分", "追缴失职渎职滥用职权造成的损失金额", "审理受理时间"]) # 【新增】确保包含新字段
 
         if not all(header in df.columns for header in required_headers):
             logger.error(f"立案登记表缺少必要表头: {required_headers}")
             flash('Excel文件缺少必要的表头', 'error')
             return redirect(request.url)
 
-        # 验证字段关系 - 接收所有20个返回值，【修改】增加一个返回值 recovery_amount_highlight_indices
+        # 验证字段关系 - 接收所有21个返回值，【修改】增加一个返回值 trial_acceptance_time_mismatch_indices
         (mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, 
         birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, 
         party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, 
@@ -160,9 +160,9 @@ def process_case_upload(request, app):
         supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices, 
         case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, voluntary_confession_highlight_indices, 
         closing_time_mismatch_indices, no_party_position_warning_mismatch_indices,
-        recovery_amount_highlight_indices) = validate_case_relationships(df) # 【新增】接收 recovery_amount_highlight_indices
+        recovery_amount_highlight_indices, trial_acceptance_time_mismatch_indices) = validate_case_relationships(df) # 【新增】接收 trial_acceptance_time_mismatch_indices
         
-        # 生成副本和立案编号文件 - 传递所有参数，包括新增的 no_party_position_warning_mismatch_indices 和 recovery_amount_highlight_indices
+        # 生成副本和立案编号文件 - 传递所有参数，包括新增的 trial_acceptance_time_mismatch_indices
         copy_path, case_num_path = generate_case_files(
             df, 
             file.filename, 
@@ -187,7 +187,8 @@ def process_case_upload(request, app):
             voluntary_confession_highlight_indices,
             closing_time_mismatch_indices,
             no_party_position_warning_mismatch_indices,
-            recovery_amount_highlight_indices  # 【新增参数】
+            recovery_amount_highlight_indices,
+            trial_acceptance_time_mismatch_indices # 【新增参数】
         )
 
         flash('文件上传处理成功！', 'success')
