@@ -168,7 +168,7 @@ def process_case_upload(request, app):
             return redirect(request.url)
 
         # 验证字段关系 - 接收所有返回值
-        # 核心修改：在解包时添加 disposal_decision_keyword_mismatch_indices
+        # 核心修改：在解包时添加 disposal_decision_keyword_mismatch_indices, trial_report_non_representative_mismatch_indices, trial_report_detention_mismatch_indices
         (mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, 
          birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, 
          party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, 
@@ -178,10 +178,12 @@ def process_case_upload(request, app):
          closing_time_mismatch_indices, no_party_position_warning_mismatch_indices,
          recovery_amount_highlight_indices, trial_acceptance_time_mismatch_indices, 
          trial_closing_time_mismatch_indices, trial_authority_agency_mismatch_indices,
-         disposal_decision_keyword_mismatch_indices) = validate_case_relationships(df) # 增加了新的返回值
+         disposal_decision_keyword_mismatch_indices,
+         trial_report_non_representative_mismatch_indices, # 新增
+         trial_report_detention_mismatch_indices) = validate_case_relationships(df) # 新增的返回值
 
         # 生成副本和立案编号文件 - 传递所有参数
-        # 核心修改：在调用 generate_case_files 时添加 disposal_decision_keyword_mismatch_indices
+        # 核心修改：在调用 generate_case_files 时添加 disposal_decision_keyword_mismatch_indices, trial_report_non_representative_mismatch_indices, trial_report_detention_mismatch_indices
         copy_path, case_num_path = generate_case_files(
             df, 
             file.filename, 
@@ -210,7 +212,9 @@ def process_case_upload(request, app):
             trial_acceptance_time_mismatch_indices,
             trial_closing_time_mismatch_indices,
             trial_authority_agency_mismatch_indices,
-            disposal_decision_keyword_mismatch_indices # 增加了新的参数
+            disposal_decision_keyword_mismatch_indices,
+            trial_report_non_representative_mismatch_indices, # 新增
+            trial_report_detention_mismatch_indices # 新增
         )
 
         flash('文件上传处理成功！', 'success')

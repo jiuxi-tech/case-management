@@ -36,7 +36,11 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
                      trial_acceptance_time_mismatch_indices=set(), 
                      trial_closing_time_mismatch_indices=set(), 
                      trial_authority_agency_mismatch_indices=set(),
-                     disposal_decision_keyword_mismatch_indices=set() # 【新增】处分决定关键词不一致的索引
+                     disposal_decision_keyword_mismatch_indices=set(), 
+                     # --- START OF NEW PARAMETERS ---
+                     trial_report_non_representative_mismatch_indices=set(), 
+                     trial_report_detention_mismatch_indices=set()
+                     # --- END OF NEW PARAMETERS ---
                      ):
     """
     格式化Excel文件，根据验证问题对单元格进行着色。
@@ -265,6 +269,16 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
                 apply_format(worksheet, idx, get_column_letter(df, "审理机关"), row.get("审理机关"), True, red_format)
                 apply_format(worksheet, idx, get_column_letter(df, "填报单位名称"), row.get("填报单位名称"), True, red_format)
 
-            # 【新增】处分决定关键词高亮 (red)
+            # 处分决定关键词高亮 (red)
             if "处分决定" in df.columns and idx in disposal_decision_keyword_mismatch_indices:
                 apply_format(worksheet, idx, get_column_letter(df, "处分决定"), row.get("处分决定"), True, red_format)
+            
+            # --- START OF NEW TRIAL REPORT HIGHLIGHTING ---
+            # 审理报告 - 非人大代表/非政协委员/非党委委员/非中共党代表/非纪委委员 (red)
+            if "审理报告" in df.columns and idx in trial_report_non_representative_mismatch_indices:
+                apply_format(worksheet, idx, get_column_letter(df, "审理报告"), row.get("审理报告"), True, red_format)
+
+            # 审理报告 - 扣押 (red)
+            if "审理报告" in df.columns and idx in trial_report_detention_mismatch_indices:
+                apply_format(worksheet, idx, get_column_letter(df, "审理报告"), row.get("审理报告"), True, red_format)
+            # --- END OF NEW TRIAL REPORT HIGHLIGHTING ---

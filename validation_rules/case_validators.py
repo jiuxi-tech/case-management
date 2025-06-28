@@ -81,8 +81,13 @@ def validate_case_relationships(df):
     trial_acceptance_time_mismatch_indices = set()
     trial_closing_time_mismatch_indices = set()
     trial_authority_agency_mismatch_indices = set()
-    # 【新增】处分决定关键词不一致的行索引集合
     disposal_decision_keyword_mismatch_indices = set() 
+    
+    # --- START OF NEW RULE ADDITION ---
+    # New sets for trial report validation
+    trial_report_non_representative_mismatch_indices = set()
+    trial_report_detention_mismatch_indices = set()
+    # --- END OF NEW RULE ADDITION ---
 
     issues_list = [] 
     
@@ -107,6 +112,7 @@ def validate_case_relationships(df):
         msg = f"缺少必要的表头: {missing_headers}"
         logger.error(msg)
         print(msg)
+        # Ensure all new sets are returned even if headers are missing
         return (mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, 
                 birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, 
                 party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, 
@@ -116,11 +122,17 @@ def validate_case_relationships(df):
                 closing_time_mismatch_indices, no_party_position_warning_mismatch_indices,
                 recovery_amount_highlight_indices, trial_acceptance_time_mismatch_indices, 
                 trial_closing_time_mismatch_indices, trial_authority_agency_mismatch_indices,
-                disposal_decision_keyword_mismatch_indices) # 【新增】返回新的索引集合
+                disposal_decision_keyword_mismatch_indices,
+                trial_report_non_representative_mismatch_indices, # NEW
+                trial_report_detention_mismatch_indices) # NEW
 
     current_year = datetime.now().year
 
     case_report_keywords_to_check = ["人大代表", "政协委员", "党委委员", "中共党代表", "纪委委员"]
+    
+    # New keywords for "审理报告"
+    trial_report_non_representative_keywords = ["非人大代表", "非政协委员", "非党委委员", "非中共党代表", "非纪委委员"]
+    trial_report_detention_keyword = "扣押"
 
     # 从数据库获取机关单位字典数据
     authority_agency_db_data = get_authority_agency_dict()
@@ -213,7 +225,7 @@ def validate_case_relationships(df):
                                             excel_voluntary_confession, trial_text_raw)
 
         validate_no_party_position_warning_rules(row, index, excel_case_code, excel_person_code, issues_list, no_party_position_warning_mismatch_indices,
-                                                  excel_no_party_position_warning, decision_text_raw)
+                                                 excel_no_party_position_warning, decision_text_raw)
 
         if pd.notna(row.get("追缴失职渎职滥用职权造成的损失金额")) and str(row.get("追缴失职渎职滥用职权造成的损失金额", "")).strip() != '':
             recovery_amount_highlight_indices.add(index)
@@ -229,7 +241,7 @@ def validate_case_relationships(df):
                     excel_date_obj = pd.to_datetime(excel_trial_acceptance_time).date()
                 except ValueError:
                     logger.warning(f"行 {index + 1} - '审理受理时间' 字段 '{excel_trial_acceptance_time}' 无法解析为日期。")
-                    print(f"行 {index + 1} - '审理受理时间' 字段 '{excel_trial_acceptance_time}' 无法解析为日期。")
+                    print(f"行 {index + 1} - '审理受理时间' 字段 '{excel_trial_acceptance_time}' 不是有效日期格式。") # Updated print message for clarity
                     trial_acceptance_time_mismatch_indices.add(index)
                     issues_list.append((index, excel_case_code, excel_person_code, "CP审理受理时间格式不正确"))
             
@@ -357,7 +369,7 @@ def validate_case_relationships(df):
                 print(f"行 {index + 1} - 审理机关 '{excel_trial_authority}' 和 填报单位名称 '{excel_reporting_agency}' 不匹配或Category不为SL。")
         else:
             logger.info(f"行 {index + 1} - '审理机关' 或 '填报单位名称' 为空，跳过比对。审理机关: '{excel_trial_authority}', 填报单位名称: '{excel_reporting_agency}'")
-            print(f"行 {index + 1} - '审理机关' 或 '填报单位名称' 为空，跳过比对。")
+            print(f"行 {index + 1} - '审理机关' 或 '填报单位名称' 为空，无法比对。")
             trial_authority_agency_mismatch_indices.add(index)
             issues_list.append((index, excel_case_code, excel_person_code, "CR审理机关或A填报单位名称为空，无法比对"))
 
@@ -376,6 +388,28 @@ def validate_case_relationships(df):
                 logger.info(f"行 {index + 1} - '处分决定' 字段不包含禁用关键词。")
                 print(f"行 {index + 1} - '处分决定' 字段不包含禁用关键词。")
 
+        # --- START OF NEW RULE ADDITION for Trial Report ---
+        if "审理报告" in df.columns and pd.notna(trial_text_raw) and trial_text_raw.strip() != '':
+            # Check for non-representative keywords
+            found_non_representative = False
+            for keyword in trial_report_non_representative_keywords:
+                if keyword in trial_text_raw:
+                    trial_report_non_representative_mismatch_indices.add(index)
+                    issues_list.append((index, excel_case_code, excel_person_code, f"CY审理报告中出现{keyword}等字样"))
+                    logger.warning(f"行 {index + 1} (案件编码: {excel_case_code}, 涉案人员编码: {excel_person_code})：审理报告中出现非人大代表/政协委员等字样: '{keyword}'。")
+                    print(f"警告：行 {index + 1} (案件编码: {excel_case_code}, 涉案人员编码: {excel_person_code})：审理报告中出现非人大代表/政协委员等字样: '{keyword}'。")
+                    found_non_representative = True
+                    # Do not break here, continue to check for other non-representative keywords if multiple can exist
+                    # If you only want to flag once per row for this category, uncomment the break below:
+                    # break 
+
+            # Check for "扣押" keyword
+            if trial_report_detention_keyword in trial_text_raw:
+                trial_report_detention_mismatch_indices.add(index)
+                issues_list.append((index, excel_case_code, excel_person_code, "CY审理报告中出现扣押字样"))
+                logger.warning(f"行 {index + 1} (案件编码: {excel_case_code}, 涉案人员编码: {excel_person_code})：审理报告中出现“扣押”字样。")
+                print(f"警告：行 {index + 1} (案件编码: {excel_case_code}, 涉案人员编码: {excel_person_code})：审理报告中出现“扣押”字样。")
+        # --- END OF NEW RULE ADDITION for Trial Report ---
 
     # 调用立案时间规则验证函数
     validate_filing_time(df, issues_list, filing_time_mismatch_indices,
@@ -397,4 +431,6 @@ def validate_case_relationships(df):
             closing_time_mismatch_indices, no_party_position_warning_mismatch_indices,
             recovery_amount_highlight_indices, trial_acceptance_time_mismatch_indices, 
             trial_closing_time_mismatch_indices, trial_authority_agency_mismatch_indices,
-            disposal_decision_keyword_mismatch_indices) # 【新增】返回新的索引集合
+            disposal_decision_keyword_mismatch_indices,
+            trial_report_non_representative_mismatch_indices, # NEW - returned
+            trial_report_detention_mismatch_indices) # NEW - returned

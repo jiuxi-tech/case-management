@@ -9,21 +9,26 @@ from excel_formatter import format_excel
 logger = logging.getLogger(__name__)
 
 def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gender_mismatch_indices, issues_list, 
-                            age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices, 
-                            ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices, 
-                            brief_case_details_mismatch_indices, filing_time_mismatch_indices, 
-                            disciplinary_committee_filing_time_mismatch_indices, 
-                            disciplinary_committee_filing_authority_mismatch_indices, 
-                            supervisory_committee_filing_time_mismatch_indices, 
-                            supervisory_committee_filing_authority_mismatch_indices, 
-                            case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, 
-                            voluntary_confession_highlight_indices, closing_time_mismatch_indices,
-                            no_party_position_warning_mismatch_indices,
-                            recovery_amount_highlight_indices,
-                            trial_acceptance_time_mismatch_indices,
-                            trial_closing_time_mismatch_indices,
-                            trial_authority_agency_mismatch_indices,
-                            disposal_decision_keyword_mismatch_indices): # 【新增】接收 disposal_decision_keyword_mismatch_indices
+                        age_mismatch_indices, birth_date_mismatch_indices, education_mismatch_indices, 
+                        ethnicity_mismatch_indices, party_member_mismatch_indices, party_joining_date_mismatch_indices, 
+                        brief_case_details_mismatch_indices, filing_time_mismatch_indices, 
+                        disciplinary_committee_filing_time_mismatch_indices, 
+                        disciplinary_committee_filing_authority_mismatch_indices, 
+                        supervisory_committee_filing_time_mismatch_indices, 
+                        supervisory_committee_filing_authority_mismatch_indices, 
+                        case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, 
+                        voluntary_confession_highlight_indices, closing_time_mismatch_indices,
+                        no_party_position_warning_mismatch_indices,
+                        recovery_amount_highlight_indices,
+                        trial_acceptance_time_mismatch_indices,
+                        trial_closing_time_mismatch_indices,
+                        trial_authority_agency_mismatch_indices,
+                        disposal_decision_keyword_mismatch_indices,
+                        # --- START: 添加这两个新的参数以匹配调用 ---
+                        trial_report_non_representative_mismatch_indices, 
+                        trial_report_detention_mismatch_indices
+                        # --- END: 添加这两个新的参数以匹配调用 ---
+                        ):
     """
     根据分析结果生成副本和立案编号Excel文件。
     该函数将原始DataFrame写入一个副本文件，对不匹配的单元格进行标红。
@@ -58,6 +63,8 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     trial_closing_time_mismatch_indices (set): 审结时间与审理报告落款时间不一致的行索引集合。
     trial_authority_agency_mismatch_indices (set): 审理机关与填报单位不一致的行索引集合。
     disposal_decision_keyword_mismatch_indices (set): 处分决定关键词不一致的行索引集合。
+    trial_report_non_representative_mismatch_indices (set): 审理报告中非人大代表/政协委员等关键词的行索引集合。
+    trial_report_detention_mismatch_indices (set): 审理报告中出现“扣押”关键词的行索引集合。
 
     返回:
     tuple: (copy_path, case_num_path) 生成的副本文件路径和立案编号文件路径。
@@ -98,7 +105,11 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
             trial_acceptance_time_mismatch_indices,
             trial_closing_time_mismatch_indices,
             trial_authority_agency_mismatch_indices,
-            disposal_decision_keyword_mismatch_indices # 【新增】传递新参数
+            disposal_decision_keyword_mismatch_indices,
+            # --- START: 将新增的参数传递给 format_excel ---
+            trial_report_non_representative_mismatch_indices, 
+            trial_report_detention_mismatch_indices
+            # --- END: 将新增的参数传递给 format_excel ---
         )
         logger.info(f"Generated copy file with highlights: {copy_path}")
         print(f"生成高亮后的副本文件: {copy_path}")
