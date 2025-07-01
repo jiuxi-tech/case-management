@@ -42,7 +42,7 @@ class Config:
         "highlight_confiscation_amount": "R2没收金额请再次确认",
         "highlight_compensation_amount": "S2责令退赔金额请再次确认",
         "highlight_registration_amount": "T2登记上交金额请再次确认",
-        "highlight_recovery_amount": "U2追缴失职渎职滥用职权造成的损失金额请再次确认",
+        "highlight_recovery_amount": "CJ追缴失职渎职滥用职权造成的损失金额请再次确认",
         "inconsistent_ethnicity": "W2民族与AB2处置情况报告民族不一致",
         "highlight_birth_date": "X2出生年月与AB2处置情况报告出生年月不一致",
         "highlight_completion_time": "BT2办结时间与AB2处置情况报告落款时间不一致",
