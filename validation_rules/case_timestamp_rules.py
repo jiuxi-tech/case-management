@@ -11,26 +11,26 @@ def validate_filing_time(df, issues_list, filing_time_mismatch_indices, discipli
     """
     验证“立案时间”、“纪委立案时间”和“监委立案时间”字段的规则。
     规则1: 从“立案决定书”字段内容中提取落款时间，如果落款时间存在空格，
-           在副本表中将“立案时间”字段标红，并在立案编号表中新增“BG立案决定书落款时间存在空格”。
+            在副本表中将“立案时间”字段标红，并在立案编号表中新增“BG立案决定书落款时间存在空格”。
     规则2: “立案时间”字段内容与“立案决定书”字段内容落款时间进行对比，精准匹配。
-           不一致就在副本表中将“立案时间”字段标红，并在立案编号表中新增“AR立案时间与BG立案决定书落款时间不一致”。
+            不一致就在副本表中将“立案时间”字段标红，并在立案编号表中新增“AR立案时间与BG立案决定书落款时间不一致”。
     规则3: 当立案决定书字段内容出现“纪立“和”审查“四个字时：
-           a) 提取立案决定书字段的落款时间，转换后跟“纪委立案时间”字段值进行对比。
-              不一致则标红“纪委立案时间”，并新增问题“AW纪委立案时间和BG立案决定书落款时间不一致“。
-           b) 获取“纪委立案机关”和“填报单位名称“字段的值，从 `authority_agency_dict` 查询匹配，
-              如果不能检索到记录，则标红“纪委立案机关”，并新增问题“A填报单位名称跟AV纪委立案机关不一致“。
+            a) 提取立案决定书字段的落款时间，转换后跟“纪委立案时间”字段值进行对比。
+               不一致则标红“纪委立案时间”，并新增问题“AW纪委立案时间和BG立案决定书落款时间不一致“。
+            b) 获取“纪委立案机关”和“填报单位名称“字段的值，从 `authority_agency_dict` 查询匹配，
+               如果不能检索到记录，则标红“纪委立案机关”，并新增问题“A填报单位名称跟AV纪委立案机关不一致“。
     规则4: 当立案决定书字段内容出现“监立“和”调查“四个字时：
-           a) 提取立案决定书字段的落款时间，转换后跟“监委立案时间”字段值进行对比。
-              不一致则标红“监委立案时间”，并新增问题“AZ监委立案时间和BG立案决定书落款时间不一致“。
-           b) 获取“监委立案机关”和“填报单位名称“字段的值，从 `authority_agency_dict` 查询匹配，
-              如果不能检索到记录，则标红“监委立案机关”，并新增问题“A填报单位名称跟AZ监委立案机关不一致“。
+            a) 提取立案决定书字段的落款时间，转换后跟“监委立案时间”字段值进行对比。
+               不一致则标红“监委立案时间”，并新增问题“AZ监委立案时间和BG立案决定书落款时间不一致“。
+            b) 获取“监委立案机关”和“填报单位名称“字段的值，从 `authority_agency_dict` 查询匹配，
+               如果不能检索到记录，则标红“监委立案机关”，并新增问题“A填报单位名称跟AZ监委立案机关不一致“。
     规则5: 当立案决定书字段内容出现“纪监立“和”审查调查“七个字时：
-           a) 提取立案决定书字段的落款时间，转换后跟“监委立案时间”和“纪委立案时间”同时进行对比，精准匹配。
-              如果不一致则同时标红“监委立案时间”和“纪委立案时间”，并新增问题“AZ监委立案时间、AW纪委立案时间和BG立案决定书落款时间不一致“。
-           b) 获取“监委立案机关”和“填报单位名称“字段的值，从 `authority_agency_dict` 查询匹配，
-              如果不能检索到记录，则标红“监委立案机关”，并新增问题“A填报单位名称跟AZ监委立案机关不一致“。
-           c) 获取“纪委立案机关”和“填报单位名称“字段的值，从 `authority_agency_dict` 查询匹配，
-              如果不能检索到记录，则标红“纪委立案机关”，并新增问题“A填报单位名称跟AV纪委立案机关不一致“。
+            a) 提取立案决定书字段的落款时间，转换后跟“监委立案时间”和“纪委立案时间”同时进行对比，精准匹配。
+               如果不一致则同时标红“监委立案时间”和“纪委立案时间”，并新增问题“AZ监委立案时间、AW纪委立案时间和BG立案决定书落款时间不一致“。
+            b) 获取“监委立案机关”和“填报单位名称“字段的值，从 `authority_agency_dict` 查询匹配，
+               如果不能检索到记录，则标红“监委立案机关”，并新增问题“A填报单位名称跟AZ监委立案机关不一致“和“A填报单位名称跟AV纪委立案机关不一致“。
+            c) 获取“纪委立案机关”和“填报单位名称“字段的值，从 `authority_agency_dict` 查询匹配，
+               如果不能检索到记录，则标红“纪委立案机关”，并新增问题“A填报单位名称跟AV纪委立案机关不一致“。
 
     参数:
     df (pd.DataFrame): 原始Excel数据的DataFrame。
@@ -272,7 +272,7 @@ def validate_filing_time(df, issues_list, filing_time_mismatch_indices, discipli
                 try:
                     standardized_excel_supervisory_committee_filing_time = pd.to_datetime(excel_supervisory_committee_filing_time_raw, errors='coerce').strftime('%Y-%m-%d')
                     logger.debug(f"Excel监委立案时间 '{excel_supervisory_committee_filing_time_raw}' 标准化为 '{standardized_excel_supervisory_committee_filing_time}' (规则5a)")
-                    print(f"Excel监委立案时间 '{excel_supervisory_committee_filing_raw}' 标准化为 '{standardized_excel_supervisory_committee_filing_time}' (规则5a)")
+                    print(f"Excel监委立案时间 '{excel_supervisory_committee_filing_time_raw}' 标准化为 '{standardized_excel_supervisory_committee_filing_time}' (规则5a)")
                 except Exception as e:
                     logger.warning(f"行 {index + 1} - 规则5a: 无法解析Excel监委立案时间 '{excel_supervisory_committee_filing_time_raw}': {e}")
                     print(f"行 {index + 1} - 规则5a: 无法解析Excel监委立案时间 '{excel_supervisory_committee_filing_time_raw}': {e}")
@@ -302,10 +302,17 @@ def validate_filing_time(df, issues_list, filing_time_mismatch_indices, discipli
                 found_match_supervisory_authority_rule_5 = True
             
             if not found_match_supervisory_authority_rule_5:
+                # 原始问题描述
                 issues_list.append((index, case_code, person_code, "A填报单位名称跟AZ监委立案机关不一致"))
                 supervisory_committee_filing_authority_mismatch_indices.add(index)
                 logger.info(f"行 {index + 1} - 规则5b违规: 监委立案机关 ('{excel_supervisory_committee_filing_authority}') 和填报单位名称 ('{excel_reporting_unit_name}') 在对应表中未找到匹配记录，或category不是'NSL'。")
                 print(f"行 {index + 1} - 规则5b违规: 监委立案机关 ('{excel_supervisory_committee_filing_authority}') 和填报单位名称 ('{excel_reporting_unit_name}') 在对应表中未找到匹配记录，或category不是'NSL'。")
+                
+                # 新增问题描述
+                issues_list.append((index, case_code, person_code, "A填报单位名称跟AV纪委立案机关不一致"))
+                disciplinary_committee_filing_authority_mismatch_indices.add(index) # 同样标红纪委立案机关
+                logger.info(f"行 {index + 1} - 规则5b新增违规: 填报单位名称 ('{excel_reporting_unit_name}') 与纪委立案机关 ('{excel_disciplinary_committee_filing_authority}') 也在规则5b条件下被视为不一致。")
+                print(f"行 {index + 1} - 规则5b新增违规: 填报单位名称 ('{excel_reporting_unit_name}') 与纪委立案机关 ('{excel_disciplinary_committee_filing_authority}') 也在规则5b条件下被视为不一致。")
             else:
                 logger.info(f"行 {index + 1} - 规则5b: 监委立案机关 ('{excel_supervisory_committee_filing_authority}') 和填报单位名称 ('{excel_reporting_unit_name}') 在对应表中找到匹配记录。")
                 print(f"行 {index + 1} - 规则5b: 监委立案机关 ('{excel_supervisory_committee_filing_authority}') 和填报单位名称 ('{excel_reporting_unit_name}') 在对应表中找到匹配记录。")
@@ -326,7 +333,6 @@ def validate_filing_time(df, issues_list, filing_time_mismatch_indices, discipli
         else:
             logger.info(f"行 {index + 1} - 立案决定书内容不包含 '纪监立' 和 '审查调查'，跳过相关验证。")
             print(f"行 {index + 1} - 立案决定书内容不包含 '纪监立' 和 '审查调查'，跳过相关验证。")
-
 
     logger.info("立案时间相关规则验证完成。")
     print("立案时间相关规则验证完成。")
