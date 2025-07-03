@@ -38,7 +38,7 @@ class Config:
         "inconsistent_organization_measure": "CC2组织措施与AB2处置情况报告不一致",
         "inconsistent_joining_party_time": "AC2入党时间与AB2处置情况报告不一致",
         "highlight_collection_amount": "Q2收缴金额请再次确认",
-        "highlight_confiscation_amount": "R2没收金额请再次确认",
+        "highlight_confiscation_amount": "R2没收金额请再次确认", # 此处R2描述为没收金额，但可能指的是收缴金额，请最终确认
         "highlight_compensation_amount": "S2责令退赔金额请再次确认",
         "highlight_registration_amount": "T2登记上交金额请再次确认",
         "highlight_recovery_amount": "CJ追缴失职渎职滥用职权造成的损失金额请再次确认",
@@ -53,7 +53,9 @@ class Config:
         # 【新增】处分决定关键词检查规则
         "disposal_decision_keyword_highlight": "CU处分决定中出现非人大代表、非政协委员、非党委委员、非中共党代表、非纪委委员等字样",
         # 【新增】没收金额规则的描述
-        "highlight_confiscation_of_property_amount": "CY审理报告中含有没收金额四字，请人工再次确认CG没收金额" 
+        "highlight_confiscation_of_property_amount": "CY审理报告中含有没收金额四字，请人工再次确认CG没收金额",
+        # 【新增】责令退赔金额规则的描述
+        "highlight_compensation_from_trial_report": "CY审理报告中含有责令退赔四字，请人工再次确认CH责令退赔金额"
     }
     
     # 组织措施关键词
@@ -63,7 +65,7 @@ class Config:
         "责令具结悔过"
     ]
 
-    # 【新增】处分决定中的特殊关键词
+    # 处分决定中的特殊关键词
     DISPOSAL_DECISION_KEYWORDS = [
         "非人大代表", "非政协委员", "非党委委员", "非中共党代表", "非纪委委员"
     ]

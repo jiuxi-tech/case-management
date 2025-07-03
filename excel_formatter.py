@@ -12,7 +12,7 @@ def apply_format(worksheet, row_idx, col_letter, value, condition_met, format_ob
     根据条件判断是否应用格式。
     row_idx 是 DataFrame 的索引 (0-based)，Excel 行号是 row_idx + 2 (因为有表头和Pandas的默认0行)
     """
-    excel_row = row_idx + 2    # Excel行号从1开始，且有表头，所以加2
+    excel_row = row_idx + 2     # Excel行号从1开始，且有表头，所以加2
     if condition_met:
         # 如果条件满足，写入带格式的值
         worksheet.write(f'{col_letter}{excel_row}', value if pd.notna(value) else '', format_obj)
@@ -21,29 +21,31 @@ def apply_format(worksheet, row_idx, col_letter, value, condition_met, format_ob
         worksheet.write(f'{col_letter}{excel_row}', value if pd.notna(value) else '')
 
 def format_excel(df, mismatch_indices, output_path, issues_list,
-                 gender_mismatch_indices=set(), age_mismatch_indices=set(),
-                 birth_date_mismatch_indices=set(), education_mismatch_indices=set(), ethnicity_mismatch_indices=set(),
-                 party_member_mismatch_indices=set(), party_joining_date_mismatch_indices=set(),
-                 brief_case_details_mismatch_indices=set(), filing_time_mismatch_indices=set(),
-                 disciplinary_committee_filing_time_mismatch_indices=set(),
-                 disciplinary_committee_filing_authority_mismatch_indices=set(),
-                 supervisory_committee_filing_time_mismatch_indices=set(),
-                 supervisory_committee_filing_authority_mismatch_indices=set(),
-                 case_report_keyword_mismatch_indices=set(), disposal_spirit_mismatch_indices=set(),
-                 voluntary_confession_highlight_indices=set(), closing_time_mismatch_indices=set(),
-                 no_party_position_warning_mismatch_indices=set(), 
-                 recovery_amount_highlight_indices=set(), 
-                 trial_acceptance_time_mismatch_indices=set(), 
-                 trial_closing_time_mismatch_indices=set(), 
-                 trial_authority_agency_mismatch_indices=set(),
-                 disposal_decision_keyword_mismatch_indices=set(), 
-                 # --- START OF NEW PARAMETERS (Trial Report) ---
-                 trial_report_non_representative_mismatch_indices=set(), 
-                 trial_report_detention_mismatch_indices=set(),
-                 # --- END OF NEW PARAMETERS (Trial Report) ---
-                 confiscation_amount_indices=set(), # 添加 confiscation_amount_indices
-                 confiscation_of_property_amount_indices=set() # <--- 新增没收金额（万元）的索引参数
-                 ):
+                     gender_mismatch_indices=set(), age_mismatch_indices=set(),
+                     birth_date_mismatch_indices=set(), education_mismatch_indices=set(), ethnicity_mismatch_indices=set(),
+                     party_member_mismatch_indices=set(), party_joining_date_mismatch_indices=set(),
+                     brief_case_details_mismatch_indices=set(), filing_time_mismatch_indices=set(),
+                     disciplinary_committee_filing_time_mismatch_indices=set(),
+                     disciplinary_committee_filing_authority_mismatch_indices=set(),
+                     supervisory_committee_filing_time_mismatch_indices=set(),
+                     supervisory_committee_filing_authority_mismatch_indices=set(),
+                     case_report_keyword_mismatch_indices=set(), disposal_spirit_mismatch_indices=set(),
+                     voluntary_confession_highlight_indices=set(), closing_time_mismatch_indices=set(),
+                     no_party_position_warning_mismatch_indices=set(), 
+                     recovery_amount_highlight_indices=set(), 
+                     trial_acceptance_time_mismatch_indices=set(), 
+                     trial_closing_time_mismatch_indices=set(), 
+                     trial_authority_agency_mismatch_indices=set(),
+                     disposal_decision_keyword_mismatch_indices=set(), 
+                     # --- START OF NEW PARAMETERS (Trial Report) ---
+                     trial_report_non_representative_mismatch_indices=set(), 
+                     trial_report_detention_mismatch_indices=set(),
+                     # --- END OF NEW PARAMETERS (Trial Report) ---
+                     confiscation_amount_indices=set(), # 添加 confiscation_amount_indices
+                     confiscation_of_property_amount_indices=set(), # <--- 新增没收金额（万元）的索引参数
+                     # 【新增】这里添加 compensation_amount_highlight_indices
+                     compensation_amount_highlight_indices=set() 
+                     ):
     """
     格式化Excel文件，根据验证问题对单元格进行着色。
     df: 原始DataFrame
@@ -55,6 +57,7 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
     其他索引集合: 用于标红或标黄特定字段
     confiscation_amount_indices: 收缴金额（万元）需要高亮的行索引集合。
     confiscation_of_property_amount_indices: 没收金额需要高亮的行索引集合。
+    compensation_amount_highlight_indices: 责令退赔金额需要高亮的行索引集合。 # <--- 【新增】参数说明
     """
     with pd.ExcelWriter(output_path, engine='xlsxwriter', engine_kwargs={'options': {'nan_inf_to_errors': True}}) as writer:
         df_str = df.fillna('').astype(str)
@@ -300,4 +303,8 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
             # 没收金额需要高亮 (yellow) <--- 新增的没收金额格式化逻辑
             if "没收金额" in df.columns and idx in confiscation_of_property_amount_indices:
                 apply_format(worksheet, idx, get_column_letter(df, "没收金额"), row.get("没收金额"), True, yellow_format)
+
+            # 【新增】责令退赔金额需要高亮 (yellow)
+            if "责令退赔金额" in df.columns and idx in compensation_amount_highlight_indices:
+                apply_format(worksheet, idx, get_column_letter(df, "责令退赔金额"), row.get("责令退赔金额"), True, yellow_format)
             # --- END OF NEW TRIAL REPORT HIGHLIGHTING ---

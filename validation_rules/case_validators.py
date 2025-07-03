@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
 from datetime import datetime
-from config import Config
+from config import Config # 导入Config
 import re
 from db_utils import get_authority_agency_dict
 
@@ -33,7 +33,7 @@ from validation_rules.case_validation_additional import (
 from validation_rules.case_timestamp_rules import (
     validate_filing_time, 
     validate_confiscation_amount, 
-    validate_confiscation_of_property_amount # <--- 【修改点1】: 导入没收金额验证函数
+    validate_confiscation_of_property_amount
 )
 # 导入处分和金额相关规则
 from validation_rules.case_disposal_amount_rules import validate_disposal_and_amount_rules
@@ -92,7 +92,9 @@ def validate_case_relationships(df):
     trial_report_non_representative_mismatch_indices = set()
     trial_report_detention_mismatch_indices = set()
     confiscation_amount_indices = set() 
-    confiscation_of_property_amount_indices = set() # <--- 【修改点2】: 初始化没收金额的索引集合
+    confiscation_of_property_amount_indices = set() 
+    # 【新增点1】: 初始化责令退赔金额的索引集合
+    compensation_amount_highlight_indices = set() 
     # --- END OF NEW RULE ADDITION ---
 
     issues_list = [] 
@@ -113,7 +115,8 @@ def validate_case_relationships(df):
         "审结时间",
         "审理机关",
         "收缴金额（万元）", 
-        "没收金额" # <--- 【修改点3】: 确保这里也包含了新的列 "没收金额"
+        "没收金额",
+        "责令退赔金额" # 【新增点2】: 确保这里也包含了新的列 "责令退赔金额"
     ]
     if not all(header in df.columns for header in required_headers):
         missing_headers = [header for header in required_headers if header not in df.columns]
@@ -133,8 +136,9 @@ def validate_case_relationships(df):
                 disposal_decision_keyword_mismatch_indices,
                 trial_report_non_representative_mismatch_indices, 
                 trial_report_detention_mismatch_indices,
-                confiscation_amount_indices, # 确保返回收缴金额的集合
-                confiscation_of_property_amount_indices) # <--- 【修改点4】: 确保缺失表头时也返回没收金额的集合
+                confiscation_amount_indices, 
+                confiscation_of_property_amount_indices,
+                compensation_amount_highlight_indices) # 【新增点3】: 确保缺失表头时也返回责令退赔金额的集合
 
     current_year = datetime.now().year
 
@@ -143,6 +147,8 @@ def validate_case_relationships(df):
     # New keywords for "审理报告"
     trial_report_non_representative_keywords = ["非人大代表", "非政协委员", "非党委委员", "非中共党代表", "非纪委委员"]
     trial_report_detention_keyword = "扣押"
+    # 【新增点4】: 责令退赔关键词
+    compensation_keyword = "责令退赔" 
 
     # 从数据库获取机关单位字典数据
     authority_agency_db_data = get_authority_agency_dict()
@@ -154,22 +160,6 @@ def validate_case_relationships(df):
                 'authority': record['authority'],
                 'agency': record['agency']
             })
-
-    # !!! 注意: 原来的 for 循环在处理行时，只执行了部分验证，
-    # !!! 像 validate_filing_time 和 validate_disposal_and_amount_rules 是在循环结束后调用的。
-    # !!! 新增的 validate_confiscation_amount 和 validate_confiscation_of_property_amount
-    # !!! 也应该在循环结束后调用，或者如果它依赖于行内的数据，则需要在循环内调用。
-    # !!! 根据你提供的新规则，'审理报告' 的检查是在行级别进行的，
-    # !!! 所以我将其放置在主循环之后，与其他类似的函数一起调用。
-    # !!! 如果你的 validate_filing_time 和 validate_disposal_and_amount_rules
-    # !!! 也都是在行级别操作，并且在循环内部被优化调用，请根据实际情况调整。
-
-    # 通常情况下，像 validate_gender_rules, validate_age_rules 等是在循环内部对每一行进行处理。
-    # 但 validate_filing_time 和 validate_disposal_and_amount_rules 
-    # 在你提供的代码中是在循环外部一次性调用，并处理整个DataFrame。
-    # 
-    # 为了保持一致性，新的 validate_confiscation_amount 和 validate_confiscation_of_property_amount 也将放在循环外部调用。
-    # （如果它内部会遍历DataFrame的话，这是更高效的做法）
 
     # 遍历DataFrame的每一行
     for index, row in df.iterrows():
@@ -216,6 +206,9 @@ def validate_case_relationships(df):
         investigation_text_raw = row.get("审查调查报告", "") if pd.notna(row.get("审查调查报告")) else ''
         trial_text_raw = row.get("审理报告", "") if pd.notna(row.get("审理报告")) else ''
         filing_decision_doc_raw = row.get("立案决定书", "") if pd.notna(row.get("立案决定书")) else ''
+        
+        # 【新增点5】: 获取责令退赔金额字段值，用于判断是否为空（非必须，但保持一致性）
+        excel_compensation_amount = str(row.get("责令退赔金额", "")).strip()
 
         # --- 调用辅助函数进行验证 ---
         validate_gender_rules(row, index, excel_case_code, excel_person_code, issues_list, gender_mismatch_indices,
@@ -403,7 +396,7 @@ def validate_case_relationships(df):
             trial_authority_agency_mismatch_indices.add(index)
             issues_list.append((index, excel_case_code, excel_person_code, "CR审理机关或A填报单位名称为空，无法比对"))
 
-        # 【新增】处分决定关键词检查
+        # 处分决定关键词检查
         if "处分决定" in df.columns and pd.notna(decision_text_raw) and decision_text_raw.strip() != '':
             found_disposal_keyword = False
             for keyword in Config.DISPOSAL_DECISION_KEYWORDS:
@@ -418,11 +411,7 @@ def validate_case_relationships(df):
                 logger.info(f"行 {index + 1} - '处分决定' 字段不包含禁用关键词。")
                 print(f"行 {index + 1} - '处分决定' 字段不包含禁用关键词。")
 
-        # --- START OF NEW RULE ADDITION for Trial Report (within loop, if applicable to per-row check) ---
-        # NOTE: The rule you provided for "审理报告" and "收缴" is *not* here.
-        # It is handled by the validate_confiscation_amount function which is called outside the loop.
-        # The rules below were already in your provided case_validators.py,
-        # indicating they are meant for per-row checks within the main loop.
+        # 审理报告关键词检查（非人大代表/政协委员等字样，和扣押字样）
         if "审理报告" in df.columns and pd.notna(trial_text_raw) and trial_text_raw.strip() != '':
             # Check for non-representative keywords
             found_non_representative = False
@@ -434,18 +423,26 @@ def validate_case_relationships(df):
                     print(f"警告：行 {index + 1} (案件编码: {excel_case_code}, 涉案人员编码: {excel_person_code})：审理报告中出现非人大代表/政协委员等字样: '{keyword}'。")
                     found_non_representative = True
                     # Do not break here, continue to check for other non-representative keywords if multiple can exist
-                    # If you only want to flag once per row for this category, uncomment the break below:
-                    # break 
-
+            
             # Check for "扣押" keyword
             if trial_report_detention_keyword in trial_text_raw:
                 trial_report_detention_mismatch_indices.add(index)
                 issues_list.append((index, excel_case_code, excel_person_code, "CY审理报告中出现扣押字样"))
                 logger.warning(f"行 {index + 1} (案件编码: {excel_case_code}, 涉案人员编码: {excel_person_code})：审理报告中出现“扣押”字样。")
                 print(f"警告：行 {index + 1} (案件编码: {excel_case_code}, 涉案人员编码: {excel_person_code})：审理报告中出现“扣押”字样。")
-        # --- END OF NEW RULE ADDITION for Trial Report ---
 
-    # 调用立案时间规则验证函数
+            # 【新增点6】: 检查“审理报告”是否包含“责令退赔”
+            if compensation_keyword in trial_text_raw:
+                compensation_amount_highlight_indices.add(index)
+                issues_list.append((index, excel_case_code, excel_person_code, Config.VALIDATION_RULES["highlight_compensation_from_trial_report"]))
+                logger.warning(f"行 {index + 1} (案件编码: {excel_case_code}, 涉案人员编码: {excel_person_code})：审理报告中出现“责令退赔”字样，请人工再次确认“责令退赔金额”。")
+                print(f"警告：行 {index + 1} (案件编码: {excel_case_code}, 涉案人员编码: {excel_person_code})：审理报告中出现“责令退赔”字样，请人工再次确认“责令退赔金额”。")
+            else:
+                logger.info(f"行 {index + 1} (案件编码: {excel_case_code}, 涉案人员编码: {excel_person_code})：审理报告中未出现“责令退赔”字样。")
+                print(f"行 {index + 1} (案件编码: {excel_case_code}, 涉案人员编码: {excel_person_code})：审理报告中未出现“责令退赔”字样。")
+
+
+        # 调用立案时间规则验证函数
     validate_filing_time(df, issues_list, filing_time_mismatch_indices,
                          disciplinary_committee_filing_time_mismatch_indices,
                          disciplinary_committee_filing_authority_mismatch_indices,
@@ -455,10 +452,10 @@ def validate_case_relationships(df):
     # 调用处分和金额相关规则验证函数
     validate_disposal_and_amount_rules(df, issues_list, disposal_spirit_mismatch_indices, closing_time_mismatch_indices)
 
-    # <--- 【修改点5】: 调用新增的没收金额验证函数
+    # 调用没收金额验证函数
     validate_confiscation_of_property_amount(df, issues_list, confiscation_of_property_amount_indices)
 
-    # <--- 【修改点6】: 调用收缴金额验证函数 (已存在，但再次确认位置)
+    # 调用收缴金额验证函数
     validate_confiscation_amount(df, issues_list, confiscation_amount_indices)
 
 
@@ -475,5 +472,6 @@ def validate_case_relationships(df):
             disposal_decision_keyword_mismatch_indices,
             trial_report_non_representative_mismatch_indices, 
             trial_report_detention_mismatch_indices,
-            confiscation_amount_indices, # <--- 【修改点7】: 在返回语句中包含收缴金额的集合
-            confiscation_of_property_amount_indices) # <--- 【修改点8】: 在返回语句中包含没收金额的集合
+            confiscation_amount_indices, 
+            confiscation_of_property_amount_indices,
+            compensation_amount_highlight_indices) # 【新增点7】: 在返回语句中包含责令退赔金额的集合
