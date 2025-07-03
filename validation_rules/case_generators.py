@@ -26,7 +26,8 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
                         disposal_decision_keyword_mismatch_indices,
                         trial_report_non_representative_mismatch_indices, 
                         trial_report_detention_mismatch_indices,
-                        confiscation_amount_indices 
+                        confiscation_amount_indices,
+                        confiscation_of_property_amount_indices # <--- 【新增】这里添加 confiscation_of_property_amount_indices
                         ):
     """
     根据分析结果生成副本和立案编号Excel文件。
@@ -65,6 +66,7 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     trial_report_non_representative_mismatch_indices (set): 审理报告中非人大代表/政协委员等关键词的行索引集合。
     trial_report_detention_mismatch_indices (set): 审理报告中出现“扣押”关键词的行索引集合。
     confiscation_amount_indices (set): 收缴金额（万元）需要高亮的行索引集合。 
+    confiscation_of_property_amount_indices (set): 没收金额需要高亮的行索引集合。 # <--- 【新增】这里添加参数说明
 
     返回:
     tuple: (copy_path, case_num_path) 生成的副本文件路径和立案编号文件路径。
@@ -109,7 +111,8 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
             disposal_decision_keyword_mismatch_indices,
             trial_report_non_representative_mismatch_indices, 
             trial_report_detention_mismatch_indices,
-            confiscation_amount_indices 
+            confiscation_amount_indices,
+            confiscation_of_property_amount_indices # <--- 【新增】这里添加 confiscation_of_property_amount_indices
         )
         logger.info(f"Generated copy file with highlights: {copy_path}")
         print(f"生成高亮后的副本文件: {copy_path}")

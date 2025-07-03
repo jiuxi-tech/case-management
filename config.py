@@ -1,4 +1,3 @@
-# config.py
 import os
 from datetime import datetime
 
@@ -52,7 +51,9 @@ class Config:
         "inconsistent_case_name_investigation": "C2被调查人与CX2审查调查报告不一致",
         "inconsistent_case_name_trial": "C2被调查人与CY2审理报告不一致",
         # 【新增】处分决定关键词检查规则
-        "disposal_decision_keyword_highlight": "CU处分决定中出现非人大代表、非政协委员、非党委委员、非中共党代表、非纪委委员等字样"
+        "disposal_decision_keyword_highlight": "CU处分决定中出现非人大代表、非政协委员、非党委委员、非中共党代表、非纪委委员等字样",
+        # 【新增】没收金额规则的描述
+        "highlight_confiscation_of_property_amount": "CY审理报告中含有没收金额四字，请人工再次确认CG没收金额" 
     }
     
     # 组织措施关键词

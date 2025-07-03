@@ -30,7 +30,11 @@ from validation_rules.case_validation_additional import (
 )
 
 # 导入立案时间规则
-from validation_rules.case_timestamp_rules import validate_filing_time, validate_confiscation_amount # <--- 修改点1: 导入 validate_confiscation_amount
+from validation_rules.case_timestamp_rules import (
+    validate_filing_time, 
+    validate_confiscation_amount, 
+    validate_confiscation_of_property_amount # <--- 【修改点1】: 导入没收金额验证函数
+)
 # 导入处分和金额相关规则
 from validation_rules.case_disposal_amount_rules import validate_disposal_and_amount_rules
 
@@ -87,7 +91,8 @@ def validate_case_relationships(df):
     # New sets for trial report validation
     trial_report_non_representative_mismatch_indices = set()
     trial_report_detention_mismatch_indices = set()
-    confiscation_amount_indices = set() # <--- 修改点2: 初始化新的集合
+    confiscation_amount_indices = set() 
+    confiscation_of_property_amount_indices = set() # <--- 【修改点2】: 初始化没收金额的索引集合
     # --- END OF NEW RULE ADDITION ---
 
     issues_list = [] 
@@ -107,7 +112,8 @@ def validate_case_relationships(df):
         "审理受理时间",
         "审结时间",
         "审理机关",
-        "收缴金额（万元）" # <--- 确保这里也包含了新的列
+        "收缴金额（万元）", 
+        "没收金额" # <--- 【修改点3】: 确保这里也包含了新的列 "没收金额"
     ]
     if not all(header in df.columns for header in required_headers):
         missing_headers = [header for header in required_headers if header not in df.columns]
@@ -127,7 +133,8 @@ def validate_case_relationships(df):
                 disposal_decision_keyword_mismatch_indices,
                 trial_report_non_representative_mismatch_indices, 
                 trial_report_detention_mismatch_indices,
-                confiscation_amount_indices) # <--- 确保缺失表头时也返回新的集合
+                confiscation_amount_indices, # 确保返回收缴金额的集合
+                confiscation_of_property_amount_indices) # <--- 【修改点4】: 确保缺失表头时也返回没收金额的集合
 
     current_year = datetime.now().year
 
@@ -150,8 +157,8 @@ def validate_case_relationships(df):
 
     # !!! 注意: 原来的 for 循环在处理行时，只执行了部分验证，
     # !!! 像 validate_filing_time 和 validate_disposal_and_amount_rules 是在循环结束后调用的。
-    # !!! 新增的 validate_confiscation_amount 也应该在循环结束后调用，
-    # !!! 或者如果它依赖于行内的数据，则需要在循环内调用。
+    # !!! 新增的 validate_confiscation_amount 和 validate_confiscation_of_property_amount
+    # !!! 也应该在循环结束后调用，或者如果它依赖于行内的数据，则需要在循环内调用。
     # !!! 根据你提供的新规则，'审理报告' 的检查是在行级别进行的，
     # !!! 所以我将其放置在主循环之后，与其他类似的函数一起调用。
     # !!! 如果你的 validate_filing_time 和 validate_disposal_and_amount_rules
@@ -161,7 +168,7 @@ def validate_case_relationships(df):
     # 但 validate_filing_time 和 validate_disposal_and_amount_rules 
     # 在你提供的代码中是在循环外部一次性调用，并处理整个DataFrame。
     # 
-    # 为了保持一致性，新的 validate_confiscation_amount 也将放在循环外部调用。
+    # 为了保持一致性，新的 validate_confiscation_amount 和 validate_confiscation_of_property_amount 也将放在循环外部调用。
     # （如果它内部会遍历DataFrame的话，这是更高效的做法）
 
     # 遍历DataFrame的每一行
@@ -387,6 +394,9 @@ def validate_case_relationships(df):
                 issues_list.append((index, excel_case_code, excel_person_code, "CR审理机关与A填报单位不一致"))
                 logger.warning(f"行 {index + 1} - 审理机关 '{excel_trial_authority}' 和 填报单位名称 '{excel_reporting_agency}' 不匹配或Category不为SL。")
                 print(f"行 {index + 1} - 审理机关 '{excel_trial_authority}' 和 填报单位名称 '{excel_reporting_agency}' 不匹配或Category不为SL。")
+            else:
+                logger.info(f"行 {index + 1} - 审理机关 ('{excel_trial_authority}') 和 填报单位名称 ('{excel_reporting_agency}') 在对应表中找到匹配记录。")
+                print(f"行 {index + 1} - 审理机关 ('{excel_trial_authority}') 和 填报单位名称 ('{excel_reporting_agency}') 在对应表中找到匹配记录。")
         else:
             logger.info(f"行 {index + 1} - '审理机关' 或 '填报单位名称' 为空，跳过比对。审理机关: '{excel_trial_authority}', 填报单位名称: '{excel_reporting_agency}'")
             print(f"行 {index + 1} - '审理机关' 或 '填报单位名称' 为空，无法比对。")
@@ -445,7 +455,10 @@ def validate_case_relationships(df):
     # 调用处分和金额相关规则验证函数
     validate_disposal_and_amount_rules(df, issues_list, disposal_spirit_mismatch_indices, closing_time_mismatch_indices)
 
-    # <--- 修改点3: 调用新增的收缴金额验证函数
+    # <--- 【修改点5】: 调用新增的没收金额验证函数
+    validate_confiscation_of_property_amount(df, issues_list, confiscation_of_property_amount_indices)
+
+    # <--- 【修改点6】: 调用收缴金额验证函数 (已存在，但再次确认位置)
     validate_confiscation_amount(df, issues_list, confiscation_amount_indices)
 
 
@@ -462,4 +475,5 @@ def validate_case_relationships(df):
             disposal_decision_keyword_mismatch_indices,
             trial_report_non_representative_mismatch_indices, 
             trial_report_detention_mismatch_indices,
-            confiscation_amount_indices) # <--- 修改点4: 在返回语句中包含新的集合
+            confiscation_amount_indices, # <--- 【修改点7】: 在返回语句中包含收缴金额的集合
+            confiscation_of_property_amount_indices) # <--- 【修改点8】: 在返回语句中包含没收金额的集合

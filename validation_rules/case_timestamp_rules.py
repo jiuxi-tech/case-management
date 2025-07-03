@@ -11,26 +11,26 @@ def validate_filing_time(df, issues_list, filing_time_mismatch_indices, discipli
     """
     验证“立案时间”、“纪委立案时间”和“监委立案时间”字段的规则。
     规则1: 从“立案决定书”字段内容中提取落款时间，如果落款时间存在空格，
-            在副本表中将“立案时间”字段标红，并在立案编号表中新增“BG立案决定书落款时间存在空格”。
+             在副本表中将“立案时间”字段标红，并在立案编号表中新增“BG立案决定书落款时间存在空格”。
     规则2: “立案时间”字段内容与“立案决定书”字段内容落款时间进行对比，精准匹配。
-            不一致就在副本表中将“立案时间”字段标红，并在立案编号表中新增“AR立案时间与BG立案决定书落款时间不一致”。
+             不一致就在副本表中将“立案时间”字段标红，并在立案编号表中新增“AR立案时间与BG立案决定书落款时间不一致”。
     规则3: 当立案决定书字段内容出现“纪立“和”审查“四个字时：
-            a) 提取立案决定书字段的落款时间，转换后跟“纪委立案时间”字段值进行对比。
-               不一致则标红“纪委立案时间”，并新增问题“AW纪委立案时间和BG立案决定书落款时间不一致“。
-            b) 获取“纪委立案机关”和“填报单位名称“字段的值，从 `authority_agency_dict` 查询匹配，
-               如果不能检索到记录，则标红“纪委立案机关”，并新增问题“A填报单位名称跟AV纪委立案机关不一致“。
+             a) 提取立案决定书字段的落款时间，转换后跟“纪委立案时间”字段值进行对比。
+                不一致则标红“纪委立案时间”，并新增问题“AW纪委立案时间和BG立案决定书落款时间不一致“。
+             b) 获取“纪委立案机关”和“填报单位名称“字段的值，从 `authority_agency_dict` 查询匹配，
+                如果不能检索到记录，则标红“纪委立案机关”，并新增问题“A填报单位名称跟AV纪委立案机关不一致“。
     规则4: 当立案决定书字段内容出现“监立“和”调查“四个字时：
-            a) 提取立案决定书字段的落款时间，转换后跟“监委立案时间”字段值进行对比。
-               不一致则标红“监委立案时间”，并新增问题“AZ监委立案时间和BG立案决定书落款时间不一致“。
-            b) 获取“监委立案机关”和“填报单位名称“字段的值，从 `authority_agency_dict` 查询匹配，
-               如果不能检索到记录，则标红“监委立案机关”，并新增问题“A填报单位名称跟AZ监委立案机关不一致“。
+             a) 提取立案决定书字段的落款时间，转换后跟“监委立案时间”字段值进行对比。
+                不一致则标红“监委立案时间”，并新增问题“AZ监委立案时间和BG立案决定书落款时间不一致“。
+             b) 获取“监委立案机关”和“填报单位名称“字段的值，从 `authority_agency_dict` 查询匹配，
+                如果不能检索到记录，则标红“监委立案机关”，并新增问题“A填报单位名称跟AZ监委立案机关不一致“。
     规则5: 当立案决定书字段内容出现“纪监立“和”审查调查“七个字时：
-            a) 提取立案决定书字段的落款时间，转换后跟“监委立案时间”和“纪委立案时间”同时进行对比，精准匹配。
-               如果不一致则同时标红“监委立案时间”和“纪委立案时间”，并新增问题“AZ监委立案时间、AW纪委立案时间和BG立案决定书落款时间不一致“。
-            b) 获取“监委立案机关”和“填报单位名称“字段的值，从 `authority_agency_dict` 查询匹配，
-               如果不能检索到记录，则标红“监委立案机关”，并新增问题“A填报单位名称跟AZ监委立案机关不一致“和“A填报单位名称跟AV纪委立案机关不一致“。
-            c) 获取“纪委立案机关”和“填报单位名称“字段的值，从 `authority_agency_dict` 查询匹配，
-               如果不能检索到记录，则标红“纪委立案机关”，并新增问题“A填报单位名称跟AV纪委立案机关不一致“。
+             a) 提取立案决定书字段的落款时间，转换后跟“监委立案时间”和“纪委立案时间”同时进行对比，精准匹配。
+                如果不一致则同时标红“监委立案时间”和“纪委立案时间”，并新增问题“AZ监委立案时间、AW纪委立案时间和BG立案决定书落款时间不一致“。
+             b) 获取“监委立案机关”和“填报单位名称“字段的值，从 `authority_agency_dict` 查询匹配，
+                如果不能检索到记录，则标红“监委立案机关”，并新增问题“A填报单位名称跟AZ监委立案机关不一致“和“A填报单位名称跟AV纪委立案机关不一致“。
+             c) 获取“纪委立案机关”和“填报单位名称“字段的值，从 `authority_agency_dict` 查询匹配，
+                如果不能检索到记录，则标红“纪委立案机关”，并新增问题“A填报单位名称跟AV纪委立案机关不一致“。
 
     参数:
     df (pd.DataFrame): 原始Excel数据的DataFrame。
@@ -374,9 +374,47 @@ def validate_confiscation_amount(df, issues_list, confiscation_amount_indices):
             confiscation_amount_indices.add(index)
             logger.info(f"行 {index + 1} - '审理报告' 中包含 '收缴'。'收缴金额（万元）' 字段将标黄。案件编码: {case_code}, 涉案人员编码: {person_code}")
             print(f"行 {index + 1} - '审理报告' 中包含 '收缴'。'收缴金额（万元）' 字段将标黄。案件编码: {case_code}, 涉案人员编码: {person_code}")
-        # else: # 如果不需要打印没有“收缴”二字的日志，可以注释掉这部分
-        #     logger.debug(f"行 {index + 1} - '审理报告' 中不包含 '收缴'。")
-        #     print(f"行 {index + 1} - '审理报告' 中不包含 '收缴'。")
 
     logger.info("收缴金额相关规则验证完成。")
     print("收缴金额相关规则验证完成。")
+
+
+def validate_confiscation_of_property_amount(df, issues_list, confiscation_of_property_amount_indices):
+    """
+    新增规则：与“审理报告”字段内容进行对比，查找字符串“没收金额”，
+    若出现“没收金额”四字，将副本文件“没收金额”字段标黄。
+    并在立案编号表中添加问题描述：“CY审理报告中含有没收金额四字，请人工再次确认CG没收金额“。
+
+    参数:
+    df (pd.DataFrame): 原始Excel数据的DataFrame。
+    issues_list (list): 包含所有问题的列表，每个问题是一个(索引, 案件编码, 涉案人员编码, 问题描述)元组。
+    confiscation_of_property_amount_indices (set): 收集所有“没收金额”需要标黄的行索引。
+
+    返回:
+    None (issues_list 和 confiscation_of_property_amount_indices 会在函数内部被修改)。
+    """
+    logger.info("开始验证没收金额相关规则...")
+    print("开始验证没收金额相关规则...")
+
+    col_trial_report = "审理报告"
+    col_confiscation_of_property_amount = "没收金额"
+
+    if col_trial_report not in df.columns or col_confiscation_of_property_amount not in df.columns:
+        msg = f"缺少必要的列 '{col_trial_report}' 或 '{col_confiscation_of_property_amount}'，跳过没收金额相关验证。"
+        logger.warning(msg)
+        print(msg)
+        return
+
+    for index, row in df.iterrows():
+        trial_report_text = str(row[col_trial_report]).strip() if pd.notna(row[col_trial_report]) else ''
+        case_code = str(row.get("案件编码", "")).strip()
+        person_code = str(row.get("涉案人员编码", "")).strip()
+
+        if "没收金额" in trial_report_text:
+            issues_list.append((index, case_code, person_code, "CY审理报告中含有没收金额四字，请人工再次确认CG没收金额"))
+            confiscation_of_property_amount_indices.add(index)
+            logger.info(f"行 {index + 1} - '审理报告' 中包含 '没收金额'。'没收金额' 字段将标黄。案件编码: {case_code}, 涉案人员编码: {person_code}")
+            print(f"行 {index + 1} - '审理报告' 中包含 '没收金额'。'没收金额' 字段将标黄。案件编码: {case_code}, 涉案人员编码: {person_code}")
+
+    logger.info("没收金额相关规则验证完成。")
+    print("没收金额相关规则验证完成。")
