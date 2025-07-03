@@ -148,7 +148,7 @@ def process_case_upload(request, app):
     try:
         df = pd.read_excel(file_path)
         # 【最终修正】彻底移除“填报单位”，只保留“填报单位名称”
-        # 【重要】这里更新 required_headers，添加 "责令退赔金额"
+        # 【重要】这里更新 required_headers，添加 "责令退赔金额" 和 "登记上交金额"
         required_headers = [
             "被调查人", "性别", "年龄", "出生年月", "学历", "民族", 
             "是否中共党员", "入党时间", 
@@ -163,7 +163,8 @@ def process_case_upload(request, app):
             "审理机关", 
             "收缴金额（万元）",
             "没收金额",
-            "责令退赔金额" # <--- 【关键】这里添加 "责令退赔金额"
+            "责令退赔金额",
+            "登记上交金额" # <--- 【关键】这里添加 "登记上交金额"
         ]
 
         if not all(header in df.columns for header in required_headers):
@@ -174,7 +175,7 @@ def process_case_upload(request, app):
             return redirect(request.url)
 
         # 验证字段关系 - 接收所有返回值
-        # 【核心修正】在解包时添加 compensation_amount_highlight_indices
+        # 【核心修正】在解包时添加 registered_handover_amount_indices
         (mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, 
          birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, 
          party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, 
@@ -189,11 +190,12 @@ def process_case_upload(request, app):
          trial_report_detention_mismatch_indices,
          confiscation_amount_indices,
          confiscation_of_property_amount_indices,
-         compensation_amount_highlight_indices) = validate_case_relationships(df) # <--- 【关键】这里添加 compensation_amount_highlight_indices
+         compensation_amount_highlight_indices,
+         registered_handover_amount_indices) = validate_case_relationships(df) # <--- 【关键】这里添加 registered_handover_amount_indices
 
 
         # 生成副本和立案编号文件 - 传递所有参数
-        # 【核心修正】在调用 generate_case_files 时添加 compensation_amount_highlight_indices
+        # 【核心修正】在调用 generate_case_files 时添加 registered_handover_amount_indices
         copy_path, case_num_path = generate_case_files(
             df, 
             file.filename, 
@@ -227,7 +229,8 @@ def process_case_upload(request, app):
             trial_report_detention_mismatch_indices,
             confiscation_amount_indices,
             confiscation_of_property_amount_indices,
-            compensation_amount_highlight_indices # <--- 【关键】这里添加 compensation_amount_highlight_indices
+            compensation_amount_highlight_indices,
+            registered_handover_amount_indices # <--- 【关键】这里添加 registered_handover_amount_indices
         )
 
         flash('文件上传处理成功！', 'success')

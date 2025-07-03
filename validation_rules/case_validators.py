@@ -31,9 +31,10 @@ from validation_rules.case_validation_additional import (
 
 # 导入立案时间规则
 from validation_rules.case_timestamp_rules import (
-    validate_filing_time, 
-    validate_confiscation_amount, 
-    validate_confiscation_of_property_amount
+    validate_filing_time,
+    validate_confiscation_amount,
+    validate_confiscation_of_property_amount,
+    validate_registered_handover_amount # 【修改点1】: 导入新的验证函数
 )
 # 导入处分和金额相关规则
 from validation_rules.case_disposal_amount_rules import validate_disposal_and_amount_rules
@@ -85,38 +86,41 @@ def validate_case_relationships(df):
     trial_acceptance_time_mismatch_indices = set()
     trial_closing_time_mismatch_indices = set()
     trial_authority_agency_mismatch_indices = set()
-    disposal_decision_keyword_mismatch_indices = set() 
+    disposal_decision_keyword_mismatch_indices = set()
     
     # --- START OF NEW RULE ADDITION ---
     # New sets for trial report validation
     trial_report_non_representative_mismatch_indices = set()
     trial_report_detention_mismatch_indices = set()
-    confiscation_amount_indices = set() 
-    confiscation_of_property_amount_indices = set() 
+    confiscation_amount_indices = set()
+    confiscation_of_property_amount_indices = set()
     # 【新增点1】: 初始化责令退赔金额的索引集合
-    compensation_amount_highlight_indices = set() 
+    compensation_amount_highlight_indices = set()
+    # 【修改点2】: 初始化登记上交金额的索引集合
+    registered_handover_amount_indices = set()
     # --- END OF NEW RULE ADDITION ---
 
-    issues_list = [] 
+    issues_list = []
     
     required_headers = [
-        "被调查人", "性别", "年龄", "出生年月", "学历", "民族", 
-        "是否中共党员", "入党时间", "立案报告", "处分决定", 
+        "被调查人", "性别", "年龄", "出生年月", "学历", "民族",
+        "是否中共党员", "入党时间", "立案报告", "处分决定",
         "审查调查报告", "审理报告", "简要案情",
         "案件编码", "涉案人员编码",
-        "立案时间", "立案决定书", 
-        "纪委立案时间", "纪委立案机关", "监委立案时间", "监委立案机关", "填报单位名称", 
+        "立案时间", "立案决定书",
+        "纪委立案时间", "纪委立案机关", "监委立案时间", "监委立案机关", "填报单位名称",
         "是否违反中央八项规定精神",
         "是否主动交代问题",
-        "结案时间", 
+        "结案时间",
         "是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分",
         "追缴失职渎职滥用职权造成的损失金额",
         "审理受理时间",
         "审结时间",
         "审理机关",
-        "收缴金额（万元）", 
+        "收缴金额（万元）",
         "没收金额",
-        "责令退赔金额" # 【新增点2】: 确保这里也包含了新的列 "责令退赔金额"
+        "责令退赔金额", # 【新增点2】: 确保这里也包含了新的列 "责令退赔金额"
+        "登记上交金额" # 【修改点3】: 确保这里也包含了新的列 "登记上交金额"
     ]
     if not all(header in df.columns for header in required_headers):
         missing_headers = [header for header in required_headers if header not in df.columns]
@@ -124,21 +128,22 @@ def validate_case_relationships(df):
         logger.error(msg)
         print(msg)
         # Ensure all new sets are returned even if headers are missing
-        return (mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, 
-                birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, 
-                party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, 
-                disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, 
-                supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices, 
-                case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, voluntary_confession_highlight_indices, 
+        return (mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list,
+                birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices,
+                party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices,
+                disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices,
+                supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices,
+                case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, voluntary_confession_highlight_indices,
                 closing_time_mismatch_indices, no_party_position_warning_mismatch_indices,
-                recovery_amount_highlight_indices, trial_acceptance_time_mismatch_indices, 
+                recovery_amount_highlight_indices, trial_acceptance_time_mismatch_indices,
                 trial_closing_time_mismatch_indices, trial_authority_agency_mismatch_indices,
                 disposal_decision_keyword_mismatch_indices,
-                trial_report_non_representative_mismatch_indices, 
+                trial_report_non_representative_mismatch_indices,
                 trial_report_detention_mismatch_indices,
-                confiscation_amount_indices, 
+                confiscation_amount_indices,
                 confiscation_of_property_amount_indices,
-                compensation_amount_highlight_indices) # 【新增点3】: 确保缺失表头时也返回责令退赔金额的集合
+                compensation_amount_highlight_indices, # 【新增点3】: 确保缺失表头时也返回责令退赔金额的集合
+                registered_handover_amount_indices) # 【修改点4】: 确保缺失表头时也返回登记上交金额的集合
 
     current_year = datetime.now().year
 
@@ -209,6 +214,9 @@ def validate_case_relationships(df):
         
         # 【新增点5】: 获取责令退赔金额字段值，用于判断是否为空（非必须，但保持一致性）
         excel_compensation_amount = str(row.get("责令退赔金额", "")).strip()
+        # 【修改点5】: 获取登记上交金额字段值
+        excel_registered_handover_amount = str(row.get("登记上交金额", "")).strip()
+
 
         # --- 调用辅助函数进行验证 ---
         validate_gender_rules(row, index, excel_case_code, excel_person_code, issues_list, gender_mismatch_indices,
@@ -442,7 +450,7 @@ def validate_case_relationships(df):
                 print(f"行 {index + 1} (案件编码: {excel_case_code}, 涉案人员编码: {excel_person_code})：审理报告中未出现“责令退赔”字样。")
 
 
-        # 调用立案时间规则验证函数
+    # 调用立案时间规则验证函数
     validate_filing_time(df, issues_list, filing_time_mismatch_indices,
                          disciplinary_committee_filing_time_mismatch_indices,
                          disciplinary_committee_filing_authority_mismatch_indices,
@@ -458,20 +466,24 @@ def validate_case_relationships(df):
     # 调用收缴金额验证函数
     validate_confiscation_amount(df, issues_list, confiscation_amount_indices)
 
+    # 【修改点6】: 调用登记上交金额验证函数
+    validate_registered_handover_amount(df, issues_list, registered_handover_amount_indices)
+
 
     # 返回所有可能的不一致索引集以及更新后的 issues_list
-    return (mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, 
-            birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, 
-            party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, 
-            disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, 
-            supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices, 
-            case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, voluntary_confession_highlight_indices, 
+    return (mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list,
+            birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices,
+            party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices,
+            disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices,
+            supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices,
+            case_report_keyword_mismatch_indices, disposal_spirit_mismatch_indices, voluntary_confession_highlight_indices,
             closing_time_mismatch_indices, no_party_position_warning_mismatch_indices,
-            recovery_amount_highlight_indices, trial_acceptance_time_mismatch_indices, 
+            recovery_amount_highlight_indices, trial_acceptance_time_mismatch_indices,
             trial_closing_time_mismatch_indices, trial_authority_agency_mismatch_indices,
             disposal_decision_keyword_mismatch_indices,
-            trial_report_non_representative_mismatch_indices, 
+            trial_report_non_representative_mismatch_indices,
             trial_report_detention_mismatch_indices,
-            confiscation_amount_indices, 
+            confiscation_amount_indices,
             confiscation_of_property_amount_indices,
-            compensation_amount_highlight_indices) # 【新增点7】: 在返回语句中包含责令退赔金额的集合
+            compensation_amount_highlight_indices, # 【新增点7】: 在返回语句中包含责令退赔金额的集合
+            registered_handover_amount_indices) # 【修改点7】: 在返回语句中包含登记上交金额的集合
