@@ -149,7 +149,9 @@ def process_case_upload(request, app):
         df = pd.read_excel(file_path)
         # 【最终修正】彻底移除“填报单位”，只保留“填报单位名称”
         required_headers = [
-            "被调查人", "立案报告", "处分决定", "审查调查报告", "审理报告",
+            "被调查人", "性别", "年龄", "出生年月", "学历", "民族", # Added back Gender, Age, Birth Year/Month, Education, Ethnicity
+            "是否中共党员", "入党时间", # Added back Party Member, Party Joining Date
+            "立案报告", "处分决定", "审查调查报告", "审理报告", "简要案情", # Added back Brief Case Details
             "案件编码", "涉案人员编码", "立案时间", "立案决定书", 
             "纪委立案时间", "纪委立案机关", "监委立案时间", "监委立案机关", 
             "填报单位名称", # 确保这里是正确的
@@ -157,7 +159,8 @@ def process_case_upload(request, app):
             "结案时间", 
             "是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分", 
             "追缴失职渎职滥用职权造成的损失金额", "审理受理时间", "审结时间",
-            "审理机关" # 移除“填报单位”
+            "审理机关", # 移除“填报单位”
+            "收缴金额（万元）" # <--- IMPORTANT: Add this new required header for consistency
         ]
 
         if not all(header in df.columns for header in required_headers):
@@ -168,7 +171,7 @@ def process_case_upload(request, app):
             return redirect(request.url)
 
         # 验证字段关系 - 接收所有返回值
-        # 核心修改：在解包时添加 disposal_decision_keyword_mismatch_indices, trial_report_non_representative_mismatch_indices, trial_report_detention_mismatch_indices
+        # 核心修改：在解包时添加 disposal_decision_keyword_mismatch_indices, trial_report_non_representative_mismatch_indices, trial_report_detention_mismatch_indices, confiscation_amount_indices
         (mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, 
          birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, 
          party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, 
@@ -179,11 +182,13 @@ def process_case_upload(request, app):
          recovery_amount_highlight_indices, trial_acceptance_time_mismatch_indices, 
          trial_closing_time_mismatch_indices, trial_authority_agency_mismatch_indices,
          disposal_decision_keyword_mismatch_indices,
-         trial_report_non_representative_mismatch_indices, # 新增
-         trial_report_detention_mismatch_indices) = validate_case_relationships(df) # 新增的返回值
+         trial_report_non_representative_mismatch_indices, 
+         trial_report_detention_mismatch_indices,
+         confiscation_amount_indices) = validate_case_relationships(df) # <--- 修改点1: 添加 confiscation_amount_indices
+
 
         # 生成副本和立案编号文件 - 传递所有参数
-        # 核心修改：在调用 generate_case_files 时添加 disposal_decision_keyword_mismatch_indices, trial_report_non_representative_mismatch_indices, trial_report_detention_mismatch_indices
+        # 核心修改：在调用 generate_case_files 时添加 disposal_decision_keyword_mismatch_indices, trial_report_non_representative_mismatch_indices, trial_report_detention_mismatch_indices, confiscation_amount_indices
         copy_path, case_num_path = generate_case_files(
             df, 
             file.filename, 
@@ -213,8 +218,9 @@ def process_case_upload(request, app):
             trial_closing_time_mismatch_indices,
             trial_authority_agency_mismatch_indices,
             disposal_decision_keyword_mismatch_indices,
-            trial_report_non_representative_mismatch_indices, # 新增
-            trial_report_detention_mismatch_indices # 新增
+            trial_report_non_representative_mismatch_indices, 
+            trial_report_detention_mismatch_indices,
+            confiscation_amount_indices # <--- 修改点2: 添加 confiscation_amount_indices
         )
 
         flash('文件上传处理成功！', 'success')

@@ -37,10 +37,11 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
                      trial_closing_time_mismatch_indices=set(), 
                      trial_authority_agency_mismatch_indices=set(),
                      disposal_decision_keyword_mismatch_indices=set(), 
-                     # --- START OF NEW PARAMETERS ---
+                     # --- START OF NEW PARAMETERS (Trial Report) ---
                      trial_report_non_representative_mismatch_indices=set(), 
-                     trial_report_detention_mismatch_indices=set()
-                     # --- END OF NEW PARAMETERS ---
+                     trial_report_detention_mismatch_indices=set(),
+                     # --- END OF NEW PARAMETERS (Trial Report) ---
+                     confiscation_amount_indices=set() # <--- 修改点1: 添加 confiscation_amount_indices
                      ):
     """
     格式化Excel文件，根据验证问题对单元格进行着色。
@@ -51,6 +52,7 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
                   每个元素可能是 (original_df_index, clue_code_value, issue_description) (3个值)
                   或 (original_df_index, case_code_value, person_code_value, issue_description) (4个值)
     其他索引集合: 用于标红或标黄特定字段
+    confiscation_amount_indices: 收缴金额（万元）需要高亮的行索引集合。
     """
     with pd.ExcelWriter(output_path, engine='xlsxwriter', engine_kwargs={'options': {'nan_inf_to_errors': True}}) as writer:
         df_str = df.fillna('').astype(str)
@@ -281,4 +283,8 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
             # 审理报告 - 扣押 (red)
             if "审理报告" in df.columns and idx in trial_report_detention_mismatch_indices:
                 apply_format(worksheet, idx, get_column_letter(df, "审理报告"), row.get("审理报告"), True, red_format)
+
+            # --- 修改点2: 添加收缴金额（万元）的格式化逻辑 ---
+            if "收缴金额（万元）" in df.columns and idx in confiscation_amount_indices:
+                apply_format(worksheet, idx, get_column_letter(df, "收缴金额（万元）"), row.get("收缴金额（万元）"), True, yellow_format)
             # --- END OF NEW TRIAL REPORT HIGHLIGHTING ---

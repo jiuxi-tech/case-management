@@ -30,7 +30,7 @@ from validation_rules.case_validation_additional import (
 )
 
 # 导入立案时间规则
-from validation_rules.case_timestamp_rules import validate_filing_time
+from validation_rules.case_timestamp_rules import validate_filing_time, validate_confiscation_amount # <--- 修改点1: 导入 validate_confiscation_amount
 # 导入处分和金额相关规则
 from validation_rules.case_disposal_amount_rules import validate_disposal_and_amount_rules
 
@@ -87,6 +87,7 @@ def validate_case_relationships(df):
     # New sets for trial report validation
     trial_report_non_representative_mismatch_indices = set()
     trial_report_detention_mismatch_indices = set()
+    confiscation_amount_indices = set() # <--- 修改点2: 初始化新的集合
     # --- END OF NEW RULE ADDITION ---
 
     issues_list = [] 
@@ -105,7 +106,8 @@ def validate_case_relationships(df):
         "追缴失职渎职滥用职权造成的损失金额",
         "审理受理时间",
         "审结时间",
-        "审理机关"
+        "审理机关",
+        "收缴金额（万元）" # <--- 确保这里也包含了新的列
     ]
     if not all(header in df.columns for header in required_headers):
         missing_headers = [header for header in required_headers if header not in df.columns]
@@ -123,8 +125,9 @@ def validate_case_relationships(df):
                 recovery_amount_highlight_indices, trial_acceptance_time_mismatch_indices, 
                 trial_closing_time_mismatch_indices, trial_authority_agency_mismatch_indices,
                 disposal_decision_keyword_mismatch_indices,
-                trial_report_non_representative_mismatch_indices, # NEW
-                trial_report_detention_mismatch_indices) # NEW
+                trial_report_non_representative_mismatch_indices, 
+                trial_report_detention_mismatch_indices,
+                confiscation_amount_indices) # <--- 确保缺失表头时也返回新的集合
 
     current_year = datetime.now().year
 
@@ -145,6 +148,23 @@ def validate_case_relationships(df):
                 'agency': record['agency']
             })
 
+    # !!! 注意: 原来的 for 循环在处理行时，只执行了部分验证，
+    # !!! 像 validate_filing_time 和 validate_disposal_and_amount_rules 是在循环结束后调用的。
+    # !!! 新增的 validate_confiscation_amount 也应该在循环结束后调用，
+    # !!! 或者如果它依赖于行内的数据，则需要在循环内调用。
+    # !!! 根据你提供的新规则，'审理报告' 的检查是在行级别进行的，
+    # !!! 所以我将其放置在主循环之后，与其他类似的函数一起调用。
+    # !!! 如果你的 validate_filing_time 和 validate_disposal_and_amount_rules
+    # !!! 也都是在行级别操作，并且在循环内部被优化调用，请根据实际情况调整。
+
+    # 通常情况下，像 validate_gender_rules, validate_age_rules 等是在循环内部对每一行进行处理。
+    # 但 validate_filing_time 和 validate_disposal_and_amount_rules 
+    # 在你提供的代码中是在循环外部一次性调用，并处理整个DataFrame。
+    # 
+    # 为了保持一致性，新的 validate_confiscation_amount 也将放在循环外部调用。
+    # （如果它内部会遍历DataFrame的话，这是更高效的做法）
+
+    # 遍历DataFrame的每一行
     for index, row in df.iterrows():
         logger.debug(f"Processing row {index + 1}")
         print(f"处理行 {index + 1}")
@@ -388,7 +408,11 @@ def validate_case_relationships(df):
                 logger.info(f"行 {index + 1} - '处分决定' 字段不包含禁用关键词。")
                 print(f"行 {index + 1} - '处分决定' 字段不包含禁用关键词。")
 
-        # --- START OF NEW RULE ADDITION for Trial Report ---
+        # --- START OF NEW RULE ADDITION for Trial Report (within loop, if applicable to per-row check) ---
+        # NOTE: The rule you provided for "审理报告" and "收缴" is *not* here.
+        # It is handled by the validate_confiscation_amount function which is called outside the loop.
+        # The rules below were already in your provided case_validators.py,
+        # indicating they are meant for per-row checks within the main loop.
         if "审理报告" in df.columns and pd.notna(trial_text_raw) and trial_text_raw.strip() != '':
             # Check for non-representative keywords
             found_non_representative = False
@@ -421,6 +445,10 @@ def validate_case_relationships(df):
     # 调用处分和金额相关规则验证函数
     validate_disposal_and_amount_rules(df, issues_list, disposal_spirit_mismatch_indices, closing_time_mismatch_indices)
 
+    # <--- 修改点3: 调用新增的收缴金额验证函数
+    validate_confiscation_amount(df, issues_list, confiscation_amount_indices)
+
+
     # 返回所有可能的不一致索引集以及更新后的 issues_list
     return (mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, 
             birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, 
@@ -432,5 +460,6 @@ def validate_case_relationships(df):
             recovery_amount_highlight_indices, trial_acceptance_time_mismatch_indices, 
             trial_closing_time_mismatch_indices, trial_authority_agency_mismatch_indices,
             disposal_decision_keyword_mismatch_indices,
-            trial_report_non_representative_mismatch_indices, # NEW - returned
-            trial_report_detention_mismatch_indices) # NEW - returned
+            trial_report_non_representative_mismatch_indices, 
+            trial_report_detention_mismatch_indices,
+            confiscation_amount_indices) # <--- 修改点4: 在返回语句中包含新的集合

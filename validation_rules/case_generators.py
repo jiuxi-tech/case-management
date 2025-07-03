@@ -3,8 +3,8 @@ import pandas as pd
 import os
 from datetime import datetime
 import xlsxwriter 
-from config import Config
-from excel_formatter import format_excel
+from config import Config # 确保 Config 被正确导入
+from excel_formatter import format_excel # 确保这个导入是正确的
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +24,9 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
                         trial_closing_time_mismatch_indices,
                         trial_authority_agency_mismatch_indices,
                         disposal_decision_keyword_mismatch_indices,
-                        # --- START: 添加这两个新的参数以匹配调用 ---
                         trial_report_non_representative_mismatch_indices, 
-                        trial_report_detention_mismatch_indices
-                        # --- END: 添加这两个新的参数以匹配调用 ---
+                        trial_report_detention_mismatch_indices,
+                        confiscation_amount_indices 
                         ):
     """
     根据分析结果生成副本和立案编号Excel文件。
@@ -37,7 +36,7 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     参数:
     df (pd.DataFrame): 原始Excel数据的DataFrame。
     original_filename (str): 原始上传的文件名。
-    upload_dir (str): 上传文件的根目录。
+    upload_dir (str): 上传文件的根目录 (此参数实际上未被使用，我们将直接使用 Config.CASE_FOLDER)。
     mismatch_indices (set): 姓名不匹配的行索引集合。
     gender_mismatch_indices (set): 性别不匹配的行索引集合。
     issues_list (list): 包含所有问题的列表，每个问题是一个(索引, 案件编码, 涉案人员编码, 问题描述)元组。
@@ -65,14 +64,16 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     disposal_decision_keyword_mismatch_indices (set): 处分决定关键词不一致的行索引集合。
     trial_report_non_representative_mismatch_indices (set): 审理报告中非人大代表/政协委员等关键词的行索引集合。
     trial_report_detention_mismatch_indices (set): 审理报告中出现“扣押”关键词的行索引集合。
+    confiscation_amount_indices (set): 收缴金额（万元）需要高亮的行索引集合。 
 
     返回:
     tuple: (copy_path, case_num_path) 生成的副本文件路径和立案编号文件路径。
             如果生成失败，返回 (None, None)。
     """
-    today = datetime.now().strftime('%Y%m%d')
-    case_dir = os.path.join(upload_dir, today, 'case')
-    os.makedirs(case_dir, exist_ok=True)
+    # 修正点：直接使用 Config.CASE_FOLDER 作为文件保存的根目录
+    # 这样可以确保与 file_processor.py 中保存上传文件的逻辑一致
+    case_dir = Config.CASE_FOLDER 
+    os.makedirs(case_dir, exist_ok=True) # 确保目录存在
 
     copy_filename = original_filename.replace('.xlsx', '_副本.xlsx').replace('.xls', '_副本.xlsx')
     copy_path = os.path.join(case_dir, copy_filename)
@@ -106,10 +107,9 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
             trial_closing_time_mismatch_indices,
             trial_authority_agency_mismatch_indices,
             disposal_decision_keyword_mismatch_indices,
-            # --- START: 将新增的参数传递给 format_excel ---
             trial_report_non_representative_mismatch_indices, 
-            trial_report_detention_mismatch_indices
-            # --- END: 将新增的参数传递给 format_excel ---
+            trial_report_detention_mismatch_indices,
+            confiscation_amount_indices 
         )
         logger.info(f"Generated copy file with highlights: {copy_path}")
         print(f"生成高亮后的副本文件: {copy_path}")
@@ -118,7 +118,8 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
         print(f"生成高亮副本文件失败: {e}")
         return None, None
 
-    case_num_filename = f"立案编号{today}.xlsx"
+    # 立案编号文件的命名方式和路径也调整，确保在同一个目录下
+    case_num_filename = f"立案编号{datetime.now().strftime('%Y%m%d')}.xlsx" # 使用当前日期生成文件名
     case_num_path = os.path.join(case_dir, case_num_filename)
     
     issues_df = pd.DataFrame(columns=['序号', '案件编码', '涉案人员编码', '问题'])
@@ -127,7 +128,20 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
         issues_df = pd.DataFrame({'序号': [1], '案件编码': [''], '涉案人员编码': [''], '问题': ['无问题']})
     else:
         data = []
-        for i, (original_index, case_code, person_code, issue_description) in enumerate(issues_list):
+        for i, issue_item in enumerate(issues_list):
+            # 根据您提供的 issues_list 结构，它应该是 (original_df_index, clue_code_value, issue_description) 3个元素
+            # 或者如果是案件，可能是 (original_df_index, case_code_value, person_code_value, issue_description) 4个元素
+            # 这里的逻辑需要根据您实际传入 issues_list 的结构来确定。
+            # 暂时按照立案登记表可能包含人员编码的情况处理，如果不对，请根据实际传入的 issues_list 结构调整
+            if len(issue_item) == 4:
+                original_index, case_code, person_code, issue_description = issue_item
+            elif len(issue_item) == 3: # 如果 issues_list 只有三个元素 (index, code, description)
+                original_index, case_code, issue_description = issue_item
+                person_code = '' # 如果没有涉案人员编码，可以留空或给定默认值
+            else:
+                logger.warning(f"issues_list 中存在未知格式的元素，跳过: {issue_item}")
+                continue # 跳过无法解析的行
+
             data.append({'序号': i + 1, '案件编码': case_code, '涉案人员编码': person_code, '问题': issue_description})
         issues_df = pd.DataFrame(data)
 

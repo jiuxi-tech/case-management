@@ -7,7 +7,7 @@ import database # 导入 database 模块
 
 logger = logging.getLogger(__name__)
 
-def validate_filing_time(df, issues_list, filing_time_mismatch_indices, disciplinary_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, supervisory_committee_filing_time_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices):
+def validate_filing_time(df, issues_list, filing_time_mismatch_indices, disciplinary_committee_filing_time_mismatch_indices, supervisory_committee_filing_time_mismatch_indices, disciplinary_committee_filing_authority_mismatch_indices, supervisory_committee_filing_authority_mismatch_indices):
     """
     验证“立案时间”、“纪委立案时间”和“监委立案时间”字段的规则。
     规则1: 从“立案决定书”字段内容中提取落款时间，如果落款时间存在空格，
@@ -336,3 +336,47 @@ def validate_filing_time(df, issues_list, filing_time_mismatch_indices, discipli
 
     logger.info("立案时间相关规则验证完成。")
     print("立案时间相关规则验证完成。")
+
+
+def validate_confiscation_amount(df, issues_list, confiscation_amount_indices):
+    """
+    新增规则：与“审理报告”字段内容进行对比，查找字符串“收缴”，
+    若出现“收缴”二字，将副本文件“收缴金额（万元）”字段标黄，
+    并在立案编号表中添加问题描述：“CY审理报告中含有收缴二字，请人工再次确认“。
+
+    参数:
+    df (pd.DataFrame): 原始Excel数据的DataFrame。
+    issues_list (list): 包含所有问题的列表，每个问题是一个(索引, 案件编码, 涉案人员编码, 问题描述)元组。
+    confiscation_amount_indices (set): 收集所有“收缴金额（万元）”需要标黄的行索引。
+
+    返回:
+    None (issues_list 和 confiscation_amount_indices 会在函数内部被修改)。
+    """
+    logger.info("开始验证收缴金额相关规则...")
+    print("开始验证收缴金额相关规则...")
+
+    col_trial_report = "审理报告"
+    col_confiscation_amount = "收缴金额（万元）"
+
+    if col_trial_report not in df.columns or col_confiscation_amount not in df.columns:
+        msg = f"缺少必要的列 '{col_trial_report}' 或 '{col_confiscation_amount}'，跳过收缴金额相关验证。"
+        logger.warning(msg)
+        print(msg)
+        return
+
+    for index, row in df.iterrows():
+        trial_report_text = str(row[col_trial_report]).strip() if pd.notna(row[col_trial_report]) else ''
+        case_code = str(row.get("案件编码", "")).strip()
+        person_code = str(row.get("涉案人员编码", "")).strip()
+
+        if "收缴" in trial_report_text:
+            issues_list.append((index, case_code, person_code, "CY审理报告中含有收缴二字，请人工再次确认"))
+            confiscation_amount_indices.add(index)
+            logger.info(f"行 {index + 1} - '审理报告' 中包含 '收缴'。'收缴金额（万元）' 字段将标黄。案件编码: {case_code}, 涉案人员编码: {person_code}")
+            print(f"行 {index + 1} - '审理报告' 中包含 '收缴'。'收缴金额（万元）' 字段将标黄。案件编码: {case_code}, 涉案人员编码: {person_code}")
+        # else: # 如果不需要打印没有“收缴”二字的日志，可以注释掉这部分
+        #     logger.debug(f"行 {index + 1} - '审理报告' 中不包含 '收缴'。")
+        #     print(f"行 {index + 1} - '审理报告' 中不包含 '收缴'。")
+
+    logger.info("收缴金额相关规则验证完成。")
+    print("收缴金额相关规则验证完成。")
