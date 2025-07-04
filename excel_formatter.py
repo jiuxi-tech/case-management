@@ -17,7 +17,7 @@ def apply_format(worksheet, row_idx, col_letter, value, condition_met, format_ob
     Applies formatting based on a condition.
     row_idx is the DataFrame's index (0-based), Excel row number is row_idx + 2 (due to header and Pandas' default 0-row).
     """
-    excel_row = row_idx + 2      # Excel rows start from 1, and there's a header, so add 2
+    excel_row = row_idx + 2       # Excel rows start from 1, and there's a header, so add 2
     if condition_met:
         # If the condition is met, write the value with formatting
         worksheet.write(f'{col_letter}{excel_row}', value if pd.notna(value) else '', format_obj)
@@ -42,15 +42,14 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
                  trial_closing_time_mismatch_indices=set(), 
                  trial_authority_agency_mismatch_indices=set(),
                  disposal_decision_keyword_mismatch_indices=set(), 
-                 # --- START OF NEW PARAMETERS (Trial Report) ---
                  trial_report_non_representative_mismatch_indices=set(), 
                  trial_report_detention_mismatch_indices=set(),
-                 # --- END OF NEW PARAMETERS (Trial Report) ---
-                 confiscation_amount_indices=set(), # Add confiscation_amount_indices
-                 confiscation_of_property_amount_indices=set(), # <--- Added confiscation_of_property_amount_indices parameter
-                 # 【新增】这里添加 compensation_amount_highlight_indices
+                 confiscation_amount_indices=set(), 
+                 confiscation_of_property_amount_indices=set(), 
                  compensation_amount_highlight_indices=set(),
-                 registered_handover_amount_indices=set() # <--- NEW: Added registered_handover_amount_indices parameter
+                 registered_handover_amount_indices=set(),
+                 # --- 【新增】这里添加 disciplinary_sanction_mismatch_indices 参数 ---
+                 disciplinary_sanction_mismatch_indices=set() 
                  ):
     """
     Formats the Excel file, coloring cells based on validation issues.
@@ -63,8 +62,9 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
     Other index sets: Used for red or yellow highlighting of specific fields
     confiscation_amount_indices: Set of row indices for "收缴金额（万元）" to be highlighted.
     confiscation_of_property_amount_indices: Set of row indices for "没收金额" to be highlighted.
-    compensation_amount_highlight_indices: Set of row indices for "责令退赔金额" to be highlighted. # <--- New parameter description
-    registered_handover_amount_indices: Set of row indices for "登记上交金额" to be highlighted. # <--- NEW: Parameter description
+    compensation_amount_highlight_indices: Set of row indices for "责令退赔金额" to be highlighted.
+    registered_handover_amount_indices: Set of row indices for "登记上交金额" to be highlighted.
+    disciplinary_sanction_mismatch_indices: Set of row indices for "党纪处分" to be highlighted. # <--- NEW: Parameter description
     """
     try:
         with pd.ExcelWriter(output_path, engine='xlsxwriter', engine_kwargs={'options': {'nan_inf_to_errors': True}}) as writer:
@@ -81,109 +81,175 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
             
             # 【关键修改】判断 issues_list 中元素的结构
             is_case_table_issues = False
-            if issues_list and len(issues_list[0]) == 4:
+            # 这里的判断应该更健壮，考虑 issues_list 可能为空的情况
+            if issues_list and isinstance(issues_list[0], dict): # 假设现在 issues_list 元素是字典
+                # 检查字典中是否存在涉案人员编码，这通常是案件表的特征
+                if "涉案人员编码" in issues_list[0]:
+                    is_case_table_issues = True
+            elif issues_list and isinstance(issues_list[0], tuple) and len(issues_list[0]) == 4: # 兼容旧的元组格式（4个元素）
                 is_case_table_issues = True
+
 
             for idx in range(len(df)):
                 row = df.iloc[idx]
 
                 # --- Apply yellow formatting checks (mainly for clue table) ---
                 # Acceptance Time (Clue Table)
-                # Corrected Config.COLUMN_MAPPings to Config.COLUMN_MAPPINGS
                 if Config.COLUMN_MAPPINGS.get("acceptance_time") in df.columns: 
                     value = row.get(Config.COLUMN_MAPPINGS["acceptance_time"])
-                    if is_case_table_issues:
-                        condition = any(issue_desc == Config.VALIDATION_RULES["confirm_acceptance_time"] for i, _, _, issue_desc in issues_list if i == idx)
-                    else: # Clue table scenario
-                        condition = any(issue_desc == Config.VALIDATION_RULES["confirm_acceptance_time"] for i, _, issue_desc in issues_list if i == idx)
+                    condition = False
+                    if issues_list and isinstance(issues_list[0], dict): # 优先处理字典格式
+                         condition = any(issue_item.get('问题描述') == Config.VALIDATION_RULES["confirm_acceptance_time"] and issue_item.get('行号', 0) - 2 == idx for issue_item in issues_list)
+                    elif issues_list and isinstance(issues_list[0], tuple): # 兼容元组格式
+                        if is_case_table_issues: # 4个元素的元组
+                            condition = any(issue_desc == Config.VALIDATION_RULES["confirm_acceptance_time"] for i, _, _, issue_desc in issues_list if i == idx)
+                        else: # 3个元素的元组 (线索表)
+                            condition = any(issue_desc == Config.VALIDATION_RULES["confirm_acceptance_time"] for i, _, issue_desc in issues_list if i == idx)
                     apply_format(worksheet, idx, get_column_letter(df, Config.COLUMN_MAPPINGS["acceptance_time"]), value, condition, yellow_format)
 
                 # Empty Disposal Report (Clue Table)
                 report_text = row.get("处置情况报告", '')
                 if "处置情况报告" in df.columns and (pd.isna(report_text) or report_text == ''):
-                    if is_case_table_issues:
-                        condition = any(issue_desc == Config.VALIDATION_RULES["empty_report"] for i, _, _, issue_desc in issues_list if i == idx)
-                    else: # Clue table scenario
-                        condition = any(issue_desc == Config.VALIDATION_RULES["empty_report"] for i, _, issue_desc in issues_list if i == idx)
+                    condition = False
+                    if issues_list and isinstance(issues_list[0], dict): # 优先处理字典格式
+                        condition = any(issue_item.get('问题描述') == Config.VALIDATION_RULES["empty_report"] and issue_item.get('行号', 0) - 2 == idx for issue_item in issues_list)
+                    elif issues_list and isinstance(issues_list[0], tuple): # 兼容元组格式
+                        if is_case_table_issues:
+                            condition = any(issue_desc == Config.VALIDATION_RULES["empty_report"] for i, _, _, issue_desc in issues_list if i == idx)
+                        else: # Clue table scenario
+                            condition = any(issue_desc == Config.VALIDATION_RULES["empty_report"] for i, _, issue_desc in issues_list if i == idx)
                     apply_format(worksheet, idx, get_column_letter(df, "处置情况报告"), report_text, condition, yellow_format)
 
                 # Check amount fields (Clue Table) - **【CORE CHANGE: REMOVED "没收金额" FROM THIS LOOP】**
                 for field, rule in [
                     ("收缴金额（万元）", Config.VALIDATION_RULES["highlight_collection_amount"]),
-                    # ("没收金额", Config.VALIDATION_RULES["highlight_confiscation_amount"]), # <--- REMOVED THIS LINE
                     ("责令退赔金额", Config.VALIDATION_RULES["highlight_compensation_amount"]),
-                    ("登记上交金额", Config.VALIDATION_RULES["highlight_registration_amount"]) # <--- NEW: Added registration amount
+                    ("登记上交金额", Config.VALIDATION_RULES["highlight_registration_amount"]) 
                 ]:
                     if field in df.columns:
                         col_letter = get_column_letter(df, field)
                         value = row.get(field)
-                        if is_case_table_issues:
-                            condition = any(issue_desc == rule for i, _, _, issue_desc in issues_list if i == idx)
-                        else: # Clue table scenario
-                            condition = any(issue_desc == rule for i, _, issue_desc in issues_list if i == idx)
+                        condition = False
+                        if issues_list and isinstance(issues_list[0], dict):
+                            condition = any(issue_item.get('问题描述') == rule and issue_item.get('行号', 0) - 2 == idx for issue_item in issues_list)
+                        elif issues_list and isinstance(issues_list[0], tuple):
+                            if is_case_table_issues:
+                                condition = any(issue_desc == rule for i, _, _, issue_desc in issues_list if i == idx)
+                            else: # Clue table scenario
+                                condition = any(issue_desc == rule for i, _, issue_desc in issues_list if i == idx)
                         apply_format(worksheet, idx, col_letter, value, condition, yellow_format)
 
                 # --- Apply red formatting checks (mainly for clue table) ---
                 # Agency (Clue Table)
-                if "填报单位名称" in df.columns and "办理机关" in df.columns and \
-                   (is_case_table_issues and any(issue_desc == Config.VALIDATION_RULES["inconsistent_agency"] for i, _, _, issue_desc in issues_list if i == idx) or \
-                   (not is_case_table_issues and any(issue_desc == Config.VALIDATION_RULES["inconsistent_agency"] for i, _, issue_desc in issues_list if i == idx))):
-                    apply_format(worksheet, idx, get_column_letter(df, "填报单位名称"), row.get("填报单位名称"), True, red_format)
-                    apply_format(worksheet, idx, get_column_letter(df, "办理机关"), row.get("办理机关"), True, red_format)
+                if "填报单位名称" in df.columns and "办理机关" in df.columns:
+                    condition = False
+                    if issues_list and isinstance(issues_list[0], dict):
+                        condition = any(issue_item.get('问题描述') == Config.VALIDATION_RULES["inconsistent_agency"] and issue_item.get('行号', 0) - 2 == idx for issue_item in issues_list)
+                    elif issues_list and isinstance(issues_list[0], tuple):
+                        if is_case_table_issues:
+                            condition = any(issue_desc == Config.VALIDATION_RULES["inconsistent_agency"] for i, _, _, issue_desc in issues_list if i == idx)
+                        else:
+                            condition = any(issue_desc == Config.VALIDATION_RULES["inconsistent_agency"] for i, _, issue_desc in issues_list if i == idx)
+                    if condition:
+                        apply_format(worksheet, idx, get_column_letter(df, "填报单位名称"), row.get("填报单位名称"), True, red_format)
+                        apply_format(worksheet, idx, get_column_letter(df, "办理机关"), row.get("办理机关"), True, red_format)
 
                 # Reflected Person (Clue Table)
-                if "被反映人" in df.columns and \
-                   (is_case_table_issues and any(issue_desc == Config.VALIDATION_RULES["inconsistent_name"] for i, _, _, issue_desc in issues_list if i == idx) or \
-                   (not is_case_table_issues and any(issue_desc == Config.VALIDATION_RULES["inconsistent_name"] for i, _, issue_desc in issues_list if i == idx))):
-                    apply_format(worksheet, idx, get_column_letter(df, "被反映人"), row.get("被反映人"), True, red_format)
+                if "被反映人" in df.columns:
+                    condition = False
+                    if issues_list and isinstance(issues_list[0], dict):
+                        condition = any(issue_item.get('问题描述') == Config.VALIDATION_RULES["inconsistent_name"] and issue_item.get('行号', 0) - 2 == idx for issue_item in issues_list)
+                    elif issues_list and isinstance(issues_list[0], tuple):
+                        if is_case_table_issues:
+                            condition = any(issue_desc == Config.VALIDATION_RULES["inconsistent_name"] for i, _, _, issue_desc in issues_list if i == idx)
+                        else:
+                            condition = any(issue_desc == Config.VALIDATION_RULES["inconsistent_name"] for i, _, issue_desc in issues_list if i == idx)
+                    if condition:
+                        apply_format(worksheet, idx, get_column_letter(df, "被反映人"), row.get("被反映人"), True, red_format)
 
                 # Organizational Measures (Clue Table)
-                # Corrected Config.COLUMN_MAPPings to Config.COLUMN_MAPPINGS
-                if Config.COLUMN_MAPPINGS.get("organization_measure") in df.columns and \
-                   (is_case_table_issues and any(issue_desc == Config.VALIDATION_RULES["inconsistent_organization_measure"] for i, _, _, issue_desc in issues_list if i == idx) or \
-                   (not is_case_table_issues and any(issue_desc == Config.VALIDATION_RULES["inconsistent_organization_measure"] for i, _, issue_desc in issues_list if i == idx))):
-                    col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["organization_measure"])
-                    apply_format(worksheet, idx, col_letter, row.get(Config.COLUMN_MAPPINGS["organization_measure"]), True, red_format)
+                if Config.COLUMN_MAPPINGS.get("organization_measure") in df.columns:
+                    condition = False
+                    if issues_list and isinstance(issues_list[0], dict):
+                        condition = any(issue_item.get('问题描述') == Config.VALIDATION_RULES["inconsistent_organization_measure"] and issue_item.get('行号', 0) - 2 == idx for issue_item in issues_list)
+                    elif issues_list and isinstance(issues_list[0], tuple):
+                        if is_case_table_issues:
+                            condition = any(issue_desc == Config.VALIDATION_RULES["inconsistent_organization_measure"] for i, _, _, issue_desc in issues_list if i == idx)
+                        else:
+                            condition = any(issue_desc == Config.VALIDATION_RULES["inconsistent_organization_measure"] for i, _, issue_desc in issues_list if i == idx)
+                    if condition:
+                        col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["organization_measure"])
+                        apply_format(worksheet, idx, col_letter, row.get(Config.COLUMN_MAPPINGS["organization_measure"]), True, red_format)
 
                 # Party Joining Time (Clue Table)
-                # Corrected Config.COLUMN_MAPPings to Config.COLUMN_MAPPINGS
-                if Config.COLUMN_MAPPINGS.get("joining_party_time") in df.columns and \
-                   (is_case_table_issues and any(issue_desc == Config.VALIDATION_RULES["inconsistent_joining_party_time"] for i, _, _, issue_desc in issues_list if i == idx) or \
-                   (not is_case_table_issues and any(issue_desc == Config.VALIDATION_RULES["inconsistent_joining_party_time"] for i, _, issue_desc in issues_list if i == idx))):
-                    col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["joining_party_time"])
-                    apply_format(worksheet, idx, col_letter, row.get(Config.COLUMN_MAPPINGS["joining_party_time"]), True, red_format)
+                if Config.COLUMN_MAPPINGS.get("joining_party_time") in df.columns:
+                    condition = False
+                    if issues_list and isinstance(issues_list[0], dict):
+                        condition = any(issue_item.get('问题描述') == Config.VALIDATION_RULES["inconsistent_joining_party_time"] and issue_item.get('行号', 0) - 2 == idx for issue_item in issues_list)
+                    elif issues_list and isinstance(issues_list[0], tuple):
+                        if is_case_table_issues:
+                            condition = any(issue_desc == Config.VALIDATION_RULES["inconsistent_joining_party_time"] for i, _, _, issue_desc in issues_list if i == idx)
+                        else:
+                            condition = any(issue_desc == Config.VALIDATION_RULES["inconsistent_joining_party_time"] for i, _, issue_desc in issues_list if i == idx)
+                    if condition:
+                        col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["joining_party_time"])
+                        apply_format(worksheet, idx, col_letter, row.get(Config.COLUMN_MAPPINGS["joining_party_time"]), True, red_format)
 
                 # Ethnicity (Clue Table)
-                # Corrected Config.COLUMN_MAPPings to Config.COLUMN_MAPPINGS
-                if Config.COLUMN_MAPPINGS.get("ethnicity") in df.columns and \
-                   (is_case_table_issues and any(issue_desc == Config.VALIDATION_RULES["inconsistent_ethnicity"] for i, _, _, issue_desc in issues_list if i == idx) or \
-                   (not is_case_table_issues and any(issue_desc == Config.VALIDATION_RULES["inconsistent_ethnicity"] for i, _, issue_desc in issues_list if i == idx))):
-                    col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["ethnicity"])
-                    apply_format(worksheet, idx, col_letter, row.get(Config.COLUMN_MAPPINGS["ethnicity"]), True, red_format)
+                if Config.COLUMN_MAPPINGS.get("ethnicity") in df.columns:
+                    condition = False
+                    if issues_list and isinstance(issues_list[0], dict):
+                        condition = any(issue_item.get('问题描述') == Config.VALIDATION_RULES["inconsistent_ethnicity"] and issue_item.get('行号', 0) - 2 == idx for issue_item in issues_list)
+                    elif issues_list and isinstance(issues_list[0], tuple):
+                        if is_case_table_issues:
+                            condition = any(issue_desc == Config.VALIDATION_RULES["inconsistent_ethnicity"] for i, _, _, issue_desc in issues_list if i == idx)
+                        else:
+                            condition = any(issue_desc == Config.VALIDATION_RULES["inconsistent_ethnicity"] for i, _, issue_desc in issues_list if i == idx)
+                    if condition:
+                        col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["ethnicity"])
+                        apply_format(worksheet, idx, col_letter, row.get(Config.COLUMN_MAPPINGS["ethnicity"]), True, red_format)
 
                 # Birth Date (Clue Table)
-                # Corrected Config.COLUMN_MAPPings to Config.COLUMN_MAPPINGS
-                if Config.COLUMN_MAPPINGS.get("birth_date") in df.columns and \
-                   (is_case_table_issues and any(issue_desc == Config.VALIDATION_RULES["highlight_birth_date"] for i, _, _, issue_desc in issues_list if i == idx) or \
-                   (not is_case_table_issues and any(issue_desc == Config.VALIDATION_RULES["highlight_birth_date"] for i, _, issue_desc in issues_list if i == idx))):
-                    col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["birth_date"])
-                    apply_format(worksheet, idx, col_letter, row.get(Config.COLUMN_MAPPINGS["birth_date"]), True, red_format)
+                if Config.COLUMN_MAPPINGS.get("birth_date") in df.columns:
+                    condition = False
+                    if issues_list and isinstance(issues_list[0], dict):
+                        condition = any(issue_item.get('问题描述') == Config.VALIDATION_RULES["highlight_birth_date"] and issue_item.get('行号', 0) - 2 == idx for issue_item in issues_list)
+                    elif issues_list and isinstance(issues_list[0], tuple):
+                        if is_case_table_issues:
+                            condition = any(issue_desc == Config.VALIDATION_RULES["highlight_birth_date"] for i, _, _, issue_desc in issues_list if i == idx)
+                        else:
+                            condition = any(issue_desc == Config.VALIDATION_RULES["highlight_birth_date"] for i, _, issue_desc in issues_list if i == idx)
+                    if condition:
+                        col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["birth_date"])
+                        apply_format(worksheet, idx, col_letter, row.get(Config.COLUMN_MAPPINGS["birth_date"]), True, red_format)
 
                 # Completion Time (Clue Table)
-                # Corrected Config.COLUMN_MAPPings to Config.COLUMN_MAPPINGS
-                if Config.COLUMN_MAPPINGS.get("completion_time") in df.columns and \
-                   (is_case_table_issues and any(issue_desc == Config.VALIDATION_RULES["highlight_completion_time"] for i, _, _, issue_desc in issues_list if i == idx) or \
-                   (not is_case_table_issues and any(issue_desc == Config.VALIDATION_RULES["highlight_completion_time"] for i, _, issue_desc in issues_list if i == idx))):
-                    col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["completion_time"])
-                    apply_format(worksheet, idx, col_letter, row.get(Config.COLUMN_MAPPINGS["completion_time"]), True, red_format)
+                if Config.COLUMN_MAPPINGS.get("completion_time") in df.columns:
+                    condition = False
+                    if issues_list and isinstance(issues_list[0], dict):
+                        condition = any(issue_item.get('问题描述') == Config.VALIDATION_RULES["highlight_completion_time"] and issue_item.get('行号', 0) - 2 == idx for issue_item in issues_list)
+                    elif issues_list and isinstance(issues_list[0], tuple):
+                        if is_case_table_issues:
+                            condition = any(issue_desc == Config.VALIDATION_RULES["highlight_completion_time"] for i, _, _, issue_desc in issues_list if i == idx)
+                        else:
+                            condition = any(issue_desc == Config.VALIDATION_RULES["highlight_completion_time"] for i, _, issue_desc in issues_list if i == idx)
+                    if condition:
+                        col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["completion_time"])
+                        apply_format(worksheet, idx, col_letter, row.get(Config.COLUMN_MAPPINGS["completion_time"]), True, red_format)
 
                 # Disposal Method 1 Secondary (Clue Table)
-                # Corrected Config.COLUMN_MAPPings to Config.COLUMN_MAPPINGS
-                if Config.COLUMN_MAPPINGS.get("disposal_method_1") in df.columns and \
-                   (is_case_table_issues and any(issue_desc == Config.VALIDATION_RULES["highlight_disposal_method_1"] for i, _, _, issue_desc in issues_list if i == idx) or \
-                   (not is_case_table_issues and any(issue_desc == Config.VALIDATION_RULES["highlight_disposal_method_1"] for i, _, issue_desc in issues_list if i == idx))):
-                    col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["disposal_method_1"])
-                    apply_format(worksheet, idx, col_letter, row.get(Config.COLUMN_MAPPINGS["disposal_method_1"]), True, yellow_format)
+                if Config.COLUMN_MAPPINGS.get("disposal_method_1") in df.columns:
+                    condition = False
+                    if issues_list and isinstance(issues_list[0], dict):
+                        condition = any(issue_item.get('问题描述') == Config.VALIDATION_RULES["highlight_disposal_method_1"] and issue_item.get('行号', 0) - 2 == idx for issue_item in issues_list)
+                    elif issues_list and isinstance(issues_list[0], tuple):
+                        if is_case_table_issues:
+                            condition = any(issue_desc == Config.VALIDATION_RULES["highlight_disposal_method_1"] for i, _, _, issue_desc in issues_list if i == idx)
+                        else:
+                            condition = any(issue_desc == Config.VALIDATION_RULES["highlight_disposal_method_1"] for i, _, issue_desc in issues_list if i == idx)
+                    if condition:
+                        col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["disposal_method_1"])
+                        apply_format(worksheet, idx, col_letter, row.get(Config.COLUMN_MAPPINGS["disposal_method_1"]), True, yellow_format)
 
 
                 # --- Formatting logic for Case Registration Table ---
@@ -197,10 +263,17 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
                         ("审查调查报告", "inconsistent_case_name_investigation"),
                         ("审理报告", "inconsistent_case_name_trial")
                     ]:
-                        if report_col_name in df.columns and \
-                           (is_case_table_issues and any(issue_desc == Config.VALIDATION_RULES[rule_key] for i, _, _, issue_desc in issues_list if i == idx) or \
-                           (not is_case_table_issues and any(issue_desc == Config.VALIDATION_RULES[rule_key] for i, _, issue_desc in issues_list if i == idx))):
-                            apply_format(worksheet, idx, get_column_letter(df, report_col_name), row.get(report_col_name), True, red_format)
+                        if report_col_name in df.columns:
+                            condition = False
+                            if issues_list and isinstance(issues_list[0], dict):
+                                condition = any(issue_item.get('问题描述') == Config.VALIDATION_RULES[rule_key] and issue_item.get('行号', 0) - 2 == idx for issue_item in issues_list)
+                            elif issues_list and isinstance(issues_list[0], tuple):
+                                if is_case_table_issues:
+                                    condition = any(issue_desc == Config.VALIDATION_RULES[rule_key] for i, _, _, issue_desc in issues_list if i == idx)
+                                else:
+                                    condition = any(issue_desc == Config.VALIDATION_RULES[rule_key] for i, _, issue_desc in issues_list if i == idx)
+                            if condition:
+                                apply_format(worksheet, idx, get_column_letter(df, report_col_name), row.get(report_col_name), True, red_format)
 
                 # Inconsistent Gender (red)
                 if "性别" in df.columns and idx in gender_mismatch_indices:
@@ -308,27 +381,53 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
                 if "收缴金额（万元）" in df.columns and idx in confiscation_amount_indices:
                     apply_format(worksheet, idx, get_column_letter(df, "收缴金额（万元）"), row.get("收缴金额（万元）"), True, yellow_format)
                 
-                # Confiscation of property amount (yellow) <--- NEW: Confiscation of property amount formatting logic
+                # Confiscation of property amount (yellow)
                 if "没收金额" in df.columns and idx in confiscation_of_property_amount_indices:
                     apply_format(worksheet, idx, get_column_letter(df, "没收金额"), row.get("没收金额"), True, yellow_format)
 
-                # 【新增】Compensation amount to highlight (yellow)
+                # Compensation amount to highlight (yellow)
                 if "责令退赔金额" in df.columns and idx in compensation_amount_highlight_indices:
                     apply_format(worksheet, idx, get_column_letter(df, "责令退赔金额"), row.get("责令退赔金额"), True, yellow_format)
                 
-                # 【新增】Registered handover amount to highlight (yellow)
-                if "登记上交金额" in df.columns and idx in registered_handover_amount_indices: # <--- NEW: Added registered_handover_amount_indices highlighting
+                # Registered handover amount to highlight (yellow)
+                if "登记上交金额" in df.columns and idx in registered_handover_amount_indices:
                     apply_format(worksheet, idx, get_column_letter(df, "登记上交金额"), row.get("登记上交金额"), True, yellow_format)
-                # --- END OF NEW TRIAL REPORT HIGHLIGHTING ---
+
+                # --- NEW: Party Disciplinary Sanction (red) ---
+                if "党纪处分" in df.columns and idx in disciplinary_sanction_mismatch_indices:
+                    apply_format(worksheet, idx, get_column_letter(df, "党纪处分"), row.get("党纪处分"), True, red_format)
+                # --- END OF NEW PARAMETER HIGHLIGHTING ---
 
             # Create a new sheet for issues if issues_list is not empty
             if issues_list:
                 # Determine columns for issues_df based on the structure of issues_list
-                if is_case_table_issues:
-                    issues_df = pd.DataFrame(issues_list, columns=['原始行号', '案件编码', '涉案人员编码', '问题描述'])
-                else:
-                    issues_df = pd.DataFrame(issues_list, columns=['原始行号', '受理线索编码', '问题描述'])
-
+                # Now that issues_list is expected to contain dictionaries from case_validators.py,
+                # we can rely on dictionary keys.
+                if issues_list and isinstance(issues_list[0], dict):
+                    # Check for "涉案人员编码" to differentiate between clue and case issues
+                    if "涉案人员编码" in issues_list[0]:
+                        issues_df = pd.DataFrame([
+                            {'序号': i + 1, '案件编码': item.get('案件编码', ''), '涉案人员编码': item.get('涉案人员编码', ''), '问题': item.get('问题描述', '')}
+                            for i, item in enumerate(issues_list)
+                        ])
+                    else: # Assume it's for clue table with '受理线索编码'
+                         issues_df = pd.DataFrame([
+                            {'序号': i + 1, '受理线索编码': item.get('受理线索编码', ''), '问题': item.get('问题描述', '')}
+                            for i, item in enumerate(issues_list)
+                        ])
+                elif issues_list and isinstance(issues_list[0], tuple): # Fallback for old tuple format, should be rare now
+                    # This branch should ideally not be hit if case_validators.py is fixed to return dictionaries
+                    if len(issues_list[0]) == 4: # Case table issues (index, case_code, person_code, description)
+                        issues_df = pd.DataFrame([
+                            {'序号': i + 1, '案件编码': item[1], '涉案人员编码': item[2], '问题': item[3]}
+                            for i, item in enumerate(issues_list)
+                        ])
+                    else: # Clue table issues (index, clue_code, description)
+                        issues_df = pd.DataFrame([
+                            {'序号': i + 1, '受理线索编码': item[1], '问题': item[2]}
+                            for i, item in enumerate(issues_list)
+                        ])
+                
                 issues_df.to_excel(writer, sheet_name='问题列表', index=False)
                 logger.info(f"Issues written to '问题列表' sheet.")
             else:

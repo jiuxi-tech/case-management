@@ -12,6 +12,8 @@ from validation_rules.validation_core import get_validation_issues
 from excel_formatter import format_excel
 from validation_rules.case_validators import validate_case_relationships
 from validation_rules.case_generators import generate_case_files
+# 【党纪处分功能融合】导入正确的党纪处分验证函数
+from validation_rules.case_validation_disciplinary_sanction import validate_disciplinary_sanction
 
 
 def process_upload(request, app):
@@ -71,18 +73,18 @@ def process_upload(request, app):
             return redirect(request.url)
 
         # *** 重点：这里的 get_validation_issues 必须返回2个值 (mismatch_indices, issues_list) ***
-        # issues_list 中的每个元素应该是一个3元组 (original_df_index, clue_code_value, issue_description)
+        # issues_list 中的每个元素应该是一个字典，例如 {"案件编码": ..., "问题": ..., "风险等级": ..., "行号": ...}
         mismatch_indices, issues_list = get_validation_issues(df)
         logger.info(f"get_validation_issues 返回了 {len(mismatch_indices)} 个不匹配索引和 {len(issues_list)} 个问题。")
 
         if issues_list:
             data_for_issues_df = []
-            for i, (original_df_index, clue_code_value, issue_description) in enumerate(issues_list):
+            for i, issue_item in enumerate(issues_list): # 遍历字典
                 current_serial_number = i + 1
                 data_for_issues_df.append({
                     '序号': current_serial_number,
-                    '受理线索编码': clue_code_value,
-                    '问题': issue_description
+                    '受理线索编码': issue_item.get('受理线索编码', 'N/A'), # 从字典中获取
+                    '问题': issue_item.get('问题描述', '无描述') # 从字典中获取
                 })
             issues_df = pd.DataFrame(data_for_issues_df)
             
@@ -93,7 +95,7 @@ def process_upload(request, app):
 
         original_filename_copy = file.filename.replace('.xlsx', '_副本.xlsx').replace('.xls', '_副本.xlsx')
         original_path = os.path.join(Config.CLUE_FOLDER, original_filename_copy)
-        # format_excel 函数也需要能够正确处理 issues_list 中每个元素是3元组的情况
+        # format_excel 函数也需要能够正确处理 issues_list 中每个元素是字典的情况
         format_excel(df, mismatch_indices, original_path, issues_list)
 
         logger.info("程序执行成功")
@@ -104,9 +106,6 @@ def process_upload(request, app):
         flash(f'文件处理失败: {str(e)}', 'error')
         return redirect(request.url)
 
-#-------------------------------------------------------------------------------------------------------
-# 注意：以下是 `process_case_upload` 函数的修正，修复了之前由于我引入的`---`语法错误和参数不匹配问题。
-#-------------------------------------------------------------------------------------------------------
 
 def process_case_upload(request, app):
     logger.info("开始处理立案登记表上传请求")
@@ -147,8 +146,6 @@ def process_case_upload(request, app):
 
     try:
         df = pd.read_excel(file_path)
-        # 【最终修正】彻底移除“填报单位”，只保留“填报单位名称”
-        # 【重要】这里更新 required_headers，添加 "责令退赔金额" 和 "登记上交金额"
         required_headers = [
             "被调查人", "性别", "年龄", "出生年月", "学历", "民族", 
             "是否中共党员", "入党时间", 
@@ -164,18 +161,19 @@ def process_case_upload(request, app):
             "收缴金额（万元）",
             "没收金额",
             "责令退赔金额",
-            "登记上交金额" # <--- 【关键】这里添加 "登记上交金额"
+            "登记上交金额"
         ]
 
+        if "党纪处分" not in required_headers:
+            required_headers.append("党纪处分")
+
+
         if not all(header in df.columns for header in required_headers):
-            # 将缺少的表头找出并报告
             missing_headers = [header for header in required_headers if header not in df.columns]
             logger.error(f"立案登记表缺少必要表头: {missing_headers}")
             flash(f'Excel文件缺少必要的表头: {", ".join(missing_headers)}', 'error')
             return redirect(request.url)
 
-        # 验证字段关系 - 接收所有返回值
-        # 【核心修正】在解包时添加 registered_handover_amount_indices
         (mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, 
          birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, 
          party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, 
@@ -191,18 +189,49 @@ def process_case_upload(request, app):
          confiscation_amount_indices,
          confiscation_of_property_amount_indices,
          compensation_amount_highlight_indices,
-         registered_handover_amount_indices) = validate_case_relationships(df) # <--- 【关键】这里添加 registered_handover_amount_indices
+         registered_handover_amount_indices,
+         disciplinary_sanction_mismatch_indices
+         ) = validate_case_relationships(df) 
+        
+        mismatch_indices = list(set(mismatch_indices))
+        
+        # Ensure issues_list contains dictionaries for proper de-duplication
+        # This block assumes issues_list now contains dictionaries after modifying case_validators.py
+        issues_list_unique = []
+        seen_issues = set()
+        for issue_dict_or_tuple in issues_list:
+            # If it's still a tuple for some reason, convert it.
+            # This is a defensive check, the main fix is to prevent tuples from being added in the first place.
+            if isinstance(issue_dict_or_tuple, tuple):
+                # Attempt to convert a tuple back to a dictionary.
+                # This requires knowing the order/meaning of elements in the tuple.
+                # Based on previous context, assume (index, case_code, person_code, problem_description)
+                issue_dict_converted = {
+                    "行号": issue_dict_or_tuple[0] + 2, # Adjust row number
+                    "案件编码": issue_dict_or_tuple[1],
+                    "涉案人员编码": issue_dict_or_tuple[2],
+                    "问题描述": issue_dict_or_tuple[3]
+                }
+                issue_hashable = frozenset(issue_dict_converted.items())
+                if issue_hashable not in seen_issues:
+                    issues_list_unique.append(issue_dict_converted)
+                    seen_issues.add(issue_hashable)
+            elif isinstance(issue_dict_or_tuple, dict):
+                issue_hashable = frozenset(issue_dict_or_tuple.items()) 
+                if issue_hashable not in seen_issues:
+                    issues_list_unique.append(issue_dict_or_tuple)
+                    seen_issues.add(issue_hashable)
+            else:
+                logger.warning(f"Unexpected item type in issues_list: {type(issue_dict_or_tuple)}. Skipping de-duplication for this item.")
+        issues_list = issues_list_unique
 
-
-        # 生成副本和立案编号文件 - 传递所有参数
-        # 【核心修正】在调用 generate_case_files 时添加 registered_handover_amount_indices
         copy_path, case_num_path = generate_case_files(
             df, 
             file.filename, 
             Config.BASE_UPLOAD_FOLDER, 
             mismatch_indices, 
             gender_mismatch_indices, 
-            issues_list,
+            issues_list, # issues_list should now contain dictionaries
             age_mismatch_indices,
             birth_date_mismatch_indices,
             education_mismatch_indices,
@@ -230,7 +259,8 @@ def process_case_upload(request, app):
             confiscation_amount_indices,
             confiscation_of_property_amount_indices,
             compensation_amount_highlight_indices,
-            registered_handover_amount_indices # <--- 【关键】这里添加 registered_handover_amount_indices
+            registered_handover_amount_indices,
+            disciplinary_sanction_mismatch_indices
         )
 
         flash('文件上传处理成功！', 'success')
@@ -238,6 +268,6 @@ def process_case_upload(request, app):
 
         return redirect(request.url)
     except Exception as e:
-        logger.error(f"立案登记表处理失败: {str(e)}", exc_info=True) # 打印详细 traceback
+        logger.error(f"立案登记表处理失败: {str(e)}", exc_info=True)
         flash(f'文件处理失败: {str(e)}', 'error')
         return redirect(request.url)

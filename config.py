@@ -20,7 +20,41 @@ class Config:
         "completion_time": "办结时间",
         "disposal_method_1": "处置方式1二级",
         "disposal_report": "处置情况报告", 
-        "accepted_clue_code": "受理线索编码" 
+        "accepted_clue_code": "受理线索编码",
+        # 【新增党纪处分相关字段映射】
+        "case_code": "案件编码", # 用于报错定位
+        "person_code": "涉案人员编码", # 用于报错定位
+        "disciplinary_sanction": "党纪处分", # 党纪处分文本
+        "party_member": "是否中共党员", # 用于检查党员身份
+        "investigated_person": "被调查人", # 用于关联报告名称
+        "case_report": "立案报告", # 用于关联报告名称
+        "disciplinary_decision": "处分决定", # 用于关联报告名称
+        "investigation_report": "审查调查报告", # 用于关联报告名称
+        "trial_report": "审理报告", # 用于关联报告名称
+        "gender": "性别", # 可能用于其他校验
+        "age": "年龄", # 可能用于其他校验
+        "education": "学历", # 可能用于其他校验
+        "party_joining_date": "入党时间", # 可能用于其他校验
+        "brief_case_details": "简要案情", # 可能用于其他校验
+        "filing_time": "立案时间", # 可能用于其他校验
+        "filing_decision_doc": "立案决定书", # 可能用于其他校验
+        "disciplinary_committee_filing_time": "纪委立案时间", # 可能用于其他校验
+        "disciplinary_committee_filing_authority": "纪委立案机关", # 可能用于其他校验
+        "supervisory_committee_filing_time": "监委立案时间", # 可能用于其他校验
+        "supervisory_committee_filing_authority": "监委立案机关", # 可能用于其他校验
+        "central_eight_provisions": "是否违反中央八项规定精神", # 可能用于其他校验
+        "voluntary_confession": "是否主动交代问题", # 可能用于其他校验
+        "closing_time": "结案时间", # 可能用于其他校验
+        "no_party_position_warning": "是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分", # 可能用于其他校验
+        "recovery_amount": "追缴失职渎职滥用职权造成的损失金额", # 可能用于其他校验
+        "trial_acceptance_time": "审理受理时间", # 可能用于其他校验
+        "trial_closing_time": "审结时间", # 可能用于其他校验
+        "trial_authority": "审理机关", # 可能用于其他校验
+        "confiscation_amount": "收缴金额（万元）", # 可能用于其他校验
+        "confiscation_of_property_amount": "没收金额", # 可能用于其他校验
+        "compensation_amount": "责令退赔金额", # 可能用于其他校验
+        "registered_handover_amount": "登记上交金额", # 可能用于其他校验
+        "reporting_agency": "填报单位名称" # 可能用于其他校验
     }
     
     # Excel 格式
@@ -55,7 +89,9 @@ class Config:
         # 【新增】没收金额规则的描述
         "highlight_confiscation_of_property_amount": "CY审理报告中含有没收金额四字，请人工再次确认CG没收金额",
         # 【新增】责令退赔金额规则的描述
-        "highlight_compensation_from_trial_report": "CY审理报告中含有责令退赔四字，请人工再次确认CH责令退赔金额"
+        "highlight_compensation_from_trial_report": "CY审理报告中含有责令退赔四字，请人工再次确认CH责令退赔金额",
+        # 【党纪处分功能新增】: 党纪处分与党员身份不符的规则描述
+        "disciplinary_sanction_party_member_mismatch": "党纪处分（处分决定）中出现开除党籍，但被调查人非中共党员，请核实！"
     }
     
     # 组织措施关键词
@@ -68,6 +104,11 @@ class Config:
     # 处分决定中的特殊关键词
     DISPOSAL_DECISION_KEYWORDS = [
         "非人大代表", "非政协委员", "非党委委员", "非中共党代表", "非纪委委员"
+    ]
+
+    # 【党纪处分功能新增】: 用于党纪处分规则的特定关键词列表
+    DISCIPLINARY_SANCTION_KEYWORDS = [
+        "开除党籍", "留党察看", "撤销党内职务", "严重警告", "警告"
     ]
     
     # 线索登记表必需的表头

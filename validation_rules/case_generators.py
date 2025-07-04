@@ -3,8 +3,8 @@ import pandas as pd
 import os
 from datetime import datetime
 import xlsxwriter 
-from config import Config # 确保 Config 被正确导入
-from excel_formatter import format_excel # 确保这个导入是正确的
+from config import Config 
+from excel_formatter import format_excel 
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,8 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
                         confiscation_amount_indices,
                         confiscation_of_property_amount_indices,
                         compensation_amount_highlight_indices,
-                        registered_handover_amount_indices # <--- 【新增】这里添加 registered_handover_amount_indices 参数
+                        registered_handover_amount_indices, 
+                        disciplinary_sanction_mismatch_indices 
                         ):
     """
     根据分析结果生成副本和立案编号Excel文件。
@@ -42,7 +43,7 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     upload_dir (str): 上传文件的根目录 (此参数实际上未被使用，我们将直接使用 Config.CASE_FOLDER)。
     mismatch_indices (set): 姓名不匹配的行索引集合。
     gender_mismatch_indices (set): 性别不匹配的行索引集合。
-    issues_list (list): 包含所有问题的列表，每个问题是一个(索引, 案件编码, 涉案人员编码, 问题描述)元组。
+    issues_list (list): 包含所有问题的列表，每个问题是一个字典。
     age_mismatch_indices (set): 年龄不匹配的行索引集合。
     birth_date_mismatch_indices (set): 出生年月不匹配的行索引集合。
     education_mismatch_indices (set): 学历不匹配的行索引集合。
@@ -70,16 +71,15 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     confiscation_amount_indices (set): 收缴金额（万元）需要高亮的行索引集合。 
     confiscation_of_property_amount_indices (set): 没收金额需要高亮的行索引集合。
     compensation_amount_highlight_indices (set): 责令退赔金额需要高亮的行索引集合。
-    registered_handover_amount_indices (set): 登记上交金额需要高亮的行索引集合。 # <--- 【新增】这里添加参数说明
+    registered_handover_amount_indices (set): 登记上交金额需要高亮的行索引集合。
+    disciplinary_sanction_mismatch_indices (set): 党纪处分不匹配的行索引集合。
 
     返回:
     tuple: (copy_path, case_num_path) 生成的副本文件路径和立案编号文件路径。
             如果生成失败，返回 (None, None)。
     """
-    # 修正点：直接使用 Config.CASE_FOLDER 作为文件保存的根目录
-    # 这样可以确保与 file_processor.py 中保存上传文件的逻辑一致
     case_dir = Config.CASE_FOLDER 
-    os.makedirs(case_dir, exist_ok=True) # 确保目录存在
+    os.makedirs(case_dir, exist_ok=True) 
 
     copy_filename = original_filename.replace('.xlsx', '_副本.xlsx').replace('.xls', '_副本.xlsx')
     copy_path = os.path.join(case_dir, copy_filename)
@@ -118,7 +118,8 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
             confiscation_amount_indices,
             confiscation_of_property_amount_indices,
             compensation_amount_highlight_indices,
-            registered_handover_amount_indices # <--- 【新增】这里添加 registered_handover_amount_indices 参数到 format_excel 的调用中
+            registered_handover_amount_indices,
+            disciplinary_sanction_mismatch_indices 
         )
         logger.info(f"Generated copy file with highlights: {copy_path}")
         print(f"生成高亮后的副本文件: {copy_path}")
@@ -127,35 +128,53 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
         print(f"生成高亮副本文件失败: {e}")
         return None, None
 
-    # 立案编号文件的命名方式和路径也调整，确保在同一个目录下
-    case_num_filename = f"立案编号{datetime.now().strftime('%Y%m%d')}.xlsx" # 使用当前日期生成文件名
+    case_num_filename = f"立案编号{datetime.now().strftime('%Y%m%d')}.xlsx" 
     case_num_path = os.path.join(case_dir, case_num_filename)
     
-    issues_df = pd.DataFrame(columns=['序号', '案件编码', '涉案人员编码', '问题'])
-    
-    if not issues_list:
-        issues_df = pd.DataFrame({'序号': [1], '案件编码': [''], '涉案人员编码': [''], '问题': ['无问题']})
-    else:
-        data = []
-        for i, issue_item in enumerate(issues_list):
-            # 根据您提供的 issues_list 结构，它应该是 (original_df_index, clue_code_value, issue_description) 3个元素
-            # 或者如果是案件，可能是 (original_df_index, case_code_value, person_code_value, issue_description) 4个元素
-            # 这里的逻辑需要根据您实际传入 issues_list 的结构来确定。
-            # 暂时按照立案登记表可能包含人员编码的情况处理，如果不对，请根据实际传入的 issues_list 结构调整
-            if len(issue_item) == 4:
-                original_index, case_code, person_code, issue_description = issue_item
-            elif len(issue_item) == 3: # 如果 issues_list 只有三个元素 (index, code, description)
-                original_index, case_code, issue_description = issue_item
-                person_code = '' # 如果没有涉案人员编码，可以留空或给定默认值
-            else:
-                logger.warning(f"issues_list 中存在未知格式的元素，跳过: {issue_item}")
-                continue # 跳过无法解析的行
+    data = []
+    for i, issue_item in enumerate(issues_list):
+        # 确保字典中存在这些键，即使值为空，也用空字符串填充
+        case_code = issue_item.get('案件编码', '')
+        person_code = issue_item.get('涉案人员编码', '')
+        # 如果是线索表，可能没有案件编码和涉案人员编码，而是受理线索编码
+        if not case_code and not person_code:
+            case_code = issue_item.get('受理线索编码', '') # 尝试获取线索编码
 
-            data.append({'序号': i + 1, '案件编码': case_code, '涉案人员编码': person_code, '问题': issue_description})
-        issues_df = pd.DataFrame(data)
+        issue_description = issue_item.get('问题描述', '')
+        data.append({'序号': i + 1, '案件编码': case_code, '涉案人员编码': person_code, '问题': issue_description})
+    
+    issues_df = pd.DataFrame(data)
 
     try:
-        issues_df.to_excel(case_num_path, index=False)
+        with pd.ExcelWriter(case_num_path, engine='xlsxwriter') as writer:
+            issues_df.to_excel(writer, sheet_name='Sheet1', index=False)
+            workbook = writer.book
+            worksheet = writer.sheets['Sheet1']
+
+            # 定义通用的左对齐和文本格式
+            # 这里的关键是 'num_format': '@'，它强制将单元格内容视为文本
+            left_align_text_format = workbook.add_format({
+                'align': 'left', 
+                'valign': 'vcenter',
+                'num_format': '@' # 强制文本格式
+            })
+
+            # 设置所有相关列的对齐方式和文本格式
+            # 对于“序号”列，通常希望居中或右对齐，但为了统一，这里也设置为左对齐文本
+            columns_to_format = ['序号', '案件编码', '涉案人员编码', '问题'] 
+            
+            for col_name in columns_to_format:
+                if col_name in issues_df.columns:
+                    col_idx = issues_df.columns.get_loc(col_name)
+                    worksheet.set_column(col_idx, col_idx, None, left_align_text_format)
+            
+            # 自动调整列宽以适应内容
+            for i, col in enumerate(issues_df.columns):
+                # 考虑列名和实际数据中最大长度来设置列宽
+                # astype(str) 确保所有内容都被视为字符串来计算长度
+                max_len = max(issues_df[col].astype(str).map(len).max(), len(col)) + 2 # 加2是为了留出一点边距
+                worksheet.set_column(i, i, max_len)
+
         logger.info(f"Generated case number file: {case_num_path}")
         print(f"生成立案编号表: {case_num_path}")
     except Exception as e:

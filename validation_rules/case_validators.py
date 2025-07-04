@@ -34,10 +34,15 @@ from validation_rules.case_timestamp_rules import (
     validate_filing_time,
     validate_confiscation_amount,
     validate_confiscation_of_property_amount,
-    validate_registered_handover_amount # 【修改点1】: 导入新的验证函数
+    validate_registered_handover_amount
 )
 # 导入处分和金额相关规则
 from validation_rules.case_disposal_amount_rules import validate_disposal_and_amount_rules
+
+# 【党纪处分功能新增】: 导入党纪处分验证函数
+# 修正导入的函数名为 validate_disciplinary_sanction
+from validation_rules.case_validation_disciplinary_sanction import validate_disciplinary_sanction
+
 
 logger = logging.getLogger(__name__)
 
@@ -94,10 +99,10 @@ def validate_case_relationships(df):
     trial_report_detention_mismatch_indices = set()
     confiscation_amount_indices = set()
     confiscation_of_property_amount_indices = set()
-    # 【新增点1】: 初始化责令退赔金额的索引集合
     compensation_amount_highlight_indices = set()
-    # 【修改点2】: 初始化登记上交金额的索引集合
     registered_handover_amount_indices = set()
+    # 【党纪处分功能新增】: 初始化党纪处分相关的索引集合
+    disciplinary_sanction_mismatch_indices = set()
     # --- END OF NEW RULE ADDITION ---
 
     issues_list = []
@@ -119,8 +124,10 @@ def validate_case_relationships(df):
         "审理机关",
         "收缴金额（万元）",
         "没收金额",
-        "责令退赔金额", # 【新增点2】: 确保这里也包含了新的列 "责令退赔金额"
-        "登记上交金额" # 【修改点3】: 确保这里也包含了新的列 "登记上交金额"
+        "责令退赔金额",
+        "登记上交金额",
+        # 【党纪处分功能新增】: 确保包含党纪处分列
+        "党纪处分" 
     ]
     if not all(header in df.columns for header in required_headers):
         missing_headers = [header for header in required_headers if header not in df.columns]
@@ -142,8 +149,9 @@ def validate_case_relationships(df):
                 trial_report_detention_mismatch_indices,
                 confiscation_amount_indices,
                 confiscation_of_property_amount_indices,
-                compensation_amount_highlight_indices, # 【新增点3】: 确保缺失表头时也返回责令退赔金额的集合
-                registered_handover_amount_indices) # 【修改点4】: 确保缺失表头时也返回登记上交金额的集合
+                compensation_amount_highlight_indices,
+                registered_handover_amount_indices,
+                disciplinary_sanction_mismatch_indices) # 【党纪处分功能新增】: 确保缺失表头时也返回党纪处分集合
 
     current_year = datetime.now().year
 
@@ -152,7 +160,6 @@ def validate_case_relationships(df):
     # New keywords for "审理报告"
     trial_report_non_representative_keywords = ["非人大代表", "非政协委员", "非党委委员", "非中共党代表", "非纪委委员"]
     trial_report_detention_keyword = "扣押"
-    # 【新增点4】: 责令退赔关键词
     compensation_keyword = "责令退赔" 
 
     # 从数据库获取机关单位字典数据
@@ -212,11 +219,12 @@ def validate_case_relationships(df):
         trial_text_raw = row.get("审理报告", "") if pd.notna(row.get("审理报告")) else ''
         filing_decision_doc_raw = row.get("立案决定书", "") if pd.notna(row.get("立案决定书")) else ''
         
-        # 【新增点5】: 获取责令退赔金额字段值，用于判断是否为空（非必须，但保持一致性）
         excel_compensation_amount = str(row.get("责令退赔金额", "")).strip()
-        # 【修改点5】: 获取登记上交金额字段值
         excel_registered_handover_amount = str(row.get("登记上交金额", "")).strip()
 
+        # 【党纪处分功能新增】: 获取党纪处分相关字段的值，如果你的新规则需要
+        # 例如：如果你的党纪处分规则需要使用“党纪处分详细类型”这一列，你需要在这里获取它的值：
+        # excel_disciplinary_sanction_type = str(row.get("党纪处分详细类型", "")).strip() 
 
         # --- 调用辅助函数进行验证 ---
         validate_gender_rules(row, index, excel_case_code, excel_person_code, issues_list, gender_mismatch_indices,
@@ -439,7 +447,7 @@ def validate_case_relationships(df):
                 logger.warning(f"行 {index + 1} (案件编码: {excel_case_code}, 涉案人员编码: {excel_person_code})：审理报告中出现“扣押”字样。")
                 print(f"警告：行 {index + 1} (案件编码: {excel_case_code}, 涉案人员编码: {excel_person_code})：审理报告中出现“扣押”字样。")
 
-            # 【新增点6】: 检查“审理报告”是否包含“责令退赔”
+            # 检查“审理报告”是否包含“责令退赔”
             if compensation_keyword in trial_text_raw:
                 compensation_amount_highlight_indices.add(index)
                 issues_list.append((index, excel_case_code, excel_person_code, Config.VALIDATION_RULES["highlight_compensation_from_trial_report"]))
@@ -466,9 +474,13 @@ def validate_case_relationships(df):
     # 调用收缴金额验证函数
     validate_confiscation_amount(df, issues_list, confiscation_amount_indices)
 
-    # 【修改点6】: 调用登记上交金额验证函数
+    # 调用登记上交金额验证函数
     validate_registered_handover_amount(df, issues_list, registered_handover_amount_indices)
 
+    # 【党纪处分功能新增】: 调用党纪处分相关规则验证函数
+    # 接收 validate_disciplinary_sanction 的返回值，并合并到 disciplinary_sanction_mismatch_indices
+    new_disciplinary_mismatches = validate_disciplinary_sanction(df, issues_list)
+    disciplinary_sanction_mismatch_indices.update(new_disciplinary_mismatches)
 
     # 返回所有可能的不一致索引集以及更新后的 issues_list
     return (mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list,
@@ -485,5 +497,6 @@ def validate_case_relationships(df):
             trial_report_detention_mismatch_indices,
             confiscation_amount_indices,
             confiscation_of_property_amount_indices,
-            compensation_amount_highlight_indices, # 【新增点7】: 在返回语句中包含责令退赔金额的集合
-            registered_handover_amount_indices) # 【修改点7】: 在返回语句中包含登记上交金额的集合
+            compensation_amount_highlight_indices,
+            registered_handover_amount_indices,
+            disciplinary_sanction_mismatch_indices) # 【党纪处分功能新增】: 在返回语句中包含党纪处分集合
