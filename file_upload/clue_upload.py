@@ -5,7 +5,7 @@ import logging
 from flask import flash, redirect, url_for
 
 # 导入通用函数
-from common import handle_file_upload_and_initial_checks
+from .upload_utils import handle_file_upload_and_initial_checks
 
 # 导入验证规则模块和辅助函数
 try:

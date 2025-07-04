@@ -4,8 +4,8 @@ from db_utils import get_user, create_user, get_authority_agency_dict, add_autho
                      update_authority_agency, delete_authority_agency, get_db
 
 # 从新的文件中导入处理逻辑
-from clue_file_processor import process_clue_upload
-from case_file_processor import process_case_upload
+from file_upload.clue_upload import process_clue_upload
+from file_upload.case_upload import process_case_upload
 
 from werkzeug.security import generate_password_hash, check_password_hash
 
