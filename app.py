@@ -7,6 +7,7 @@ import logging
 import webbrowser
 import time
 from threading import Timer
+from datetime import datetime # 导入 datetime 模块
 
 from db_utils import init_db
 
@@ -58,13 +59,6 @@ def create_app():
     """
     app = Flask(__name__)
     app.config.from_object(Config)
-
-    # --- DEBUG PRINT START ---
-    # 移除打印 Config.COLUMN_MAPPINGS 到控制台的调试语句
-    # print(f"DEBUG: app.config['COLUMN_MAPPINGS'] after loading Config: {app.config.get('COLUMN_MAPPINGS')}")
-    # print(f"DEBUG: 'organization_measure' in app.config['COLUMN_MAPPINGS']? {'organization_measure' in app.config.get('COLUMN_MAPPINGS', {})}")
-    # --- DEBUG PRINT END ---
-
     _ensure_directories(app.config)
 
     # 确保所有路由正确绑定到应用实例
@@ -77,25 +71,36 @@ def _open_browser_if_not_opened():
     """
     延迟打开浏览器，确保服务器启动后再打开，且只打开一次。
     """
-    time.sleep(2)
+    time.sleep(1)
     webbrowser.open('http://localhost:5000')
 
 def _configure_logging(app, base_path):
     """
     配置应用的日志系统，将日志输出到文件和控制台。
     日志文件路径会根据写入权限进行调整。
+    日志文件以当前日期为目录名，日志文件以日期作为日志名。
     """
-    log_folder = os.path.join(base_path, 'logs')
-    os.makedirs(log_folder, exist_ok=True)
+    # 获取当前日期字符串，用于日志目录和文件名
+    today_date = datetime.now().strftime('%Y%m%d')
 
-    log_file = os.path.join(log_folder, 'app.log')
-    # 检查基础路径是否有写入权限，若无则回退到临时目录
+    # 构建日志目录路径
+    log_folder = os.path.join(base_path, 'logs', today_date)
+    os.makedirs(log_folder, exist_ok=True) # 确保日志目录存在
+
+    # 构建日志文件路径
+    log_file = os.path.join(log_folder, f'{today_date}.log')
+
+    # 检查日志目录是否有写入权限，若无则回退到临时目录
     # 对于 PyInstaller 打包的应用，确保日志文件始终可写
-    if not os.access(base_path, os.W_OK) and not getattr(sys, 'frozen', False):
-        log_file = os.path.join(os.getenv('TEMP', '/tmp'), 'app.log')
+    if not os.access(log_folder, os.W_OK) and not getattr(sys, 'frozen', False):
+        temp_log_folder = os.path.join(os.getenv('TEMP', '/tmp'), 'logs', today_date)
+        os.makedirs(temp_log_folder, exist_ok=True)
+        log_file = os.path.join(temp_log_folder, f'{today_date}.log')
     elif getattr(sys, 'frozen', False):
-         if not os.access(log_folder, os.W_OK):
-             log_file = os.path.join(os.getenv('TEMP', '/tmp'), 'app.log')
+        if not os.access(log_folder, os.W_OK):
+            temp_log_folder = os.path.join(os.getenv('TEMP', '/tmp'), 'logs', today_date)
+            os.makedirs(temp_log_folder, exist_ok=True)
+            log_file = os.path.join(temp_log_folder, f'{today_date}.log')
 
     # 获取根日志器并设置级别
     logger = logging.getLogger(__name__)
