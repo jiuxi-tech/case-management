@@ -25,6 +25,7 @@ class Config:
         "case_code": "案件编码", # 用于报错定位
         "person_code": "涉案人员编码", # 用于报错定位
         "disciplinary_sanction": "党纪处分", # 党纪处分文本
+        "administrative_sanction": "政务处分", # 【新增】政务处分文本
         "party_member": "是否中共党员", # 用于检查党员身份
         "investigated_person": "被调查人", # 用于关联报告名称
         "case_report": "立案报告", # 用于关联报告名称
@@ -91,7 +92,9 @@ class Config:
         # 【新增】责令退赔金额规则的描述
         "highlight_compensation_from_trial_report": "CY审理报告中含有责令退赔四字，请人工再次确认CH责令退赔金额",
         # 【党纪处分功能新增】: 党纪处分与党员身份不符的规则描述
-        "disciplinary_sanction_party_member_mismatch": "党纪处分（处分决定）中出现开除党籍，但被调查人非中共党员，请核实！"
+        "disciplinary_sanction_party_member_mismatch": "党纪处分（处分决定）中出现开除党籍，但被调查人非中共党员，请核实！",
+        # 【新增】政务处分与处分决定不一致的规则描述
+        "administrative_sanction_mismatch": "BR政务处分与CU处分决定不一致" 
     }
     
     # 组织措施关键词
@@ -109,6 +112,11 @@ class Config:
     # 【党纪处分功能新增】: 用于党纪处分规则的特定关键词列表
     DISCIPLINARY_SANCTION_KEYWORDS = [
         "开除党籍", "留党察看", "撤销党内职务", "严重警告", "警告"
+    ]
+
+    # 【新增】政务处分规则的特定关键词列表
+    ADMINISTRATIVE_SANCTION_KEYWORDS = [
+        "警告", "记过", "记大过", "降级", "撤职", "开除"
     ]
     
     # 线索登记表必需的表头

@@ -30,7 +30,8 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
                         confiscation_of_property_amount_indices,
                         compensation_amount_highlight_indices,
                         registered_handover_amount_indices, 
-                        disciplinary_sanction_mismatch_indices 
+                        disciplinary_sanction_mismatch_indices,
+                        administrative_sanction_mismatch_indices # <-- 【新增】在这里添加这个参数
                         ):
     """
     根据分析结果生成副本和立案编号Excel文件。
@@ -73,7 +74,8 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     compensation_amount_highlight_indices (set): 责令退赔金额需要高亮的行索引集合。
     registered_handover_amount_indices (set): 登记上交金额需要高亮的行索引集合。
     disciplinary_sanction_mismatch_indices (set): 党纪处分不匹配的行索引集合。
-
+    administrative_sanction_mismatch_indices (set): 政务处分不匹配的行索引集合。 # <-- 【新增】在这里添加这个参数的文档
+    
     返回:
     tuple: (copy_path, case_num_path) 生成的副本文件路径和立案编号文件路径。
             如果生成失败，返回 (None, None)。
@@ -119,7 +121,8 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
             confiscation_of_property_amount_indices,
             compensation_amount_highlight_indices,
             registered_handover_amount_indices,
-            disciplinary_sanction_mismatch_indices 
+            disciplinary_sanction_mismatch_indices,
+            administrative_sanction_mismatch_indices # <-- 【新增】在这里添加这个参数
         )
         logger.info(f"Generated copy file with highlights: {copy_path}")
         print(f"生成高亮后的副本文件: {copy_path}")

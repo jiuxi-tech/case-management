@@ -134,6 +134,7 @@ def apply_case_table_formats(worksheet, df, row, idx, mismatch_indices, issues_l
                              confiscation_amount_indices, confiscation_of_property_amount_indices,
                              compensation_amount_highlight_indices, registered_handover_amount_indices,
                              disciplinary_sanction_mismatch_indices,
+                             administrative_sanction_mismatch_indices, # <-- 【新增】在这里添加这个参数
                              yellow_format, red_format):
     """
     Applies red and yellow formatting checks specific to the case registration table.
@@ -272,6 +273,10 @@ def apply_case_table_formats(worksheet, df, row, idx, mismatch_indices, issues_l
     # Party Disciplinary Sanction (red)
     if "党纪处分" in df.columns and idx in disciplinary_sanction_mismatch_indices:
         apply_format(worksheet, idx, get_column_letter(df, "党纪处分"), row.get("党纪处分"), True, red_format)
+
+    # Administrative Sanction (red) # <-- 【新增】在这里添加政务处分的高亮逻辑
+    if "政务处分" in df.columns and idx in administrative_sanction_mismatch_indices:
+        apply_format(worksheet, idx, get_column_letter(df, "政务处分"), row.get("政务处分"), True, red_format)
 
 
 def create_issues_sheet(writer, issues_list):

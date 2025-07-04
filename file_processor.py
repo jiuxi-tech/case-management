@@ -13,7 +13,8 @@ from excel_formatter import format_excel
 from validation_rules.case_validators import validate_case_relationships
 from validation_rules.case_generators import generate_case_files
 # 【党纪处分功能融合】导入正确的党纪处分验证函数
-from validation_rules.case_validation_disciplinary_sanction import validate_disciplinary_sanction
+# 【新增政务处分功能】导入政务处分验证函数
+from validation_rules.case_validation_sanctions import validate_disciplinary_sanction, validate_administrative_sanction
 
 
 def process_upload(request, app):
@@ -164,8 +165,11 @@ def process_case_upload(request, app):
             "登记上交金额"
         ]
 
-        if "党纪处分" not in required_headers:
-            required_headers.append("党纪处分")
+        # 确保党纪处分和政务处分字段也在必填头中
+        if Config.COLUMN_MAPPINGS.get("disciplinary_sanction") not in required_headers:
+            required_headers.append(Config.COLUMN_MAPPINGS.get("disciplinary_sanction"))
+        if Config.COLUMN_MAPPINGS.get("administrative_sanction") not in required_headers: # 【新增】政务处分添加到必填头
+            required_headers.append(Config.COLUMN_MAPPINGS.get("administrative_sanction"))
 
 
         if not all(header in df.columns for header in required_headers):
@@ -174,6 +178,8 @@ def process_case_upload(request, app):
             flash(f'Excel文件缺少必要的表头: {", ".join(missing_headers)}', 'error')
             return redirect(request.url)
 
+        # 调用主要的校验函数
+        # ！！！关键修改在这里：重新包含 disciplinary_sanction_mismatch_indices
         (mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list, 
          birth_date_mismatch_indices, education_mismatch_indices, ethnicity_mismatch_indices, 
          party_member_mismatch_indices, party_joining_date_mismatch_indices, filing_time_mismatch_indices, 
@@ -190,27 +196,37 @@ def process_case_upload(request, app):
          confiscation_of_property_amount_indices,
          compensation_amount_highlight_indices,
          registered_handover_amount_indices,
-         disciplinary_sanction_mismatch_indices
+         disciplinary_sanction_mismatch_indices # <-- 重新添加，与 case_validators.py 的 32 个返回值匹配
          ) = validate_case_relationships(df) 
         
+        # 调用党纪处分规则 (这个调用是独立的，并且正确)
+        # 它的返回值应该合并到 issues_list 中，如果 validate_disciplinary_sanction 已经做了
+        # 如果 validate_disciplinary_sanction 返回的是它自己的不匹配索引，我们需要用一个新变量接收
+        # 再次检查 case_validation_sanctions.py 中的 validate_disciplinary_sanction 函数签名
+        # 我之前的假设是它返回不匹配索引，并修改 issues_list
+        # 如果它只返回不匹配索引，这里应该像 administrative_sanction_mismatch_indices 一样接收
+        # 根据 case_validators.py，它是直接调用并更新了 issues_list
+        # 所以，我们不再在这里重复调用 validate_disciplinary_sanction
+        # 因为它已经在 case_validators.py 内部被 validate_case_relationships 调用了
+        # 移除重复调用：
+        # disciplinary_sanction_mismatch_indices = validate_disciplinary_sanction(df, issues_list) # 这一行应该被移除
+        
+        # 【新增】调用政务处分规则 (这个调用是新的，且需要保留)
+        administrative_sanction_mismatch_indices = validate_administrative_sanction(df, issues_list)
+
         mismatch_indices = list(set(mismatch_indices))
         
         # Ensure issues_list contains dictionaries for proper de-duplication
-        # This block assumes issues_list now contains dictionaries after modifying case_validators.py
         issues_list_unique = []
         seen_issues = set()
         for issue_dict_or_tuple in issues_list:
-            # If it's still a tuple for some reason, convert it.
-            # This is a defensive check, the main fix is to prevent tuples from being added in the first place.
             if isinstance(issue_dict_or_tuple, tuple):
-                # Attempt to convert a tuple back to a dictionary.
-                # This requires knowing the order/meaning of elements in the tuple.
-                # Based on previous context, assume (index, case_code, person_code, problem_description)
                 issue_dict_converted = {
                     "行号": issue_dict_or_tuple[0] + 2, # Adjust row number
                     "案件编码": issue_dict_or_tuple[1],
                     "涉案人员编码": issue_dict_or_tuple[2],
-                    "问题描述": issue_dict_or_tuple[3]
+                    "问题描述": issue_dict_or_tuple[3],
+                    "风险等级": issue_dict_or_tuple[4] if len(issue_dict_or_tuple) > 4 else "中" # 确保风险等级也被传递
                 }
                 issue_hashable = frozenset(issue_dict_converted.items())
                 if issue_hashable not in seen_issues:
@@ -260,7 +276,8 @@ def process_case_upload(request, app):
             confiscation_of_property_amount_indices,
             compensation_amount_highlight_indices,
             registered_handover_amount_indices,
-            disciplinary_sanction_mismatch_indices
+            disciplinary_sanction_mismatch_indices,
+            administrative_sanction_mismatch_indices # 【新增】将政务处分不匹配索引传递给 generate_case_files
         )
 
         flash('文件上传处理成功！', 'success')

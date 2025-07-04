@@ -40,7 +40,7 @@ from validation_rules.case_timestamp_rules import (
 from validation_rules.case_disposal_amount_rules import validate_disposal_and_amount_rules
 
 # 【党纪处分功能新增】: 导入党纪处分验证函数
-from validation_rules.case_validation_disciplinary_sanction import validate_disciplinary_sanction
+from validation_rules.case_validation_sanctions import validate_disciplinary_sanction
 
 # 导入新拆分的文件中的验证函数
 from validation_rules.case_document_validators import ( 

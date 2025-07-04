@@ -29,7 +29,8 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
                  confiscation_of_property_amount_indices=set(),
                  compensation_amount_highlight_indices=set(),
                  registered_handover_amount_indices=set(),
-                 disciplinary_sanction_mismatch_indices=set()
+                 disciplinary_sanction_mismatch_indices=set(),
+                 administrative_sanction_mismatch_indices=set() # <-- 【新增】在这里添加这个参数
                  ):
     """
     Formats the Excel file, coloring cells based on validation issues.
@@ -45,6 +46,7 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
     compensation_amount_highlight_indices: Set of row indices for "责令退赔金额" to be highlighted.
     registered_handover_amount_indices: Set of row indices for "登记上交金额" to be highlighted.
     disciplinary_sanction_mismatch_indices: Set of row indices for "党纪处分" to be highlighted.
+    administrative_sanction_mismatch_indices: Set of row indices for "政务处分" to be highlighted. # <-- 【新增】在这里添加这个参数的文档
     """
     try:
         with pd.ExcelWriter(output_path, engine='xlsxwriter', engine_kwargs={'options': {'nan_inf_to_errors': True}}) as writer:
@@ -91,6 +93,7 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
                                          confiscation_amount_indices, confiscation_of_property_amount_indices,
                                          compensation_amount_highlight_indices, registered_handover_amount_indices,
                                          disciplinary_sanction_mismatch_indices,
+                                         administrative_sanction_mismatch_indices, # <-- 【新增】在这里添加这个参数
                                          yellow_format, red_format)
 
             # 创建问题列表sheet
