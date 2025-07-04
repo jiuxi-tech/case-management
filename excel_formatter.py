@@ -1,29 +1,11 @@
-import xlsxwriter
+# excel_formatter.py
 import pandas as pd
+import xlsxwriter
 from config import Config
-import logging # Added import for logging
+import logging
+from excel_utils import get_column_letter, apply_format # 从新的文件导入辅助函数
 
-logger = logging.getLogger(__name__) # Added logger initialization
-
-def get_column_letter(df, column_name):
-    """
-    Gets the column index and converts it to an Excel column letter (1-based index).
-    """
-    col_idx = df.columns.get_loc(column_name) + 1
-    return xlsxwriter.utility.xl_col_to_name(col_idx - 1)
-
-def apply_format(worksheet, row_idx, col_letter, value, condition_met, format_obj):
-    """
-    Applies formatting based on a condition.
-    row_idx is the DataFrame's index (0-based), Excel row number is row_idx + 2 (due to header and Pandas' default 0-row).
-    """
-    excel_row = row_idx + 2       # Excel rows start from 1, and there's a header, so add 2
-    if condition_met:
-        # If the condition is met, write the value with formatting
-        worksheet.write(f'{col_letter}{excel_row}', value if pd.notna(value) else '', format_obj)
-    else:
-        # If the condition is not met, write the value without formatting
-        worksheet.write(f'{col_letter}{excel_row}', value if pd.notna(value) else '')
+logger = logging.getLogger(__name__)
 
 def format_excel(df, mismatch_indices, output_path, issues_list,
                  gender_mismatch_indices=set(), age_mismatch_indices=set(),
@@ -36,20 +18,19 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
                  supervisory_committee_filing_authority_mismatch_indices=set(),
                  case_report_keyword_mismatch_indices=set(), disposal_spirit_mismatch_indices=set(),
                  voluntary_confession_highlight_indices=set(), closing_time_mismatch_indices=set(),
-                 no_party_position_warning_mismatch_indices=set(), 
-                 recovery_amount_highlight_indices=set(), 
-                 trial_acceptance_time_mismatch_indices=set(), 
-                 trial_closing_time_mismatch_indices=set(), 
+                 no_party_position_warning_mismatch_indices=set(),
+                 recovery_amount_highlight_indices=set(),
+                 trial_acceptance_time_mismatch_indices=set(),
+                 trial_closing_time_mismatch_indices=set(),
                  trial_authority_agency_mismatch_indices=set(),
-                 disposal_decision_keyword_mismatch_indices=set(), 
-                 trial_report_non_representative_mismatch_indices=set(), 
+                 disposal_decision_keyword_mismatch_indices=set(),
+                 trial_report_non_representative_mismatch_indices=set(),
                  trial_report_detention_mismatch_indices=set(),
-                 confiscation_amount_indices=set(), 
-                 confiscation_of_property_amount_indices=set(), 
+                 confiscation_amount_indices=set(),
+                 confiscation_of_property_amount_indices=set(),
                  compensation_amount_highlight_indices=set(),
                  registered_handover_amount_indices=set(),
-                 # --- 【新增】这里添加 disciplinary_sanction_mismatch_indices 参数 ---
-                 disciplinary_sanction_mismatch_indices=set() 
+                 disciplinary_sanction_mismatch_indices=set()
                  ):
     """
     Formats the Excel file, coloring cells based on validation issues.
@@ -64,7 +45,7 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
     confiscation_of_property_amount_indices: Set of row indices for "没收金额" to be highlighted.
     compensation_amount_highlight_indices: Set of row indices for "责令退赔金额" to be highlighted.
     registered_handover_amount_indices: Set of row indices for "登记上交金额" to be highlighted.
-    disciplinary_sanction_mismatch_indices: Set of row indices for "党纪处分" to be highlighted. # <--- NEW: Parameter description
+    disciplinary_sanction_mismatch_indices: Set of row indices for "党纪处分" to be highlighted.
     """
     try:
         with pd.ExcelWriter(output_path, engine='xlsxwriter', engine_kwargs={'options': {'nan_inf_to_errors': True}}) as writer:
@@ -78,7 +59,7 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
 
             red_format = workbook.add_format({'bg_color': Config.FORMATS["red"]})
             yellow_format = workbook.add_format({'bg_color': Config.FORMATS["yellow"]})
-            
+
             # 【关键修改】判断 issues_list 中元素的结构
             is_case_table_issues = False
             # 这里的判断应该更健壮，考虑 issues_list 可能为空的情况
@@ -95,11 +76,11 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
 
                 # --- Apply yellow formatting checks (mainly for clue table) ---
                 # Acceptance Time (Clue Table)
-                if Config.COLUMN_MAPPINGS.get("acceptance_time") in df.columns: 
+                if Config.COLUMN_MAPPINGS.get("acceptance_time") in df.columns:
                     value = row.get(Config.COLUMN_MAPPINGS["acceptance_time"])
                     condition = False
                     if issues_list and isinstance(issues_list[0], dict): # 优先处理字典格式
-                         condition = any(issue_item.get('问题描述') == Config.VALIDATION_RULES["confirm_acceptance_time"] and issue_item.get('行号', 0) - 2 == idx for issue_item in issues_list)
+                           condition = any(issue_item.get('问题描述') == Config.VALIDATION_RULES["confirm_acceptance_time"] and issue_item.get('行号', 0) - 2 == idx for issue_item in issues_list)
                     elif issues_list and isinstance(issues_list[0], tuple): # 兼容元组格式
                         if is_case_table_issues: # 4个元素的元组
                             condition = any(issue_desc == Config.VALIDATION_RULES["confirm_acceptance_time"] for i, _, _, issue_desc in issues_list if i == idx)
@@ -124,7 +105,7 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
                 for field, rule in [
                     ("收缴金额（万元）", Config.VALIDATION_RULES["highlight_collection_amount"]),
                     ("责令退赔金额", Config.VALIDATION_RULES["highlight_compensation_amount"]),
-                    ("登记上交金额", Config.VALIDATION_RULES["highlight_registration_amount"]) 
+                    ("登记上交金额", Config.VALIDATION_RULES["highlight_registration_amount"])
                 ]:
                     if field in df.columns:
                         col_letter = get_column_letter(df, field)
@@ -331,15 +312,15 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
                 if "立案报告" in df.columns and idx in case_report_keyword_mismatch_indices:
                     apply_format(worksheet, idx, get_column_letter(df, "立案报告"), row.get("立案报告"), True, red_format)
 
-                # Violation of Central Eight Provisions Spirit (red) 
+                # Violation of Central Eight Provisions Spirit (red)
                 if "是否违反中央八项规定精神" in df.columns and idx in disposal_spirit_mismatch_indices:
                     apply_format(worksheet, idx, get_column_letter(df, "是否违反中央八项规定精神"), row.get("是否违反中央八项规定精神"), True, red_format)
 
-                # Voluntary Confession (yellow) 
+                # Voluntary Confession (yellow)
                 if "是否主动交代问题" in df.columns and idx in voluntary_confession_highlight_indices:
                     apply_format(worksheet, idx, get_column_letter(df, "是否主动交代问题"), row.get("是否主动交代问题"), True, yellow_format)
 
-                # Closing Time (red) 
+                # Closing Time (red)
                 if "结案时间" in df.columns and idx in closing_time_mismatch_indices:
                     apply_format(worksheet, idx, get_column_letter(df, "结案时间"), row.get("结案时间"), True, red_format)
 
@@ -347,7 +328,7 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
                 if "是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分" in df.columns and idx in no_party_position_warning_mismatch_indices:
                     apply_format(worksheet, idx, get_column_letter(df, "是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分"), row.get("是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分"), True, red_format)
 
-                # Recovery amount for dereliction of duty (yellow) 
+                # Recovery amount for dereliction of duty (yellow)
                 if "追缴失职渎职滥用职权造成的损失金额" in df.columns and idx in recovery_amount_highlight_indices:
                     apply_format(worksheet, idx, get_column_letter(df, "追缴失职渎职滥用职权造成的损失金额"), row.get("追缴失职渎职滥用职权造成的损失金额"), True, yellow_format)
 
@@ -367,7 +348,7 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
                 # Disposal Decision Keywords (red)
                 if "处分决定" in df.columns and idx in disposal_decision_keyword_mismatch_indices:
                     apply_format(worksheet, idx, get_column_letter(df, "处分决定"), row.get("处分决定"), True, red_format)
-                
+
                 # --- START OF NEW TRIAL REPORT HIGHLIGHTING ---
                 # Trial Report - Non-representative keywords (red)
                 if "审理报告" in df.columns and idx in trial_report_non_representative_mismatch_indices:
@@ -380,7 +361,7 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
                 # Confiscation amount (yellow)
                 if "收缴金额（万元）" in df.columns and idx in confiscation_amount_indices:
                     apply_format(worksheet, idx, get_column_letter(df, "收缴金额（万元）"), row.get("收缴金额（万元）"), True, yellow_format)
-                
+
                 # Confiscation of property amount (yellow)
                 if "没收金额" in df.columns and idx in confiscation_of_property_amount_indices:
                     apply_format(worksheet, idx, get_column_letter(df, "没收金额"), row.get("没收金额"), True, yellow_format)
@@ -388,7 +369,7 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
                 # Compensation amount to highlight (yellow)
                 if "责令退赔金额" in df.columns and idx in compensation_amount_highlight_indices:
                     apply_format(worksheet, idx, get_column_letter(df, "责令退赔金额"), row.get("责令退赔金额"), True, yellow_format)
-                
+
                 # Registered handover amount to highlight (yellow)
                 if "登记上交金额" in df.columns and idx in registered_handover_amount_indices:
                     apply_format(worksheet, idx, get_column_letter(df, "登记上交金额"), row.get("登记上交金额"), True, yellow_format)
@@ -411,10 +392,10 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
                             for i, item in enumerate(issues_list)
                         ])
                     else: # Assume it's for clue table with '受理线索编码'
-                         issues_df = pd.DataFrame([
-                            {'序号': i + 1, '受理线索编码': item.get('受理线索编码', ''), '问题': item.get('问题描述', '')}
-                            for i, item in enumerate(issues_list)
-                        ])
+                            issues_df = pd.DataFrame([
+                                {'序号': i + 1, '受理线索编码': item.get('受理线索编码', ''), '问题': item.get('问题描述', '')}
+                                for i, item in enumerate(issues_list)
+                            ])
                 elif issues_list and isinstance(issues_list[0], tuple): # Fallback for old tuple format, should be rare now
                     # This branch should ideally not be hit if case_validators.py is fixed to return dictionaries
                     if len(issues_list[0]) == 4: # Case table issues (index, case_code, person_code, description)
@@ -427,7 +408,7 @@ def format_excel(df, mismatch_indices, output_path, issues_list,
                             {'序号': i + 1, '受理线索编码': item[1], '问题': item[2]}
                             for i, item in enumerate(issues_list)
                         ])
-                
+
                 issues_df.to_excel(writer, sheet_name='问题列表', index=False)
                 logger.info(f"Issues written to '问题列表' sheet.")
             else:
