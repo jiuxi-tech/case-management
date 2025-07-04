@@ -1,3 +1,4 @@
+# config.py
 import os
 from datetime import datetime
 
@@ -6,10 +7,10 @@ class Config:
     应用配置类。
     包含文件处理、Excel 映射、验证规则、关键词列表、数据库路径和安全密钥等配置。
     """
-    
-    ALLOWED_EXTENSIONS = {'.xlsx', '.xls'}
+
+    ALLOWED_EXTENSIONS = {'xlsx', 'xls'}
     REQUIRED_FILENAME_PATTERN = '线索登记表'
-    
+
     @property
     def TODAY_DATE(self):
         """
@@ -28,7 +29,7 @@ class Config:
         "birth_date": "出生年月",
         "completion_time": "办结时间",
         "disposal_method_1": "处置方式1二级",
-        "disposal_report": "处置情况报告", 
+        "disposal_report": "处置情况报告",
         "accepted_clue_code": "受理线索编码",
         "case_code": "案件编码",
         "person_code": "涉案人员编码",
@@ -65,18 +66,18 @@ class Config:
         "registered_handover_amount": "登记上交金额",
         "reporting_agency": "填报单位名称"
     }
-    
+
     # Excel 单元格格式定义。
     # 用于在生成报告时对特定单元格进行高亮显示。
     FORMATS = {
         "red": '#FF0000',
         "yellow": '#FFFF00'
     }
-    
+
     # 验证规则描述。
     # 键为规则的内部标识，值为用户友好的中文描述。
     VALIDATION_RULES = {
-        "inconsistent_agency": "CR审理机关与A填报单位不一致", # Added this line
+        "inconsistent_agency": "CR审理机关与A填报单位不一致",
         "inconsistent_name": "E2被反映人与AB2处置情况报告姓名不一致",
         "empty_report": "E2被反映人与AB2处置情况报告姓名不一致 (报告为空)",
         "confirm_acceptance_time": "AF2受理时间请再次确认",
@@ -99,69 +100,66 @@ class Config:
         "highlight_confiscation_of_property_amount": "CY审理报告中含有没收金额四字，请人工再次确认CG没收金额",
         "highlight_compensation_from_trial_report": "CY审理报告中含有责令退赔四字，请人工再次确认CH责令退赔金额",
         "disciplinary_sanction_party_member_mismatch": "党纪处分（处分决定）中出现开除党籍，但被调查人非中共党员，请核实！",
-        "administrative_sanction_mismatch": "BR政务处分与CU处分决定不一致" 
+        "administrative_sanction_mismatch": "BR政务处分与CU处分决定不一致"
     }
-    
+
+    # 组织措施相关的关键词列表。
+    # 用于匹配和识别 Excel 内容中的组织措施。
     ORGANIZATION_MEASURE_KEYWORDS = [
-        """
-        组织措施相关的关键词列表。
-        用于匹配和识别 Excel 内容中的组织措施。
-        """
-        "谈话提醒", "提醒谈话", "批评教育", "责令检查", "责令其做出书面检查", 
-        "责令其做出检查", "诫勉", "警示谈话", "通报批评", "责令公开道歉（检查）", 
+        "谈话提醒", "提醒谈话", "批评教育", "责令检查", "责令其做出书面检查",
+        "责令其做出检查", "诫勉", "警示谈话", "通报批评", "责令公开道歉（检查）",
         "责令具结悔过"
     ]
 
+    # 处分决定中需要特别关注的关键词列表。
+    # 用于识别处分决定中可能存在的特殊情况。
     DISPOSAL_DECISION_KEYWORDS = [
-        """
-        处分决定中需要特别关注的关键词列表。
-        用于识别处分决定中可能存在的特殊情况。
-        """
         "非人大代表", "非政协委员", "非党委委员", "非中共党代表", "非纪委委员"
     ]
 
+    # 党纪处分相关的关键词列表。
+    # 用于识别和验证党纪处分类型。
     DISCIPLINARY_SANCTION_KEYWORDS = [
-        """
-        党纪处分相关的关键词列表。
-        用于识别和验证党纪处分类型。
-        """
         "开除党籍", "留党察看", "撤销党内职务", "严重警告", "警告"
     ]
 
+    # 政务处分相关的关键词列表。
+    # 用于识别和验证政务处分类型。
     ADMINISTRATIVE_SANCTION_KEYWORDS = [
-        """
-        政务处分相关的关键词列表。
-        用于识别和验证政务处分类型。
-        """
         "警告", "记过", "记大过", "降级", "撤职", "开除"
     ]
-    
+
+    # 线索登记表必需的表头列表。
+    # 用于验证上传的线索登记表是否包含所有必要的列。
     CLUE_REQUIRED_HEADERS = [
-        """
-        线索登记表必需的表头列表。
-        用于验证上传的线索登记表是否包含所有必要的列。
-        """
         "填报单位名称", "办理机关", "被反映人", "处置情况报告", "受理时间"
     ]
-    
+
+    # 立案登记表必需的表头列表。
+    # 用于验证上传的立案登记表是否包含所有必要的列。
     CASE_REQUIRED_HEADERS = [
-        """
-        立案登记表必需的表头列表。
-        用于验证上传的立案登记表是否包含所有必要的列。
-        """
         "被调查人", "立案报告", "处分决定", "审查调查报告", "审理报告"
     ]
-    
+
     DATABASE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'case_management.db')
     """
     SQLite 数据库文件的路径。
     文件将创建在 config.py 文件的同级目录。
     """
-    
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'your_very_secret_key_here') 
+
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'your_very_secret_key_here')
     """
     Flask 应用的安全密钥。
     用于会话管理和加密。建议从环境变量中获取，以提高安全性。
     如果环境变量未设置，则使用默认值 'your_very_secret_key_here'。
     在生产环境中，请务必将其替换为强随机字符串。
     """
+
+    # 确保这些文件存储目录已定义且存在，如果你的项目结构不同，请修改路径
+    UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'uploads')
+    CASE_FOLDER = os.path.join(UPLOAD_FOLDER, 'cases')
+    CLUE_FOLDER = os.path.join(UPLOAD_FOLDER, 'clues')
+
+    # 在应用启动时创建这些目录 (或者确保你的 __init__.py 或 app.py 中有类似逻辑)
+    os.makedirs(CASE_FOLDER, exist_ok=True)
+    os.makedirs(CLUE_FOLDER, exist_ok=True)

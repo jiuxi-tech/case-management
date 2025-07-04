@@ -2,7 +2,11 @@ from functools import wraps
 from flask import render_template, request, redirect, url_for, flash, session, current_app
 from db_utils import get_user, create_user, get_authority_agency_dict, add_authority_agency, \
                      update_authority_agency, delete_authority_agency, get_db
-from file_processor import process_clue_upload, process_case_upload
+
+# 从新的文件中导入处理逻辑
+from clue_file_processor import process_clue_upload
+from case_file_processor import process_case_upload
+
 from werkzeug.security import generate_password_hash, check_password_hash
 
 def login_required(f):
@@ -93,11 +97,11 @@ def init_routes(app):
         """
         线索登记表上传路由。
         GET 请求显示上传表单。
-        POST 请求调用 file_processor.process_upload 处理文件上传和验证。
+        POST 请求调用 process_clue_upload 处理文件上传和验证。
         """
         if request.method == 'POST':
-            # 将 app 实例传递给 process_upload，以便其可以访问 app.config
-            return process_upload(request, current_app._get_current_object())
+            # 将 app 实例传递给 process_clue_upload，以便其可以访问 app.config
+            return process_clue_upload(request, current_app._get_current_object())
         return render_template('upload_clue.html', title='上传')
 
     @app.route('/authority_agency')
@@ -185,10 +189,9 @@ def init_routes(app):
         """
         立案登记表上传路由。
         GET 请求显示上传表单。
-        POST 请求调用 file_processor.process_case_upload 处理文件上传和验证。
+        POST 请求调用 process_case_upload 处理文件上传和验证。
         """
         if request.method == 'POST':
             # 将 app 实例传递给 process_case_upload，以便其可以访问 app.config
             return process_case_upload(request, current_app._get_current_object())
         return render_template('upload_case.html', title='上传立案登记表')
-

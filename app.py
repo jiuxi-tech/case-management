@@ -64,7 +64,7 @@ def create_app():
     # 确保所有路由正确绑定到应用实例
     with app.app_context():
         init_routes(app)
-
+        
     return app
 
 def _open_browser_if_not_opened():
