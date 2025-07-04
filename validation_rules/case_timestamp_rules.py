@@ -3,7 +3,7 @@ import re
 import pandas as pd
 from datetime import datetime
 from validation_rules.case_extractors_timestamp import extract_timestamp_from_filing_decision
-import database # 导入 database 模块
+import db_utils
 
 logger = logging.getLogger(__name__)
 
@@ -382,7 +382,6 @@ import re
 import pandas as pd
 from datetime import datetime
 from validation_rules.case_extractors_timestamp import extract_timestamp_from_filing_decision
-import database # 导入 database 模块
 
 logger = logging.getLogger(__name__)
 
@@ -457,7 +456,7 @@ def validate_filing_time(df, issues_list, filing_time_mismatch_indices, discipli
         return
 
     # 从数据库获取机关单位对应表数据
-    authority_agency_data = database.get_authority_agency_dict()
+    authority_agency_data = db_utils.get_authority_agency_dict()
     # 将查询结果转换为更方便查找的格式，例如 {(authority, agency, category): True}
     authority_agency_lookup = set()
     for row_db in authority_agency_data:

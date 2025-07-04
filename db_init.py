@@ -1,11 +1,18 @@
 import sqlite3
 
+# 定义数据库文件名
 DATABASE = 'case_management.db'
 
 def init_db():
+    """
+    初始化数据库，包括创建 'users' 表和 'authority_agency_dict' 表。
+    如果 'authority_agency_dict' 表为空，则插入预设的初始化数据。
+    """
     with sqlite3.connect(DATABASE) as conn:
         cursor = conn.cursor()
+
         # 创建 users 表
+        # 该表用于存储用户信息，包括 id (主键，自增), username (用户名，唯一且非空), password (密码，非空)。
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -13,7 +20,9 @@ def init_db():
                 password TEXT NOT NULL
             )
         ''')
-        # 创建 authority_agency_dict 表，包含 category 字段
+
+        # 创建 authority_agency_dict 表
+        # 该表用于存储权限机构字典数据，包括 id (主键，自增), authority (权限), category (类别), agency (机构)。
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS authority_agency_dict (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,13 +31,15 @@ def init_db():
                 agency TEXT NOT NULL
             )
         ''')
-        conn.commit()
+        conn.commit() # 提交事务，确保表创建成功
 
         # 检查 authority_agency_dict 表是否已初始化
         cursor.execute('SELECT COUNT(*) FROM authority_agency_dict')
         count = cursor.fetchone()[0]
+
+        # 如果表为空，则插入初始化数据
         if count == 0:
-            # 初始化 authority_agency_dict 表数据
+            # 预设的权限机构字典数据
             dict_data = [
                 ("县市区旗纪委", "NSL", "平度市纪委监委第一纪检监察室"),
                 ("县市区旗纪委", "NSL", "平度市纪委监委第二纪检监察室"),
@@ -87,49 +98,86 @@ def init_db():
                 ("县市区旗纪委", "SL", "平度市纪委监委派驻第九纪检监察组"),
                 ("县市区旗纪委", "SL", "平度市纪委监委派驻第十纪检监察组"),
             ]
+            # 批量插入数据到 authority_agency_dict 表
             cursor.executemany('INSERT INTO authority_agency_dict (authority, category, agency) VALUES (?, ?, ?)', dict_data)
-            conn.commit()
+            conn.commit() # 提交事务，确保数据插入成功
 
 def get_db():
+    """
+    获取数据库连接。
+    设置 row_factory 为 sqlite3.Row，以便可以通过字典方式访问查询结果的列。
+    """
     conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
+    conn.row_factory = sqlite3.Row # 将查询结果的行转换为可字典访问的对象
     return conn
 
 def get_user(username):
+    """
+    根据用户名从 'users' 表中检索用户信息。
+    """
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute('SELECT * FROM users WHERE username = ?', (username,))
-        return cursor.fetchone()
+        return cursor.fetchone() # 返回匹配的第一条记录
 
 def create_user(username, hashed_password):
+    """
+    在 'users' 表中创建新用户。
+    参数:
+        username (str): 用户名。
+        hashed_password (str): 经过哈希处理的密码。
+    """
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute('INSERT INTO users (username, password) VALUES (?, ?)', 
-                      (username, hashed_password))
-        conn.commit()
+        cursor.execute('INSERT INTO users (username, password) VALUES (?, ?)',
+                       (username, hashed_password))
+        conn.commit() # 提交事务，保存新用户
 
 def get_authority_agency_dict():
+    """
+    从 'authority_agency_dict' 表中获取所有权限机构字典数据。
+    """
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute('SELECT * FROM authority_agency_dict')
-        return cursor.fetchall()
+        return cursor.fetchall() # 返回所有记录
 
 def add_authority_agency(authority, category, agency):
+    """
+    向 'authority_agency_dict' 表中添加新的权限机构记录。
+    参数:
+        authority (str): 权限名称。
+        category (str): 类别。
+        agency (str): 机构名称。
+    """
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute('INSERT INTO authority_agency_dict (authority, category, agency) VALUES (?, ?, ?)',
-                      (authority, category, agency))
-        conn.commit()
+                       (authority, category, agency))
+        conn.commit() # 提交事务，保存新记录
 
 def update_authority_agency(id, authority, category, agency):
+    """
+    更新 'authority_agency_dict' 表中指定 ID 的权限机构记录。
+    参数:
+        id (int): 要更新的记录的 ID。
+        authority (str): 新的权限名称。
+        category (str): 新的类别。
+        agency (str): 新的机构名称。
+    """
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute('UPDATE authority_agency_dict SET authority = ?, category = ?, agency = ? WHERE id = ?',
-                      (authority, category, agency, id))
-        conn.commit()
+                       (authority, category, agency, id))
+        conn.commit() # 提交事务，保存更新
 
 def delete_authority_agency(id):
+    """
+    从 'authority_agency_dict' 表中删除指定 ID 的权限机构记录。
+    参数:
+        id (int): 要删除的记录的 ID。
+    """
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute('DELETE FROM authority_agency_dict WHERE id = ?', (id,))
-        conn.commit()
+        conn.commit() # 提交事务，删除记录
