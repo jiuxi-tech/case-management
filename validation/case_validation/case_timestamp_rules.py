@@ -2,7 +2,7 @@ import logging
 import re
 import pandas as pd
 from datetime import datetime
-from validation_rules.case_extractors_timestamp import extract_timestamp_from_filing_decision
+from .case_extractors_timestamp import extract_timestamp_from_filing_decision
 import db_utils
 
 logger = logging.getLogger(__name__)
@@ -381,7 +381,7 @@ import logging
 import re
 import pandas as pd
 from datetime import datetime
-from validation_rules.case_extractors_timestamp import extract_timestamp_from_filing_decision
+from .case_extractors_timestamp import extract_timestamp_from_filing_decision
 
 logger = logging.getLogger(__name__)
 

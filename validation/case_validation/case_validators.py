@@ -6,14 +6,14 @@ import re
 from db_utils import get_authority_agency_dict
 
 # 从 case_validation_helpers 导入核心验证函数
-from validation_rules.case_validation_helpers import (
+from .case_validation_helpers import (
     validate_gender_rules,
     validate_age_rules,
     validate_brief_case_details_rules
 )
 
 # 从 case_validation_extended 导入扩展验证函数
-from validation_rules.case_validation_extended import (
+from .case_validation_extended import (
     validate_birth_date_rules,
     validate_education_rules,
     validate_ethnicity_rules,
@@ -22,7 +22,7 @@ from validation_rules.case_validation_extended import (
 )
 
 # 从 case_validation_additional 导入其他验证函数
-from validation_rules.case_validation_additional import (
+from .case_validation_additional import (
     validate_name_rules,
     validate_case_report_keywords_rules,
     validate_voluntary_confession_rules,
@@ -30,20 +30,20 @@ from validation_rules.case_validation_additional import (
 )
 
 # 导入立案时间规则
-from validation_rules.case_timestamp_rules import (
+from .case_timestamp_rules import (
     validate_filing_time,
     validate_confiscation_amount,
     validate_confiscation_of_property_amount,
     validate_registered_handover_amount
 )
 # 导入处分和金额相关规则
-from validation_rules.case_disposal_amount_rules import validate_disposal_and_amount_rules
+from .case_disposal_amount_rules import validate_disposal_and_amount_rules
 
 # 【党纪处分功能新增】: 导入党纪处分验证函数
-from validation_rules.case_validation_sanctions import validate_disciplinary_sanction, validate_administrative_sanction # 确保导入了 validate_administrative_sanction
+from .case_validation_sanctions import validate_disciplinary_sanction, validate_administrative_sanction # 确保导入了 validate_administrative_sanction
 
 # 导入新拆分的文件中的验证函数
-from validation_rules.case_document_validators import ( 
+from .case_document_validators import ( 
     validate_trial_acceptance_time_vs_report,
     validate_trial_closing_time_vs_report,
     validate_trial_authority_vs_reporting_agency,

@@ -1,5 +1,6 @@
 # clue_file_processor.py
 import os
+import sys
 import pandas as pd
 import logging
 from flask import flash, redirect, url_for
@@ -9,10 +10,14 @@ from .upload_utils import handle_file_upload_and_initial_checks
 
 # 导入验证规则模块和辅助函数
 try:
-    from validation_rules.clue_validation import validate_clue_data
+    from validation.clue_validation.clue_validation import validate_clue_data
     from excel_formatter import format_excel
 except ImportError as e:
+    # 打印到标准错误输出，确保能看到
+    print(f"ERROR: 无法导入必要的模块或函数: {e}", file=sys.stderr)
     logging.getLogger(__name__).error(f"无法导入必要的模块或函数: {e}", exc_info=True)
+    # 强制重新抛出异常
+    raise
 
 logger = logging.getLogger(__name__)
 

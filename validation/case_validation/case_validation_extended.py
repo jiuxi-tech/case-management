@@ -1,19 +1,19 @@
 import logging
 import pandas as pd
-from validation_rules.case_extractors_birth_info import (
+from .case_extractors_birth_info import (
     extract_birth_date_from_case_report,
     extract_birth_date_from_decision_report,
     extract_birth_date_from_investigation_report,
     extract_birth_date_from_trial_report
 )
-from validation_rules.case_extractors_demographics import (
+from .case_extractors_demographics import (
     extract_education_from_case_report,
     extract_ethnicity_from_case_report,
     extract_ethnicity_from_decision_report,
     extract_ethnicity_from_investigation_report,
     extract_ethnicity_from_trial_report
 )
-from validation_rules.case_extractors_party_info import (
+from .case_extractors_party_info import (
     extract_party_member_from_case_report,
     extract_party_member_from_decision_report,
     extract_party_joining_date_from_case_report

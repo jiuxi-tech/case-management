@@ -1,6 +1,6 @@
 import logging
 import pandas as pd
-from validation_rules.case_extractors_names import (
+from .case_extractors_names import (
     extract_name_from_case_report,
     extract_name_from_decision,
     extract_name_from_trial_report

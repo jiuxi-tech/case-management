@@ -1,5 +1,6 @@
 # case_file_processor.py
 import os
+import sys
 import pandas as pd
 import logging
 from flask import flash, redirect, url_for
@@ -9,11 +10,15 @@ from .upload_utils import handle_file_upload_and_initial_checks
 
 # 导入验证规则模块和辅助函数
 try:
-    from validation_rules.case_validators import validate_case_relationships
-    from validation_rules.case_generators import generate_case_files
+    from validation.case_validation.case_validators import validate_case_relationships
+    from validation.case_validation.case_generators import generate_case_files
     from excel_formatter import format_excel
 except ImportError as e:
+    # 打印到标准错误输出，确保能看到
+    print(f"ERROR: 无法导入必要的模块或函数: {e}", file=sys.stderr)
     logging.getLogger(__name__).error(f"无法导入必要的模块或函数: {e}", exc_info=True)
+    # 可以在这里直接退出或抛出异常，防止后续调用未导入的函数
+    raise # 强制重新抛出异常，让程序中断，以便调试
 
 logger = logging.getLogger(__name__)
 

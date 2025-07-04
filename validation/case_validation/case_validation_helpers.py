@@ -3,24 +3,24 @@ import pandas as pd
 import re
 
 # 导入必要的提取器函数
-from validation_rules.case_extractors_names import (
+from .case_extractors_names import (
     extract_name_from_case_report,
     extract_name_from_decision,
     extract_name_from_trial_report
 )
-from validation_rules.case_extractors_gender import (
+from .case_extractors_gender import (
     extract_gender_from_case_report,
     extract_gender_from_decision_report,
     extract_gender_from_investigation_report,
     extract_gender_from_trial_report
 )
-from validation_rules.case_extractors_birth_info import (
+from .case_extractors_birth_info import (
     extract_birth_year_from_case_report,
     extract_birth_year_from_decision_report,
     extract_birth_year_from_investigation_report,
     extract_birth_year_from_trial_report
 )
-from validation_rules.case_extractors_demographics import (
+from .case_extractors_demographics import (
     extract_suspected_violation_from_case_report,
     extract_suspected_violation_from_decision
 )

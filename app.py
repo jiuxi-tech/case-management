@@ -48,14 +48,16 @@ def _ensure_directories(app_config):
     app_config['CASE_FOLDER'] = case_folder
 
     # 动态添加 validation_rules 目录到 sys.path，以便导入自定义验证规则
-    validation_rules_path = os.path.join(base_path, 'validation_rules')
-    if os.path.exists(validation_rules_path) and validation_rules_path not in sys.path:
-        sys.path.append(validation_rules_path)
+    validation_path = os.path.join(base_path, 'validation') # 注意这里是 'validation'
+    if os.path.exists(validation_path) and validation_path not in sys.path:
+        sys.path.append(validation_path)
 
     # 动态添加 file_upload 目录到 sys.path，以便导入其中的模块
     file_upload_path = os.path.join(base_path, 'file_upload')
     if os.path.exists(file_upload_path) and file_upload_path not in sys.path:
         sys.path.append(file_upload_path)
+
+
 
 def create_app():
     """
