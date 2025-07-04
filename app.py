@@ -7,111 +7,168 @@ import logging
 import webbrowser
 import time
 from threading import Timer
+
 from db_utils import init_db
 
-def create_app():
-    app = Flask(__name__)
-    app.config.from_object(Config)
+def _get_base_path():
+    """
+    获取应用的基础路径。
+    兼容 PyInstaller 打包环境，返回 .exe 所在目录；
+    否则返回当前文件所在目录。
+    """
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
 
-    # 确保上传文件夹存在，使用 .exe 所在目录的 uploads
-    base_path = os.path.dirname(os.path.abspath(__file__)) if not getattr(sys, 'frozen', False) else os.path.dirname(sys.executable)
+def _ensure_directories(app_config):
+    """
+    确保必要的文件夹存在并配置到 Flask app config 中。
+    包括 uploads、uploads/YYYYMMDD/clue 和 uploads/YYYYMMDD/case 文件夹。
+    同时动态添加 validation_rules 目录到 sys.path。
+    """
+    base_path = _get_base_path()
+    
+    # 获取当前的日期字符串，用于构建日期相关的文件夹路径
+    today_date = Config().TODAY_DATE
+
+    # 确保 uploads 文件夹存在
     upload_folder = os.path.join(base_path, 'uploads')
-    if not os.path.exists(upload_folder):
-        os.makedirs(upload_folder)
-    app.config['UPLOAD_FOLDER'] = upload_folder
+    os.makedirs(upload_folder, exist_ok=True)
+    app_config['UPLOAD_FOLDER'] = upload_folder
 
-    # 确保 CLUE_FOLDER 存在
-    clue_folder = os.path.join(upload_folder, Config.TODAY_DATE, 'clue')
-    if not os.path.exists(clue_folder):
-        os.makedirs(clue_folder)
-    app.config['CLUE_FOLDER'] = clue_folder
+    # 确保 clue 文件夹存在
+    clue_folder = os.path.join(upload_folder, today_date, 'clue')
+    os.makedirs(clue_folder, exist_ok=True)
+    app_config['CLUE_FOLDER'] = clue_folder
 
-    # 确保 CASE_FOLDER 存在
-    case_folder = os.path.join(upload_folder, Config.TODAY_DATE, 'case')
-    if not os.path.exists(case_folder):
-        os.makedirs(case_folder)
-    app.config['CASE_FOLDER'] = case_folder
+    # 确保 case 文件夹存在
+    case_folder = os.path.join(upload_folder, today_date, 'case')
+    os.makedirs(case_folder, exist_ok=True)
+    app_config['CASE_FOLDER'] = case_folder
 
-    # 动态添加 validation_rules 目录到 sys.path
+    # 动态添加 validation_rules 目录到 sys.path，以便导入自定义验证规则
     validation_rules_path = os.path.join(base_path, 'validation_rules')
     if os.path.exists(validation_rules_path) and validation_rules_path not in sys.path:
         sys.path.append(validation_rules_path)
 
-    # 确保所有路由正确绑定
+def create_app():
+    """
+    创建并配置 Flask 应用实例。
+    加载配置、确保必要目录存在并绑定路由。
+    """
+    app = Flask(__name__)
+    app.config.from_object(Config)
+
+    # --- DEBUG PRINT START ---
+    # 移除打印 Config.COLUMN_MAPPINGS 到控制台的调试语句
+    # print(f"DEBUG: app.config['COLUMN_MAPPINGS'] after loading Config: {app.config.get('COLUMN_MAPPINGS')}")
+    # print(f"DEBUG: 'organization_measure' in app.config['COLUMN_MAPPINGS']? {'organization_measure' in app.config.get('COLUMN_MAPPINGS', {})}")
+    # --- DEBUG PRINT END ---
+
+    _ensure_directories(app.config)
+
+    # 确保所有路由正确绑定到应用实例
     with app.app_context():
         init_routes(app)
 
     return app
 
-def open_browser():
-    # 延迟 2 秒确保服务器启动
+def _open_browser_if_not_opened():
+    """
+    延迟打开浏览器，确保服务器启动后再打开，且只打开一次。
+    """
     time.sleep(2)
-    if not hasattr(open_browser, 'opened'):
-        webbrowser.open('http://localhost:5000')
-        open_browser.opened = True
+    webbrowser.open('http://localhost:5000')
 
-def run_app():
-    # 获取 .exe 所在目录
-    base_path = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.getcwd()
-    template_folder = os.path.join(base_path, 'templates')
+def _configure_logging(app, base_path):
+    """
+    配置应用的日志系统，将日志输出到文件和控制台。
+    日志文件路径会根据写入权限进行调整。
+    """
     log_folder = os.path.join(base_path, 'logs')
-    
-    if getattr(sys, 'frozen', False):
-        # PyInstaller 打包环境，调整模板路径
-        template_folder = os.path.join(sys._MEIPASS, 'templates')
-        if not os.path.exists(log_folder):
-            os.makedirs(log_folder)
-    
-    # 显式创建应用实例，使用 create_app 设定的 UPLOAD_FOLDER
-    app = create_app()
-    app.template_folder = template_folder
-    
-    # 设置日志，输出到文件和控制台
-    if not os.path.exists(log_folder):
-        os.makedirs(log_folder, exist_ok=True)
+    os.makedirs(log_folder, exist_ok=True)
+
     log_file = os.path.join(log_folder, 'app.log')
-    if not os.access(base_path, os.W_OK):
-        log_file = os.path.join(os.getenv('TEMP'), 'app.log')  # 回退到临时目录
-    
-    # 配置日志处理器
+    # 检查基础路径是否有写入权限，若无则回退到临时目录
+    # 对于 PyInstaller 打包的应用，确保日志文件始终可写
+    if not os.access(base_path, os.W_OK) and not getattr(sys, 'frozen', False):
+        log_file = os.path.join(os.getenv('TEMP', '/tmp'), 'app.log')
+    elif getattr(sys, 'frozen', False):
+         if not os.access(log_folder, os.W_OK):
+             log_file = os.path.join(os.getenv('TEMP', '/tmp'), 'app.log')
+
+    # 获取根日志器并设置级别
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')  # 移除 encoding 参数
     
-    # 文件处理器
-    file_handler = logging.FileHandler(log_file, encoding='utf-8')  # 将 encoding 应用到 FileHandler
+    # 定义日志格式
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    # 移除所有现有的处理器，防止重复添加日志处理器
+    if logger.handlers:
+        for handler in logger.handlers:
+            logger.removeHandler(handler)
+
+    # 文件处理器：将日志写入文件
+    file_handler = logging.FileHandler(log_file, encoding='utf-8')
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
-    
-    # 控制台处理器
+
+    # 控制台处理器：将日志输出到控制台
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
-    
+
+    # 将日志处理器也添加到 Flask 应用的日志器中
+    app.logger.addHandler(file_handler)
+    app.logger.addHandler(console_handler)
+
+    # 记录应用启动信息和关键路径
     logger.info("Application started in %s", base_path)
     logger.info("Log file set to: %s", log_file)
-    logger.info("Template folder set to: %s", template_folder)
     logger.info("Upload folder set to: %s", app.config['UPLOAD_FOLDER'])
     logger.info("Clue folder set to: %s", app.config['CLUE_FOLDER'])
     logger.info("Case folder set to: %s", app.config['CASE_FOLDER'])
 
-    # 数据库初始化
+def run_app():
+    """
+    运行 Flask 应用。
+    包括应用创建、模板路径设置、日志配置、数据库初始化、错误处理和启动服务器。
+    """
+    base_path = _get_base_path()
+    app = create_app()
+
+    # 根据运行环境调整模板路径
+    if getattr(sys, 'frozen', False):
+        app.template_folder = os.path.join(sys._MEIPASS, 'templates')
+    else:
+        app.template_folder = os.path.join(base_path, 'templates')
+
+    _configure_logging(app, base_path)
+    
+    # 数据库初始化，在应用上下文内执行
     with app.app_context():
         init_db()
     
-    # 自定义错误处理
+    # 自定义全局错误处理
     @app.errorhandler(Exception)
     def handle_exception(e):
-        logger.error(f"发生异常: {str(e)}")  # 记录到日志和控制台
+        """
+        捕获应用中的所有未处理异常。
+        记录错误日志、闪现错误消息并重定向到上传页面。
+        """
+        app.logger.error(f"发生异常: {str(e)}", exc_info=True)  # 记录完整堆栈信息
         flash(f'发生错误: {str(e)}', 'error')
-        return redirect(url_for('upload_case'))
+        return redirect(url_for('upload_case')), 500  # 返回 500 状态码
 
-    # 自动打开浏览器，仅首次执行
-    Timer(1, open_browser).start()
+    # 自动打开浏览器，仅在应用首次启动时执行一次
+    if not hasattr(run_app, '_browser_opened'):
+        Timer(1, _open_browser_if_not_opened).start()
+        run_app._browser_opened = True
     
-    # 启用 development mode，无重载
+    # 启动 Flask 开发服务器
     app.run(debug=False, host='0.0.0.0', port=5000, use_reloader=False)
 
 if __name__ == '__main__':

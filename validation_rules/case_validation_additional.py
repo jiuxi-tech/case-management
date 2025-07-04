@@ -9,8 +9,10 @@ from validation_rules.case_extractors_names import (
 logger = logging.getLogger(__name__)
 
 def validate_name_rules(row, index, excel_case_code, excel_person_code, issues_list, mismatch_indices,
-                       investigated_person, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw):
-    """验证姓名相关规则。"""
+                        investigated_person, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config):
+    """验证姓名相关规则。
+    新增 app_config 参数以匹配调用方传递的参数数量。
+    """
     
     report_name = extract_name_from_case_report(report_text_raw)
     if report_name and investigated_person != report_name:
@@ -41,8 +43,10 @@ def validate_name_rules(row, index, excel_case_code, excel_person_code, issues_l
         print(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
 
 def validate_case_report_keywords_rules(row, index, excel_case_code, excel_person_code, issues_list, case_report_keyword_mismatch_indices,
-                                       case_report_keywords_to_check, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw):
-    """验证立案报告关键字规则。"""
+                                        case_report_keywords_to_check, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config):
+    """验证立案报告关键字规则。
+    新增 app_config 参数以匹配调用方传递的参数数量。
+    """
     
     found_keywords_in_case_report = [kw for kw in case_report_keywords_to_check if kw in report_text_raw]
     
@@ -71,8 +75,10 @@ def validate_case_report_keywords_rules(row, index, excel_case_code, excel_perso
         print(f"行 {index + 1} - 立案报告中未发现指定关键字。")
 
 def validate_voluntary_confession_rules(row, index, excel_case_code, excel_person_code, issues_list, voluntary_confession_highlight_indices,
-                                       excel_voluntary_confession, trial_text_raw):
-    """验证是否主动交代问题规则。"""
+                                        excel_voluntary_confession, trial_text_raw, app_config):
+    """验证是否主动交代问题规则。
+    新增 app_config 参数以匹配调用方传递的参数数量。
+    """
     
     trial_report_contains_confession = "主动交代" in trial_text_raw
 
@@ -86,8 +92,10 @@ def validate_voluntary_confession_rules(row, index, excel_case_code, excel_perso
         print(f"行 {index + 1} - 规则触发: 审理报告中发现“主动交代”，已标记“是否主动交代问题”字段为黄色并添加问题描述。")
 
 def validate_no_party_position_warning_rules(row, index, excel_case_code, excel_person_code, issues_list, no_party_position_warning_mismatch_indices,
-                                            excel_no_party_position_warning, decision_text_raw):
-    """验证是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分规则。"""
+                                             excel_no_party_position_warning, decision_text_raw, app_config):
+    """验证是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分规则。
+    新增 app_config 参数以匹配调用方传递的参数数量。
+    """
     
     target_string = "属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分"
     decision_contains_warning = target_string in decision_text_raw

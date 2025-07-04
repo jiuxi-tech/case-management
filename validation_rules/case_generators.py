@@ -41,7 +41,7 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     参数:
     df (pd.DataFrame): 原始Excel数据的DataFrame。
     original_filename (str): 原始上传的文件名。
-    upload_dir (str): 上传文件的根目录 (此参数实际上未被使用，我们将直接使用 Config.CASE_FOLDER)。
+    upload_dir (str): 上传文件的根目录 (此参数现在将被使用)。
     mismatch_indices (set): 姓名不匹配的行索引集合。
     gender_mismatch_indices (set): 性别不匹配的行索引集合。
     issues_list (list): 包含所有问题的列表，每个问题是一个字典。
@@ -80,7 +80,8 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     tuple: (copy_path, case_num_path) 生成的副本文件路径和立案编号文件路径。
             如果生成失败，返回 (None, None)。
     """
-    case_dir = Config.CASE_FOLDER 
+    # 将 case_dir 从 Config 更改为使用传入的 upload_dir 参数
+    case_dir = upload_dir 
     os.makedirs(case_dir, exist_ok=True) 
 
     copy_filename = original_filename.replace('.xlsx', '_副本.xlsx').replace('.xls', '_副本.xlsx')
@@ -125,10 +126,8 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
             administrative_sanction_mismatch_indices # <-- 【新增】在这里添加这个参数
         )
         logger.info(f"Generated copy file with highlights: {copy_path}")
-        print(f"生成高亮后的副本文件: {copy_path}")
     except Exception as e:
         logger.error(f"生成高亮副本文件失败: {e}", exc_info=True)
-        print(f"生成高亮副本文件失败: {e}")
         return None, None
 
     case_num_filename = f"立案编号{datetime.now().strftime('%Y%m%d')}.xlsx" 
@@ -179,10 +178,8 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
                 worksheet.set_column(i, i, max_len)
 
         logger.info(f"Generated case number file: {case_num_path}")
-        print(f"生成立案编号表: {case_num_path}")
     except Exception as e:
         logger.error(f"生成立案编号文件失败: {e}", exc_info=True)
-        print(f"生成立案编号文件失败: {e}")
         return copy_path, None 
 
     return copy_path, case_num_path

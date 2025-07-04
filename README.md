@@ -38,5 +38,13 @@ Python库：flask, werkzeug, pandas, xlsxwriter
 
 pyinstaller --add-data "templates;templates" --add-data "uploads;uploads" --add-data "logs;logs" --add-data "static;static" --onefile -F app.py
 
+# 7 文件说明：
+## 7.1 app.py
+整个应用的入口点，它整合了配置、路由、日志、数据库等模块，确保应用能够正确启动并正常运行，同时提供了良好的用户体验和错误处理机制。
 
+## 7.2 config.py
+定义了一个应用配置类 Config，它集中管理了文件处理规则、Excel 列映射、数据验证规则、业务关键词列表、数据库路径和应用安全密钥等配置项，为应用的其他模块提供了统一的配置支持。
+
+## 7.3 routes.py
+定义了 Flask 应用的路由和用户认证逻辑，包括登录、注册、登出、文件上传以及机关单位的增删改查等功能，并通过装饰器保护需要用户登录的路由。
 

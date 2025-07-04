@@ -22,8 +22,10 @@ from validation_rules.case_extractors_party_info import (
 logger = logging.getLogger(__name__)
 
 def validate_birth_date_rules(row, index, excel_case_code, excel_person_code, issues_list, birth_date_mismatch_indices,
-                             excel_birth_date, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw):
-    """验证出生年月相关规则。"""
+                              excel_birth_date, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config):
+    """验证出生年月相关规则。
+    新增 app_config 参数以匹配调用方传递的参数数量。
+    """
     
     extracted_birth_date_from_report = extract_birth_date_from_case_report(report_text_raw)
     is_birth_date_mismatch_report = False
@@ -86,8 +88,10 @@ def validate_birth_date_rules(row, index, excel_case_code, excel_person_code, is
         print(f"行 {index + 1} - 出生年月不匹配: Excel出生年月 ('{excel_birth_date}') vs 审理报告提取出生年月 ('{extracted_birth_date_from_trial}')")
 
 def validate_education_rules(row, index, excel_case_code, excel_person_code, issues_list, education_mismatch_indices,
-                            excel_education, report_text_raw):
-    """验证学历相关规则。"""
+                             excel_education, report_text_raw, app_config):
+    """验证学历相关规则。
+    新增 app_config 参数以匹配调用方传递的参数数量。
+    """
     
     extracted_education_from_report = extract_education_from_case_report(report_text_raw)
     is_education_mismatch_report = False
@@ -119,8 +123,10 @@ def validate_education_rules(row, index, excel_case_code, excel_person_code, iss
         education_mismatch_indices.add(index)
 
 def validate_ethnicity_rules(row, index, excel_case_code, excel_person_code, issues_list, ethnicity_mismatch_indices,
-                            excel_ethnicity, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw):
-    """验证民族相关规则。"""
+                             excel_ethnicity, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config):
+    """验证民族相关规则。
+    新增 app_config 参数以匹配调用方传递的参数数量。
+    """
     
     extracted_ethnicity_from_report = extract_ethnicity_from_case_report(report_text_raw)
     is_ethnicity_mismatch_report = False
@@ -207,8 +213,10 @@ def validate_ethnicity_rules(row, index, excel_case_code, excel_person_code, iss
         ethnicity_mismatch_indices.add(index)
 
 def validate_party_member_rules(row, index, excel_case_code, excel_person_code, issues_list, party_member_mismatch_indices,
-                               excel_party_member, report_text_raw, decision_text_raw):
-    """验证是否中共党员相关规则。"""
+                                 excel_party_member, report_text_raw, decision_text_raw, app_config):
+    """验证是否中共党员相关规则。
+    新增 app_config 参数以匹配调用方传递的参数数量。
+    """
     
     extracted_party_member_from_report = extract_party_member_from_case_report(report_text_raw)
     is_party_member_mismatch_report = False
@@ -255,8 +263,10 @@ def validate_party_member_rules(row, index, excel_case_code, excel_person_code, 
         party_member_mismatch_indices.add(index)
 
 def validate_party_joining_date_rules(row, index, excel_case_code, excel_person_code, issues_list, party_joining_date_mismatch_indices,
-                                    excel_party_member, excel_party_joining_date, report_text_raw):
-    """验证入党时间相关规则。"""
+                                      excel_party_member, excel_party_joining_date, report_text_raw, app_config):
+    """验证入党时间相关规则。
+    新增 app_config 参数以匹配调用方传递的参数数量。
+    """
     
     extracted_party_joining_date_from_report = extract_party_joining_date_from_case_report(report_text_raw)
     is_party_joining_date_mismatch = False
