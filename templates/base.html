@@ -104,7 +104,7 @@
             <h1 class="text-2xl font-bold mb-6 text-center">案管系统</h1>
             <ul class="space-y-4">
                 {% if 'username' in session %}
-                    <li><a href="{{ url_for('upload') }}" class="block hover:bg-blue-700 p-2 rounded-md">上传线索登记表</a></li>
+                    <li><a href="{{ url_for('upload_clue') }}" class="block hover:bg-blue-700 p-2 rounded-md">上传线索登记表</a></li>
                     <li><a href="{{ url_for('upload_case') }}" class="block hover:bg-blue-700 p-2 rounded-md">上传立案登记表</a></li>
                     <li><a href="{{ url_for('authority_agency') }}" class="block hover:bg-blue-700 p-2 rounded-md">机关单位管理</a></li>
                 {% else %}

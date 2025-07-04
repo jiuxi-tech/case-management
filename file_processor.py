@@ -28,7 +28,7 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in Config.ALLOWED_EXTENSIONS
 
-def process_upload(request, app):
+def process_clue_upload(request, app):
     """
     处理线索登记表文件的上传、保存和验证。
     如果文件不符合要求或验证失败，会闪现错误消息并重定向。

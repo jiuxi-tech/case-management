@@ -2,10 +2,8 @@ from functools import wraps
 from flask import render_template, request, redirect, url_for, flash, session, current_app
 from db_utils import get_user, create_user, get_authority_agency_dict, add_authority_agency, \
                      update_authority_agency, delete_authority_agency, get_db
-from file_processor import process_upload, process_case_upload
+from file_processor import process_clue_upload, process_case_upload
 from werkzeug.security import generate_password_hash, check_password_hash
-# from werkzeug.utils import secure_filename # secure_filename 在 file_processor 中使用，此处无需导入
-# from config import Config # Config 未直接在路由函数中使用，但其配置已通过 app.config 传递，此处可保留或移除，为清晰起见保留
 
 def login_required(f):
     """
@@ -89,9 +87,9 @@ def init_routes(app):
         flash('已登出', 'success')
         return redirect(url_for('login'))
 
-    @app.route('/upload', methods=['GET', 'POST'])
+    @app.route('/upload_clue', methods=['GET', 'POST'])
     @login_required
-    def upload():
+    def upload_clue():
         """
         线索登记表上传路由。
         GET 请求显示上传表单。
@@ -100,7 +98,7 @@ def init_routes(app):
         if request.method == 'POST':
             # 将 app 实例传递给 process_upload，以便其可以访问 app.config
             return process_upload(request, current_app._get_current_object())
-        return render_template('upload.html', title='上传')
+        return render_template('upload_clue.html', title='上传')
 
     @app.route('/authority_agency')
     @login_required
