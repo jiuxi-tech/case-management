@@ -58,7 +58,6 @@ def _ensure_directories(app_config):
         sys.path.append(file_upload_path)
 
 
-
 def create_app():
     """
     创建并配置 Flask 应用实例。
