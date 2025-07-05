@@ -325,20 +325,63 @@ def get_validation_issues(df):
             logger.info(msg)
             print(msg)
 
-        if "收缴金额（万元）" in df.columns and validate_collection_amount(report_text):
-            issues_list.append((index, clue_code, Config.VALIDATION_RULES["highlight_collection_amount"]))
+        # 收缴金额规则已移动到clue_validation.py文件中
 
         if "没收金额" in df.columns and validate_confiscation_amount(report_text):
-            issues_list.append((index, clue_code, Config.VALIDATION_RULES["highlight_confiscation_amount"]))
+            # 构建比对字段和被比对字段的描述
+            compared_field = f"R{index + 2}没收金额"
+            being_compared_field = f"AB{index + 2}处置情况报告"
+            issues_list.append({
+                "受理线索编码": clue_code,
+                "受理人员编码": personnel_code if personnel_code else "",
+                "行号": index + 2,
+                "比对字段": compared_field,
+                "被比对字段": being_compared_field,
+                "问题描述": f"R{index + 2}没收金额与AB{index + 2}处置情况报告对比中出现没收二字",
+                "列名": "没收金额" # 添加列名用于标黄
+            })
 
         if "责令退赔金额" in df.columns and validate_compensation_amount(report_text):
-            issues_list.append((index, clue_code, Config.VALIDATION_RULES["highlight_compensation_amount"]))
+            # 构建比对字段和被比对字段的描述
+            compared_field = f"S{index + 2}责令退赔金额"
+            being_compared_field = f"AB{index + 2}处置情况报告"
+            issues_list.append({
+                "受理线索编码": clue_code,
+                "受理人员编码": personnel_code if personnel_code else "",
+                "行号": index + 2,
+                "比对字段": compared_field,
+                "被比对字段": being_compared_field,
+                "问题描述": f"S{index + 2}责令退赔金额与AB{index + 2}处置情况报告对比中出现责令退赔三字",
+                "列名": "责令退赔金额" # 添加列名用于标黄
+            })
 
         if "登记上交金额" in df.columns and validate_registration_amount(report_text):
-            issues_list.append((index, clue_code, Config.VALIDATION_RULES["highlight_registration_amount"]))
+            # 构建比对字段和被比对字段的描述
+            compared_field = f"T{index + 2}登记上交金额"
+            being_compared_field = f"AB{index + 2}处置情况报告"
+            issues_list.append({
+                "受理线索编码": clue_code,
+                "受理人员编码": personnel_code if personnel_code else "",
+                "行号": index + 2,
+                "比对字段": compared_field,
+                "被比对字段": being_compared_field,
+                "问题描述": f"T{index + 2}登记上交金额与AB{index + 2}处置情况报告对比中出现登记上交三字",
+                "列名": "登记上交金额" # 添加列名用于标黄
+            })
 
         if "追缴失职渎职滥用职权造成的损失金额" in df.columns and validate_recovery_amount(report_text):
-            issues_list.append((index, clue_code, Config.VALIDATION_RULES["highlight_recovery_amount"]))
+            # 构建比对字段和被比对字段的描述
+            compared_field = f"CJ{index + 2}追缴失职渎职滥用职权造成的损失金额"
+            being_compared_field = f"AB{index + 2}处置情况报告"
+            issues_list.append({
+                "受理线索编码": clue_code,
+                "受理人员编码": personnel_code if personnel_code else "",
+                "行号": index + 2,
+                "比对字段": compared_field,
+                "被比对字段": being_compared_field,
+                "问题描述": f"CJ{index + 2}追缴失职渎职滥用职权造成的损失金额与AB{index + 2}处置情况报告对比中出现追缴二字",
+                "列名": "追缴失职渎职滥用职权造成的损失金额" # 添加列名用于标黄
+            })
 
         if Config.COLUMN_MAPPINGS["ethnicity"] in df.columns:
             ethnicity = row[Config.COLUMN_MAPPINGS["ethnicity"]]
