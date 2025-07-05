@@ -108,6 +108,7 @@ def validate_clue_data(df, app_config, agency_mapping_db):
         disposal_report_content = str(row[app_config['COLUMN_MAPPINGS']['disposal_report']]).strip()
         
         accepted_clue_code = str(row.get(app_config['COLUMN_MAPPINGS']['accepted_clue_code'], 'N/A')).strip()
+        accepted_personnel_code = str(row.get(app_config['COLUMN_MAPPINGS']['accepted_personnel_code'], 'N/A')).strip()
 
         # 规则1: E2被反映人与AB2处置情况报告姓名不一致
         extracted_name = extract_name_from_report(disposal_report_content, investigated_person_excel)
@@ -157,16 +158,24 @@ def validate_clue_data(df, app_config, agency_mapping_db):
         if excel_ethnicity and extracted_ethnicity and excel_ethnicity != extracted_ethnicity:
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
+                "受理人员编码": accepted_personnel_code,
+                "行号": original_df_index + 2,
+                "比对字段": "",
+                "被比对字段": "",
                 "问题描述": f"行 {original_df_index + 2} - 民族不匹配: Excel '{excel_ethnicity}' vs 报告 '{extracted_ethnicity}'",
-
+                "列名": app_config['COLUMN_MAPPINGS']['ethnicity']
             })
             error_count += 1
             logger.warning(f"行 {original_df_index + 2} - 民族不匹配: Excel '{excel_ethnicity}' vs 报告 '{extracted_ethnicity}'")
         elif excel_ethnicity and not extracted_ethnicity and disposal_report_content:
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
+                "受理人员编码": accepted_personnel_code,
+                "行号": original_df_index + 2,
+                "比对字段": "",
+                "被比对字段": "",
                 "问题描述": f"行 {original_df_index + 2} - 民族有值但报告中未提取到民族，无法比对",
-
+                "列名": app_config['COLUMN_MAPPINGS']['ethnicity']
             })
             error_count += 1
             logger.warning(f"行 {original_df_index + 2} - 民族有值但报告中未提取到民族，无法比对")
@@ -179,16 +188,24 @@ def validate_clue_data(df, app_config, agency_mapping_db):
         if excel_party_joining_date and extracted_party_joining_date and excel_party_joining_date != extracted_party_joining_date:
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
+                "受理人员编码": accepted_personnel_code,
+                "行号": original_df_index + 2,
+                "比对字段": "",
+                "被比对字段": "",
                 "问题描述": f"行 {original_df_index + 2} - 入党时间不匹配: Excel '{excel_party_joining_date}' vs 报告 '{extracted_party_joining_date}'",
-
+                "列名": app_config['COLUMN_MAPPINGS']['party_joining_date']
             })
             error_count += 1
             logger.warning(f"行 {original_df_index + 2} - 入党时间不匹配: Excel '{excel_party_joining_date}' vs 报告 '{extracted_party_joining_date}'")
         elif excel_party_joining_date and not extracted_party_joining_date and disposal_report_content:
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
+                "受理人员编码": accepted_personnel_code,
+                "行号": original_df_index + 2,
+                "比对字段": "",
+                "被比对字段": "",
                 "问题描述": f"行 {original_df_index + 2} - 入党时间有值但报告中未提取到，无法比对",
-
+                "列名": app_config['COLUMN_MAPPINGS']['party_joining_date']
             })
             error_count += 1
             logger.warning(f"行 {original_df_index + 2} - 入党时间有值但报告中未提取到，无法比对")
@@ -198,12 +215,9 @@ def validate_clue_data(df, app_config, agency_mapping_db):
         # 规则9: 组织措施与处置情况报告比对
         excel_organization_measure = str(row.get(app_config['COLUMN_MAPPINGS']['organization_measure'], '')).strip()
 
-        # 获取受理人员编码 (假设存在此列，如果不存在，需要用户提供具体列名)
-        accepted_personnel_code = str(row.get(app_config['COLUMN_MAPPINGS'].get('accepted_personnel_code', '受理人员编码'), 'N/A')).strip()
+        # 获取受理人员编码
 
         # 规则10: 填报单位名称与办理机关不一致 (统一处理)
-        # 获取受理人员编码 (假设存在此列，如果不存在，需要用户提供具体列名)
-        accepted_personnel_code = str(row.get(app_config['COLUMN_MAPPINGS'].get('accepted_personnel_code', '受理人员编码'), 'N/A')).strip()
 
         reporting_agency_excel = str(row.get(app_config['COLUMN_MAPPINGS']['reporting_agency'], '')).strip()
         authority_excel = str(row.get(app_config['COLUMN_MAPPINGS']['authority'], '')).strip()
@@ -211,15 +225,15 @@ def validate_clue_data(df, app_config, agency_mapping_db):
         if reporting_agency_excel and authority_excel:
             if (authority_excel, reporting_agency_excel) not in agency_mapping_db:
                 # 构建比对字段和被比对字段的描述
-                compared_field = f"C{original_df_index + 2}{app_config['COLUMN_MAPPINGS']['reporting_agency']}"
-                being_compared_field = f"H{original_df_index + 2}{app_config['COLUMN_MAPPINGS']['authority']}"
+                compared_field = f"C{original_df_index + 2}填报单位名称"
+                being_compared_field = f"H{original_df_index + 2}办理机关"
                 issues_list.append({
                     "受理线索编码": accepted_clue_code,
                     "受理人员编码": accepted_personnel_code,
                     "行号": original_df_index + 2,
                     "比对字段": compared_field,
                     "被比对字段": being_compared_field,
-                    "问题描述": app_config['VALIDATION_RULES']["inconsistent_agency_clue"],
+                    "问题描述": f"C{original_df_index + 2}填报单位名称与H{original_df_index + 2}办理机关不一致",
                     "列名": app_config['COLUMN_MAPPINGS']['reporting_agency'] # 添加列名用于标红
                 })
                 error_count += 1
@@ -238,8 +252,12 @@ def validate_clue_data(df, app_config, agency_mapping_db):
             if not found_match:
                 issues_list.append({
                     "受理线索编码": accepted_clue_code,
-                    "问题描述": f"行 {original_df_index + 2} - 组织措施 ('{excel_organization_measure}') 与处置情况报告不一致，报告中未提及相关关键词。",
-    
+                    "受理人员编码": accepted_personnel_code,
+                    "行号": original_df_index + 2,
+                    "比对字段": "",
+                    "被比对字段": "",
+                    "问题描述": f"行 {original_df_index + 2} - 组织措施 ('{excel_organization_measure}') 与处置情况报告不一致。",
+                    "列名": app_config['COLUMN_MAPPINGS']['organization_measure']
                 })
                 error_count += 1
                 logger.warning(f"行 {original_df_index + 2} - 组织措施 ('{excel_organization_measure}') 与处置情况报告不一致。")

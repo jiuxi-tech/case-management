@@ -98,6 +98,10 @@ def process_clue_upload(request, app):
                     data_for_issues_df.append({
                         '序号': len(data_for_issues_df) + 1, # 动态生成序号
                         '受理线索编码': issue_dict.get('受理线索编码', 'N/A'),
+                        '受理人员编码': issue_dict.get('受理人员编码', ''),
+                        '行号': issue_dict.get('行号', ''),
+                        '比对字段': issue_dict.get('比对字段', ''),
+                        '被比对字段': issue_dict.get('被比对字段', ''),
                         '问题': issue_dict.get('问题描述', '无描述'),
                         '风险等级': issue_dict.get('风险等级', '中')
                     })

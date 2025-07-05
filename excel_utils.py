@@ -288,10 +288,19 @@ def create_clue_issues_sheet(writer, issues_list):
     Creates a new sheet for clue issues if issues_list is not empty.
     """
     if issues_list:
-        issues_df = pd.DataFrame([
-            {'序号': i + 1, '受理线索编码': item.get('受理线索编码', ''), '问题': item.get('问题描述', ''), '行号': item.get('行号', ''), '列名': item.get('列名', '')}
-            for i, item in enumerate(issues_list)
-        ])
+        issues_df = pd.DataFrame(issues_list)
+        # 确保列的顺序和名称与需求一致
+        issues_df = issues_df[[
+            '受理线索编码',
+            '受理人员编码',
+            '行号',
+            '比对字段',
+            '被比对字段',
+            '问题描述', # 对应 Excel 中的 '问题' 列
+            '列名'
+        ]]
+        issues_df.insert(0, '序号', range(1, 1 + len(issues_df)))
+        issues_df.rename(columns={'问题描述': '问题'}, inplace=True)
         issues_df.to_excel(writer, sheet_name='问题列表', index=False)
 
 def create_case_issues_sheet(writer, issues_list):
