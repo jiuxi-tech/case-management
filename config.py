@@ -90,7 +90,7 @@ class Config:
         "highlight_collection_amount": "收缴金额（万元）与.*处置情况报告对比结果是.*处置情况报告出现收缴二字",
         "highlight_confiscation_amount": "没收金额与.*处置情况报告对比结果是.*处置情况报告出现没收二字",
         "highlight_compensation_amount": "责令退赔金额与.*处置情况报告对比结果是.*处置情况报告出现责令退赔字样",
-        "highlight_registration_amount": "T2登记上交金额请再次确认",
+        "highlight_registration_amount": "登记上交金额与.*处置情况报告对比结果是.*处置情况报告出现登记上交金额字样",
         "highlight_recovery_amount": "CJ追缴失职渎职滥用职权造成的损失金额请再次确认",
         "inconsistent_ethnicity": "W2民族与AB2处置情况报告民族不一致",
         "highlight_birth_date": "X2出生年月与AB2处置情况报告出生年月不一致",
