@@ -94,7 +94,7 @@ class Config:
         "highlight_recovery_amount": "追缴失职渎职滥用职权造成的损失金额与.*处置情况报告对比结果是.*处置情况报告出现追缴字样",
         "inconsistent_ethnicity": "W.*民族与AB.*处置情况报告民族不一致",
         "highlight_birth_date": "X.*出生年月与AB.*处置情况报告的出生年月不一致",
-        "highlight_completion_time": "BT2办结时间与AB2处置情况报告落款时间不一致",
+        "highlight_completion_time": "BT.*办结时间与AB.*处置情况报告落款时间不一致",
         "highlight_disposal_method_1": "AK2处置方式1二级请再次确认",
         "inconsistent_case_name_report": "C2被调查人与BF2立案报告不一致",
         "inconsistent_case_name_decision": "C2被调查人与CU2处分决定不一致",
