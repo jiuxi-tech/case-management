@@ -114,8 +114,14 @@ def validate_clue_data(df, app_config, agency_mapping_db):
     for index, row in df.iterrows():
         original_df_index = index # 记录原始DataFrame的索引
         
-        investigated_person_excel = str(row[app_config['COLUMN_MAPPINGS']['mentioned_person']]).strip()
-        disposal_report_content = str(row[app_config['COLUMN_MAPPINGS']['disposal_report']]).strip()
+        investigated_person_excel = str(row.get(app_config['COLUMN_MAPPINGS']['mentioned_person'], '')).strip()
+        disposal_report_content = str(row.get(app_config['COLUMN_MAPPINGS']['disposal_report'], '')).strip()
+        
+        # 处理nan值
+        if disposal_report_content.lower() == 'nan':
+            disposal_report_content = ''
+        if investigated_person_excel.lower() == 'nan':
+            investigated_person_excel = ''
         
         accepted_clue_code = str(row.get(app_config['COLUMN_MAPPINGS']['accepted_clue_code'], 'N/A')).strip()
         accepted_personnel_code = str(row.get(app_config['COLUMN_MAPPINGS']['accepted_personnel_code'], 'N/A')).strip()
@@ -462,32 +468,86 @@ def validate_clue_data(df, app_config, agency_mapping_db):
 
         # 规则12: 组织措施与处置情况报告比对
         excel_organization_measure = str(row.get(app_config['COLUMN_MAPPINGS']['organization_measure'], '')).strip()
-
-        # 获取受理人员编码
+        
+        # 处理nan值
+        if excel_organization_measure.lower() == 'nan':
+            excel_organization_measure = ''
+        
+        # 构建字段信息
+        compared_field = f"CC{original_df_index + 2}组织措施"
+        being_compared_field = f"AB{original_df_index + 2}处置情况报告的组织措施"
         
         # 使用Config中的关键词列表
         organization_measure_keywords = app_config['ORGANIZATION_MEASURE_KEYWORDS']
         
-        found_match = False
-        if excel_organization_measure:
+        if excel_organization_measure and disposal_report_content:
+            # 检查处置报告中是否包含任何组织措施关键词
+            report_contains_keyword = False
+            matched_keyword = None
+            
             for keyword in organization_measure_keywords:
                 if keyword in disposal_report_content:
-                    found_match = True
+                    report_contains_keyword = True
+                    matched_keyword = keyword
                     break
-            if not found_match:
+            
+            # 如果处置报告中不包含任何组织措施关键词，或者与Excel中的组织措施不一致，则标红
+            excel_contains_keyword = any(keyword in excel_organization_measure for keyword in organization_measure_keywords)
+            
+            if not report_contains_keyword or not excel_contains_keyword or (matched_keyword and matched_keyword not in excel_organization_measure):
                 issues_list.append({
                     "受理线索编码": accepted_clue_code,
                     "受理人员编码": accepted_personnel_code,
                     "行号": original_df_index + 2,
-                    "比对字段": "",
-                    "被比对字段": "",
-                    "问题描述": f"行 {original_df_index + 2} - 组织措施 ('{excel_organization_measure}') 与处置情况报告不一致。",
+                    "比对字段": compared_field,
+                    "被比对字段": being_compared_field,
+                    "问题描述": f"CC{original_df_index + 2}组织措施与AB{original_df_index + 2}处置情况报告的组织措施不一致",
                     "列名": app_config['COLUMN_MAPPINGS']['organization_measure']
                 })
                 error_count += 1
-                logger.warning(f"行 {original_df_index + 2} - 组织措施 ('{excel_organization_measure}') 与处置情况报告不一致。")
+                if not report_contains_keyword:
+                    logger.warning(f"<线索 - （12.组织措施）> - 行 {original_df_index + 2} - 处置情况报告中未找到组织措施关键词")
+                elif not excel_contains_keyword:
+                    logger.warning(f"<线索 - （12.组织措施）> - 行 {original_df_index + 2} - Excel组织措施'{excel_organization_measure}'不包含预定义关键词")
+                else:
+                    logger.warning(f"<线索 - （12.组织措施）> - 行 {original_df_index + 2} - 组织措施不一致: Excel '{excel_organization_measure}' vs 报告 '{matched_keyword}'")
+        elif excel_organization_measure and not disposal_report_content:
+            issues_list.append({
+                "受理线索编码": accepted_clue_code,
+                "受理人员编码": accepted_personnel_code,
+                "行号": original_df_index + 2,
+                "比对字段": compared_field,
+                "被比对字段": being_compared_field,
+                "问题描述": f"CC{original_df_index + 2}组织措施有值但AB{original_df_index + 2}处置情况报告为空，无法比对",
+                "列名": app_config['COLUMN_MAPPINGS']['organization_measure']
+            })
+            error_count += 1
+            logger.warning(f"<线索 - （12.组织措施）> - 行 {original_df_index + 2} - 组织措施有值但处置情况报告为空，无法比对")
+        elif not excel_organization_measure and disposal_report_content:
+            # 检查处置报告中是否包含组织措施关键词，但Excel组织措施字段为空
+            report_contains_keyword = False
+            matched_keyword = None
+            
+            for keyword in organization_measure_keywords:
+                if keyword in disposal_report_content:
+                    report_contains_keyword = True
+                    matched_keyword = keyword
+                    break
+            
+            if report_contains_keyword:
+                issues_list.append({
+                    "受理线索编码": accepted_clue_code,
+                    "受理人员编码": accepted_personnel_code,
+                    "行号": original_df_index + 2,
+                    "比对字段": compared_field,
+                    "被比对字段": being_compared_field,
+                    "问题描述": f"CC{original_df_index + 2}组织措施与AB{original_df_index + 2}处置情况报告的组织措施不一致",
+                    "列名": app_config['COLUMN_MAPPINGS']['organization_measure']
+                })
+                error_count += 1
+                logger.warning(f"<线索 - （12.组织措施）> - 行 {original_df_index + 2} - 组织措施字段为空但处置情况报告包含关键词'{matched_keyword}'")
 
-        # 规则12: 受理时间与处置情况报告落款时间比对
+        # 规则13: 受理时间与处置情况报告落款时间比对
         excel_acceptance_time = row.get(app_config['COLUMN_MAPPINGS']['acceptance_time'])
         
         if pd.notna(excel_acceptance_time) and disposal_report_content:
@@ -539,7 +599,7 @@ def validate_clue_data(df, app_config, agency_mapping_db):
             error_count += 1
             logger.warning(f"行 {original_df_index + 2} - 受理时间有值但处置情况报告为空，无法比对。")
         
-        # 规则13: 处置方式1二级与处置情况报告比对
+        # 规则14: 处置方式1二级与处置情况报告比对
         excel_disposal_method_1 = str(row.get(app_config['COLUMN_MAPPINGS']['disposal_method_1'], '')).strip()
         
         # 假设处置方式1二级的值会出现在处置情况报告中

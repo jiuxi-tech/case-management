@@ -34,12 +34,16 @@ def _check_issue_condition(issues_list, idx, rule, is_case_table_issues):
     if isinstance(issues_list[0], dict):
         # 支持正则表达式匹配
         for issue_item in issues_list:
-            if issue_item.get('行号', 0) - 2 == idx:
+            issue_row = issue_item.get('行号', 0) - 2
+            if issue_row == idx:
                 issue_desc = issue_item.get('问题描述', '')
-                if issue_desc == rule or re.search(rule, issue_desc):
+                exact_match = issue_desc == rule
+                regex_match = re.search(rule, issue_desc) if rule else False
+                if exact_match or regex_match:
                     return True
         return False
     elif isinstance(issues_list[0], tuple):
+        print(f"Debug: 处理元组格式的issues_list")
         if is_case_table_issues:
             return any(issue_desc == rule or re.search(rule, issue_desc) for i, _, _, issue_desc in issues_list if i == idx)
         else:
@@ -95,10 +99,16 @@ def apply_clue_table_formats(worksheet, df, row, idx, issues_list, is_case_table
 
     # Organizational Measures (Clue Table) - Red
     if Config.COLUMN_MAPPINGS.get("organization_measure") in df.columns:
-        condition = _check_issue_condition(issues_list, idx, Config.VALIDATION_RULES["inconsistent_organization_measure"], is_case_table_issues)
+        rule_pattern = Config.VALIDATION_RULES["inconsistent_organization_measure"]
+        condition = _check_issue_condition(issues_list, idx, rule_pattern, is_case_table_issues)
         if condition:
+            # 标红组织措施字段
             col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["organization_measure"])
             apply_format(worksheet, idx, col_letter, row.get(Config.COLUMN_MAPPINGS["organization_measure"]), True, red_format)
+            # 同时标红处置情况报告字段（副本表字段）
+            if Config.COLUMN_MAPPINGS.get("disposal_report") in df.columns:
+                disposal_col_letter = get_column_letter(df, Config.COLUMN_MAPPINGS["disposal_report"])
+                apply_format(worksheet, idx, disposal_col_letter, row.get(Config.COLUMN_MAPPINGS["disposal_report"]), True, red_format)
 
     # Party Joining Time (Clue Table) - Red
     if Config.COLUMN_MAPPINGS.get("joining_party_time") in df.columns:
