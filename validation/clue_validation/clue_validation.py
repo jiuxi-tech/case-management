@@ -37,10 +37,20 @@ def extract_gender_from_report(report_content):
     return None
 
 def extract_birth_date_from_report(report_content):
-    """从报告文本中提取出生年月。"""
-    match = re.search(r'(\d{4}年\d{1,2}月(?!日))', report_content) # 匹配“XXXX年X月”，排除“X日”
-    if match:
-        return match.group(1).replace('年', '/').replace('月', '')
+    """从报告文本中提取出生年月。
+    
+    从"（一）被反映人基本情况"段落中提取类似"1966年12月生"的出生年月信息。
+    """
+    # 首先查找"（一）被反映人基本情况"段落
+    basic_info_match = re.search(r'（一）被反映人基本情况[\s\S]*?(?=（二）|$)', report_content)
+    if basic_info_match:
+        basic_info_section = basic_info_match.group(0)
+        # 在基本情况段落中查找"XXXX年XX月生"格式的出生年月
+        birth_match = re.search(r'(\d{4}年\d{1,2}月)生', basic_info_section)
+        if birth_match:
+            # 转换为标准日期格式 YYYY/MM
+            birth_date = birth_match.group(1).replace('年', '/').replace('月', '')
+            return birth_date
     return None
 
 def extract_ethnicity_from_report(report_content):
@@ -295,20 +305,35 @@ def validate_clue_data(df, app_config, agency_mapping_db):
         excel_birth_date = str(row.get(app_config['COLUMN_MAPPINGS']['birth_date'], '')).strip()
         extracted_birth_date_str = extract_birth_date_from_report(disposal_report_content)
         if excel_birth_date and extracted_birth_date_str and excel_birth_date != extracted_birth_date_str:
+            # 构建比对字段和被比对字段的描述
+            compared_field = f"X{original_df_index + 2}出生年月"
+            being_compared_field = f"AB{original_df_index + 2}处置情况报告"
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
-                "问题描述": f"行 {original_df_index + 2} - 出生年月不匹配: Excel '{excel_birth_date}' vs 报告 '{extracted_birth_date_str}'"
+                "受理人员编码": accepted_personnel_code,
+                "行号": original_df_index + 2,
+                "比对字段": compared_field,
+                "被比对字段": being_compared_field,
+                "问题描述": f"X{original_df_index + 2}出生年月与AB{original_df_index + 2}处置情况报告的出生年月不一致",
+                "列名": app_config['COLUMN_MAPPINGS']['birth_date']
             })
             error_count += 1
-            logger.warning(f"行 {original_df_index + 2} - 出生年月不匹配: Excel '{excel_birth_date}' vs 报告 '{extracted_birth_date_str}'")
+            logger.warning(f"<线索 - （9.出生年月）> - 行 {original_df_index + 2} - 出生年月不匹配: Excel '{excel_birth_date}' vs 报告 '{extracted_birth_date_str}'")
         elif excel_birth_date and not extracted_birth_date_str and disposal_report_content:
+            # 构建比对字段和被比对字段的描述
+            compared_field = f"X{original_df_index + 2}出生年月"
+            being_compared_field = f"AB{original_df_index + 2}处置情况报告"
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
-                "问题描述": f"行 {original_df_index + 2} - 出生年月有值但报告中未提取到出生年月，无法比对",
-
+                "受理人员编码": accepted_personnel_code,
+                "行号": original_df_index + 2,
+                "比对字段": compared_field,
+                "被比对字段": being_compared_field,
+                "问题描述": f"X{original_df_index + 2}出生年月有值但AB{original_df_index + 2}处置情况报告中未提取到出生年月，无法比对",
+                "列名": app_config['COLUMN_MAPPINGS']['birth_date']
             })
             error_count += 1
-            logger.warning(f"行 {original_df_index + 2} - 出生年月有值但报告中未提取到出生年月，无法比对")
+            logger.warning(f"<线索 - （9.出生年月）> - 行 {original_df_index + 2} - 出生年月有值但报告中未提取到出生年月，无法比对")
 
 
         # 规则10: 入党时间比对
