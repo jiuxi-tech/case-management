@@ -142,24 +142,35 @@ def validate_clue_data(df, app_config, agency_mapping_db):
         # 规则2: E2被反映人与AB2处置情况报告姓名不一致
         extracted_name = extract_name_from_report(disposal_report_content, investigated_person_excel)
         if investigated_person_excel and extracted_name and investigated_person_excel != extracted_name:
+            # 构建比对字段和被比对字段的描述
+            compared_field = f"E{original_df_index + 2}被反映人"
+            being_compared_field = f"AB{original_df_index + 2}处置情况报告"
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
-                "问题描述": app_config['VALIDATION_RULES']["inconsistent_name"],
-
+                "受理人员编码": accepted_personnel_code,
+                "行号": original_df_index + 2,
+                "比对字段": compared_field,
+                "被比对字段": being_compared_field,
+                "问题描述": f"E{original_df_index + 2}被反映人与AB{original_df_index + 2}处置情况报告姓名不一致",
+                "列名": app_config['COLUMN_MAPPINGS']['mentioned_person'] # 添加列名用于标红
             })
             error_count += 1
-            logger.warning(f"行 {original_df_index + 2} - 姓名不匹配: Excel '{investigated_person_excel}' vs 报告 '{extracted_name}'")
+            logger.warning(f"<线索 - （2.被反映人）> - 行 {original_df_index + 2} - 被反映人 '{investigated_person_excel}' 与 处置情况报告的姓名（{extracted_name}）不一致。")
         elif investigated_person_excel and not extracted_name and disposal_report_content: # 报告有内容但未提取到姓名
-             issues_list.append({
+            # 构建比对字段和被比对字段的描述
+            compared_field = f"E{original_df_index + 2}被反映人"
+            being_compared_field = f"AB{original_df_index + 2}处置情况报告"
+            issues_list.append({
                 "受理线索编码": accepted_clue_code,
-                "问题描述": app_config['VALIDATION_RULES']["empty_report"],
-                
+                "受理人员编码": accepted_personnel_code,
+                "行号": original_df_index + 2,
+                "比对字段": compared_field,
+                "被比对字段": being_compared_field,
+                "问题描述": f"E{original_df_index + 2}被反映人与AB{original_df_index + 2}处置情况报告姓名不一致 (报告为空)",
+                "列名": app_config['COLUMN_MAPPINGS']['mentioned_person'] # 添加列名用于标红
             })
-             error_count += 1
-             logger.warning(f"行 {original_df_index + 2} - 姓名不匹配: Excel '{investigated_person_excel}' vs 报告为空或未提取到姓名")
-
-
-
+            error_count += 1
+            logger.warning(f"<线索 - （2.被反映人）> - 行 {original_df_index + 2} - 被反映人 '{investigated_person_excel}' 与 处置情况报告的姓名为空或未提取到。")
 
         # 规则4: 出生年月比对
         excel_birth_date = str(row.get(app_config['COLUMN_MAPPINGS']['birth_date'], '')).strip()
