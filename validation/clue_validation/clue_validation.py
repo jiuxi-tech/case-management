@@ -95,7 +95,7 @@ def validate_clue_data(df, app_config):
             issues_list.append({
                 "受理线索编码": "N/A",
                 "问题描述": f"缺少必要列: {col}",
-                "风险等级": "高"
+
             })
             error_count += 1
             logger.error(f"缺少必要列: {col}")
@@ -115,7 +115,7 @@ def validate_clue_data(df, app_config):
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
                 "问题描述": app_config['VALIDATION_RULES']["inconsistent_name"],
-                "风险等级": "高"
+
             })
             error_count += 1
             logger.warning(f"行 {original_df_index + 2} - 姓名不匹配: Excel '{investigated_person_excel}' vs 报告 '{extracted_name}'")
@@ -123,7 +123,7 @@ def validate_clue_data(df, app_config):
              issues_list.append({
                 "受理线索编码": accepted_clue_code,
                 "问题描述": app_config['VALIDATION_RULES']["empty_report"],
-                "风险等级": "高"
+                
             })
              error_count += 1
              logger.warning(f"行 {original_df_index + 2} - 姓名不匹配: Excel '{investigated_person_excel}' vs 报告为空或未提取到姓名")
@@ -137,8 +137,7 @@ def validate_clue_data(df, app_config):
         if excel_birth_date and extracted_birth_date_str and excel_birth_date != extracted_birth_date_str:
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
-                "问题描述": f"行 {original_df_index + 2} - 出生年月不匹配: Excel '{excel_birth_date}' vs 报告 '{extracted_birth_date_str}'",
-                "风险等级": "中"
+                "问题描述": f"行 {original_df_index + 2} - 出生年月不匹配: Excel '{excel_birth_date}' vs 报告 '{extracted_birth_date_str}'"
             })
             error_count += 1
             logger.warning(f"行 {original_df_index + 2} - 出生年月不匹配: Excel '{excel_birth_date}' vs 报告 '{extracted_birth_date_str}'")
@@ -146,7 +145,7 @@ def validate_clue_data(df, app_config):
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
                 "问题描述": f"行 {original_df_index + 2} - 出生年月有值但报告中未提取到出生年月，无法比对",
-                "风险等级": "中"
+
             })
             error_count += 1
             logger.warning(f"行 {original_df_index + 2} - 出生年月有值但报告中未提取到出生年月，无法比对")
@@ -159,7 +158,7 @@ def validate_clue_data(df, app_config):
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
                 "问题描述": f"行 {original_df_index + 2} - 民族不匹配: Excel '{excel_ethnicity}' vs 报告 '{extracted_ethnicity}'",
-                "风险等级": "中"
+
             })
             error_count += 1
             logger.warning(f"行 {original_df_index + 2} - 民族不匹配: Excel '{excel_ethnicity}' vs 报告 '{extracted_ethnicity}'")
@@ -167,7 +166,7 @@ def validate_clue_data(df, app_config):
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
                 "问题描述": f"行 {original_df_index + 2} - 民族有值但报告中未提取到民族，无法比对",
-                "风险等级": "中"
+
             })
             error_count += 1
             logger.warning(f"行 {original_df_index + 2} - 民族有值但报告中未提取到民族，无法比对")
@@ -181,7 +180,7 @@ def validate_clue_data(df, app_config):
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
                 "问题描述": f"行 {original_df_index + 2} - 入党时间不匹配: Excel '{excel_party_joining_date}' vs 报告 '{extracted_party_joining_date}'",
-                "风险等级": "中"
+
             })
             error_count += 1
             logger.warning(f"行 {original_df_index + 2} - 入党时间不匹配: Excel '{excel_party_joining_date}' vs 报告 '{extracted_party_joining_date}'")
@@ -189,7 +188,7 @@ def validate_clue_data(df, app_config):
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
                 "问题描述": f"行 {original_df_index + 2} - 入党时间有值但报告中未提取到，无法比对",
-                "风险等级": "中"
+
             })
             error_count += 1
             logger.warning(f"行 {original_df_index + 2} - 入党时间有值但报告中未提取到，无法比对")
@@ -212,7 +211,7 @@ def validate_clue_data(df, app_config):
                 issues_list.append({
                     "受理线索编码": accepted_clue_code,
                     "问题描述": f"行 {original_df_index + 2} - 组织措施 ('{excel_organization_measure}') 与处置情况报告不一致，报告中未提及相关关键词。",
-                    "风险等级": "中"
+    
                 })
                 error_count += 1
                 logger.warning(f"行 {original_df_index + 2} - 组织措施 ('{excel_organization_measure}') 与处置情况报告不一致。")
@@ -248,7 +247,7 @@ def validate_clue_data(df, app_config):
                     issues_list.append({
                         "受理线索编码": accepted_clue_code,
                         "问题描述": f"行 {original_df_index + 2} - 受理时间 ('{excel_acceptance_time}') 晚于处置情况报告落款时间 ('{report_date}')。",
-                        "风险等级": "高"
+       
                     })
                     error_count += 1
                     logger.warning(f"行 {original_df_index + 2} - 受理时间晚于处置情况报告落款时间。")
@@ -256,7 +255,8 @@ def validate_clue_data(df, app_config):
                 issues_list.append({
                     "受理线索编码": accepted_clue_code,
                     "问题描述": f"行 {original_df_index + 2} - 处置情况报告中未能提取到有效的落款时间。",
-                    "风险等级": "中"
+    
+
                 })
                 error_count += 1
                 logger.warning(f"行 {original_df_index + 2} - 处置情况报告中未能提取到有效的落款时间。")
@@ -264,7 +264,6 @@ def validate_clue_data(df, app_config):
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
                 "问题描述": f"行 {original_df_index + 2} - 受理时间有值但处置情况报告为空，无法比对。",
-                "风险等级": "中"
             })
             error_count += 1
             logger.warning(f"行 {original_df_index + 2} - 受理时间有值但处置情况报告为空，无法比对。")
@@ -299,7 +298,7 @@ def validate_clue_data(df, app_config):
                     issues_list.append({
                         "受理线索编码": accepted_clue_code,
                         "问题描述": f"行 {original_df_index + 2} - 办结时间 ('{excel_completion_time}') 与处置情况报告落款时间 ('{report_date}') 不一致。",
-                        "风险等级": "高"
+                        
                     })
                     error_count += 1
                     logger.warning(f"行 {original_df_index + 2} - 办结时间与处置情况报告落款时间不一致。")
@@ -307,7 +306,7 @@ def validate_clue_data(df, app_config):
                 issues_list.append({
                     "受理线索编码": accepted_clue_code,
                     "问题描述": f"行 {original_df_index + 2} - 处置情况报告中未能提取到有效的落款时间。",
-                    "风险等级": "中"
+    
                 })
                 error_count += 1
                 logger.warning(f"行 {original_df_index + 2} - 处置情况报告中未能提取到有效的落款时间。")
@@ -315,7 +314,7 @@ def validate_clue_data(df, app_config):
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
                 "问题描述": f"行 {original_df_index + 2} - 办结时间有值但处置情况报告为空，无法比对。",
-                "风险等级": "中"
+
             })
             error_count += 1
             logger.warning(f"行 {original_df_index + 2} - 办结时间有值但处置情况报告为空，无法比对。")
@@ -327,8 +326,7 @@ def validate_clue_data(df, app_config):
         if excel_disposal_method_1 and excel_disposal_method_1 not in disposal_report_content:
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
-                "问题描述": f"行 {original_df_index + 2} - 处置方式1二级 ('{excel_disposal_method_1}') 未在处置情况报告中提及。",
-                "风险等级": "中"
+                "问题描述": f"行 {original_df_index + 2} - 处置方式1二级 ('{excel_disposal_method_1}') 未在处置情况报告中提及。"
             })
             error_count += 1
             logger.warning(f"行 {original_df_index + 2} - 处置方式1二级 ('{excel_disposal_method_1}') 未在处置情况报告中提及。")
