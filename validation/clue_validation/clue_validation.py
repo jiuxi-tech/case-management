@@ -225,19 +225,6 @@ def validate_clue_data(df, app_config, agency_mapping_db):
                 error_count += 1
                 logger.warning(
                     f"<线索> - 行 {original_df_index + 2} - 填报单位名称 '{reporting_agency_excel}' (len: {len(reporting_agency_excel)}) 与办理机关 '{authority_excel}' (len: {len(authority_excel)}) 不一致，且不在数据库映射中。数据库查询语句为：SELECT authority, agency FROM authority_agency_dict WHERE category = 'NSL' AND authority = '{authority_excel}' AND agency = '{reporting_agency_excel}'")
-        reporting_agency_excel = str(row.get(app_config['COLUMN_MAPPINGS']['reporting_agency'], '')).strip()
-        authority_excel = str(row.get(app_config['COLUMN_MAPPINGS']['authority'], '')).strip()
-
-        if reporting_agency_excel and authority_excel:
-            if (authority_excel, reporting_agency_excel) not in agency_mapping_db:
-                issues_list.append({
-                    "受理线索编码": accepted_clue_code,
-                    "问题描述": app_config['VALIDATION_RULES']["inconsistent_agency_clue"],
-                    "行号": original_df_index + 2, # 添加行号
-                    "列名": app_config['COLUMN_MAPPINGS']['reporting_agency'] # 添加列名用于标红
-                })
-                error_count += 1
-                logger.warning(f"<线索> - 行 {original_df_index + 2} - 填报单位名称 '{reporting_agency_excel}' (len: {len(reporting_agency_excel)}) 与办理机关 '{authority_excel}' (len: {len(authority_excel)}) 不一致，且不在数据库映射中。数据库查询语句为：SELECT authority, agency FROM authority_agency_dict WHERE category = 'NSL' AND authority = '{authority_excel}' AND agency = '{reporting_agency_excel}'")
         
         # 使用Config中的关键词列表
         organization_measure_keywords = app_config['ORGANIZATION_MEASURE_KEYWORDS']
