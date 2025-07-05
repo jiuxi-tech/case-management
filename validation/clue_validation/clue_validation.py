@@ -568,17 +568,27 @@ def validate_clue_data(df, app_config, agency_mapping_db):
             error_count += 1
             logger.warning(f"<线索 - （13.受理时间）> - 行 {original_df_index + 2} - 受理时间字段标黄，需人工确认")
         # 受理时间为空时跳过验证
-        
-        # 规则14: 处置方式1二级与处置情况报告比对
+
+        # 规则14: 处置方式1二级字段标黄提醒
         excel_disposal_method_1 = str(row.get(app_config['COLUMN_MAPPINGS']['disposal_method_1'], '')).strip()
         
-        # 假设处置方式1二级的值会出现在处置情况报告中
-        if excel_disposal_method_1 and excel_disposal_method_1 not in disposal_report_content:
+        # 只要处置方式1二级字段有值，就直接标黄提醒人工确认
+        if excel_disposal_method_1:
+            # 构建字段信息
+            compared_field = f"AK{original_df_index + 2}处置方式1二级"
+            being_compared_field = f"AB{original_df_index + 2}处置情况"
+            
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
-                "问题描述": f"行 {original_df_index + 2} - 处置方式1二级 ('{excel_disposal_method_1}') 未在处置情况报告中提及。"
+                "受理人员编码": accepted_personnel_code,
+                "行号": original_df_index + 2,
+                "比对字段": compared_field,
+                "被比对字段": being_compared_field,
+                "问题描述": f"AK{original_df_index + 2}处置方式1二级请再次确认",
+                "列名": app_config['COLUMN_MAPPINGS']['disposal_method_1']
             })
             error_count += 1
-            logger.warning(f"行 {original_df_index + 2} - 处置方式1二级 ('{excel_disposal_method_1}') 未在处置情况报告中提及。")
+            logger.warning(f"<线索 - （14.处置方式1二级）> - 行 {original_df_index + 2} - 处置方式1二级字段标黄，需人工确认")
+        # 处置方式1二级为空时跳过验证
         
     return issues_list, error_count
