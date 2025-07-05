@@ -206,7 +206,24 @@ def validate_clue_data(df, app_config, agency_mapping_db):
             error_count += 1
             logger.warning(f"<线索 - （4.没收金额）> - 行 {original_df_index + 2} - 处置情况报告出现【没收】二字。")
 
-        # 规则5: 出生年月比对
+        # 规则5: 责令退赔金额检查
+        if "责令退赔金额" in df.columns and disposal_report_content and "责令退赔" in disposal_report_content:
+            # 构建比对字段和被比对字段的描述
+            compared_field = f"S{original_df_index + 2}责令退赔金额"
+            being_compared_field = f"AB{original_df_index + 2}处置情况报告"
+            issues_list.append({
+                "受理线索编码": accepted_clue_code,
+                "受理人员编码": accepted_personnel_code,
+                "行号": original_df_index + 2,
+                "比对字段": compared_field,
+                "被比对字段": being_compared_field,
+                "问题描述": f"S{original_df_index + 2}责令退赔金额与AB{original_df_index + 2}处置情况报告对比结果是AB{original_df_index + 2}处置情况报告出现责令退赔字样",
+                "列名": "责令退赔金额" # 添加列名用于标黄
+            })
+            error_count += 1
+            logger.warning(f"<线索 - （5.责令退赔金额）> - 行 {original_df_index + 2} - 处置情况报告出现【责令退赔】字样。")
+
+        # 规则6: 出生年月比对
         excel_birth_date = str(row.get(app_config['COLUMN_MAPPINGS']['birth_date'], '')).strip()
         extracted_birth_date_str = extract_birth_date_from_report(disposal_report_content)
         if excel_birth_date and extracted_birth_date_str and excel_birth_date != extracted_birth_date_str:
