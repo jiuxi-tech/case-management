@@ -85,7 +85,7 @@ def validate_clue_data(df, app_config):
 
     # 确保所有需要的列都存在
     required_columns = [
-        app_config['COLUMN_MAPPINGS']['investigated_person'],
+        app_config['COLUMN_MAPPINGS']['mentioned_person'],
         app_config['COLUMN_MAPPINGS']['disposal_report'],
         app_config['COLUMN_MAPPINGS']['gender'],
         app_config['COLUMN_MAPPINGS']['age'],
@@ -115,7 +115,7 @@ def validate_clue_data(df, app_config):
     for index, row in df.iterrows():
         original_df_index = index # 记录原始DataFrame的索引
         
-        investigated_person_excel = str(row[app_config['COLUMN_MAPPINGS']['investigated_person']]).strip()
+        investigated_person_excel = str(row[app_config['COLUMN_MAPPINGS']['mentioned_person']]).strip()
         disposal_report_content = str(row[app_config['COLUMN_MAPPINGS']['disposal_report']]).strip()
         
         accepted_clue_code = str(row.get(app_config['COLUMN_MAPPINGS']['accepted_clue_code'], 'N/A')).strip()

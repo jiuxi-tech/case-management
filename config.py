@@ -35,6 +35,7 @@ class Config:
         "administrative_sanction": "政务处分",
         "party_member": "是否中共党员",
         "investigated_person": "被调查人",
+        "mentioned_person": "被反映人",
         "case_report": "立案报告",
         "disciplinary_decision": "处分决定",
         "investigation_report": "审查调查报告",
