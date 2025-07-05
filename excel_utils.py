@@ -62,23 +62,14 @@ def apply_clue_table_formats(worksheet, df, row, idx, issues_list, is_case_table
             apply_format(worksheet, idx, col_letter, value, condition, yellow_format)
 
     # Agency (Clue Table) - Red
+    # Agency (Clue Table) - Red
     if Config.COLUMN_MAPPINGS.get("reporting_agency") in df.columns and Config.COLUMN_MAPPINGS.get("authority") in df.columns:
         # 检查是否有针对 'inconsistent_agency_clue' 规则的问题
-        issue_found = False
-        for issue_item in issues_list:
-            if isinstance(issue_item, dict) and issue_item.get('问题描述') == Config.VALIDATION_RULES["inconsistent_agency_clue"] and issue_item.get('行号', 0) - 2 == idx:
-                issue_found = True
-                # 根据 '列名' 标红相应的单元格
-                column_to_highlight = issue_item.get('列名')
-                if column_to_highlight:
-                    col_letter = get_column_letter(df, column_to_highlight)
-                    if col_letter is not None:
-                        apply_format(worksheet, idx, col_letter, row.get(column_to_highlight), True, red_format)
-                # 如果问题描述是 'inconsistent_agency_clue'，则同时标红填报单位名称和办理机关
-                if column_to_highlight == Config.COLUMN_MAPPINGS["reporting_agency"]:
-                    apply_format(worksheet, idx, get_column_letter(df, Config.COLUMN_MAPPINGS["reporting_agency"]), row.get(Config.COLUMN_MAPPINGS["reporting_agency"]), True, red_format)
-                    apply_format(worksheet, idx, get_column_letter(df, Config.COLUMN_MAPPINGS["authority"]), row.get(Config.COLUMN_MAPPINGS["authority"]), True, red_format)
-                break
+        condition_agency_inconsistent = _check_issue_condition(issues_list, idx, Config.VALIDATION_RULES["inconsistent_agency_clue"], is_case_table_issues)
+        if condition_agency_inconsistent:
+            # 标红“填报单位名称”和“办理机关”
+            apply_format(worksheet, idx, get_column_letter(df, Config.COLUMN_MAPPINGS["reporting_agency"]), row.get(Config.COLUMN_MAPPINGS["reporting_agency"]), True, red_format)
+            apply_format(worksheet, idx, get_column_letter(df, Config.COLUMN_MAPPINGS["authority"]), row.get(Config.COLUMN_MAPPINGS["authority"]), True, red_format)
 
 
     # Reflected Person (Clue Table) - Red

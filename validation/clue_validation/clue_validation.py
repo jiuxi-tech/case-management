@@ -201,36 +201,30 @@ def validate_clue_data(df, app_config, agency_mapping_db):
         # 获取受理人员编码 (假设存在此列，如果不存在，需要用户提供具体列名)
         accepted_personnel_code = str(row.get(app_config['COLUMN_MAPPINGS'].get('accepted_personnel_code', '受理人员编码'), 'N/A')).strip()
 
-        # 规则10: 填报单位名称与办理机关比对
-        # 假设 'reporting_unit_name' 对应 '填报单位名称'，'handling_agency' 对应 '办理机关'
-        # 如果这些列名在 app_config['COLUMN_MAPPINGS'] 中没有定义，需要用户提供
-        reporting_unit_name = str(row.get(app_config['COLUMN_MAPPINGS'].get('reporting_unit_name', '填报单位名称'), '')).strip()
-        handling_agency = str(row.get(app_config['COLUMN_MAPPINGS'].get('handling_agency', '办理机关'), '')).strip()
+        # 规则10: 填报单位名称与办理机关不一致 (统一处理)
+        # 获取受理人员编码 (假设存在此列，如果不存在，需要用户提供具体列名)
+        accepted_personnel_code = str(row.get(app_config['COLUMN_MAPPINGS'].get('accepted_personnel_code', '受理人员编码'), 'N/A')).strip()
 
-        if reporting_unit_name and handling_agency and reporting_unit_name != handling_agency:
-            # 构建比对字段和被比对字段的描述
-            compared_field = f"C{original_df_index + 2}填报单位名称"
-            compared_value = reporting_unit_name
-            being_compared_field = f"H{original_df_index + 2}办理机关"
-            being_compared_value = handling_agency
+        reporting_agency_excel = str(row.get(app_config['COLUMN_MAPPINGS']['reporting_agency'], '')).strip()
+        authority_excel = str(row.get(app_config['COLUMN_MAPPINGS']['authority'], '')).strip()
 
-            issues_list.append({
-                "受理线索编码": accepted_clue_code,
-                "受理人员编码": accepted_personnel_code,
-                "行号": original_df_index + 2,
-                "比对字段": compared_field,
-                "被比对字段": being_compared_field,
-                "问题描述": f"{compared_field}与{being_compared_field}不一致",
-            })
-            error_count += 1
-            logger.warning(
-                f"<线索-编号表> - 受理线索编码: {accepted_clue_code}, 受理人员编码: {accepted_personnel_code}, "
-                f"行号: {original_df_index + 2}, 比对字段: {compared_field} (值: '{compared_value}'), "
-                f"被比对字段: {being_compared_field} (值: '{being_compared_value}'), "
-                f"问题描述: {compared_field}与{being_compared_field}不一致"
-            )
-
-        # 规则10: C2填报单位名称与H2办理机关不一致
+        if reporting_agency_excel and authority_excel:
+            if (authority_excel, reporting_agency_excel) not in agency_mapping_db:
+                # 构建比对字段和被比对字段的描述
+                compared_field = f"C{original_df_index + 2}{app_config['COLUMN_MAPPINGS']['reporting_agency']}"
+                being_compared_field = f"H{original_df_index + 2}{app_config['COLUMN_MAPPINGS']['authority']}"
+                issues_list.append({
+                    "受理线索编码": accepted_clue_code,
+                    "受理人员编码": accepted_personnel_code,
+                    "行号": original_df_index + 2,
+                    "比对字段": compared_field,
+                    "被比对字段": being_compared_field,
+                    "问题描述": app_config['VALIDATION_RULES']["inconsistent_agency_clue"],
+                    "列名": app_config['COLUMN_MAPPINGS']['reporting_agency'] # 添加列名用于标红
+                })
+                error_count += 1
+                logger.warning(
+                    f"<线索> - 行 {original_df_index + 2} - 填报单位名称 '{reporting_agency_excel}' (len: {len(reporting_agency_excel)}) 与办理机关 '{authority_excel}' (len: {len(authority_excel)}) 不一致，且不在数据库映射中。数据库查询语句为：SELECT authority, agency FROM authority_agency_dict WHERE category = 'NSL' AND authority = '{authority_excel}' AND agency = '{reporting_agency_excel}'")
         reporting_agency_excel = str(row.get(app_config['COLUMN_MAPPINGS']['reporting_agency'], '')).strip()
         authority_excel = str(row.get(app_config['COLUMN_MAPPINGS']['authority'], '')).strip()
 
