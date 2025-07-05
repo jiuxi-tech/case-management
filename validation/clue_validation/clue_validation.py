@@ -257,7 +257,41 @@ def validate_clue_data(df, app_config, agency_mapping_db):
             error_count += 1
             logger.warning(f"<线索 - （7.追缴失职渎职滥用职权造成的损失金额）> - 行 {original_df_index + 2} - 处置情况报告出现【追缴】字样。")
 
-        # 规则8: 出生年月比对
+        # 规则8: 民族比对
+        excel_ethnicity = str(row.get(app_config['COLUMN_MAPPINGS']['ethnicity'], '')).strip()
+        extracted_ethnicity = extract_ethnicity_from_report(disposal_report_content)
+        if excel_ethnicity and extracted_ethnicity and excel_ethnicity != extracted_ethnicity:
+            # 构建比对字段和被比对字段的描述
+            compared_field = f"W{original_df_index + 2}民族"
+            being_compared_field = f"AB{original_df_index + 2}处置情况报告"
+            issues_list.append({
+                "受理线索编码": accepted_clue_code,
+                "受理人员编码": accepted_personnel_code,
+                "行号": original_df_index + 2,
+                "比对字段": compared_field,
+                "被比对字段": being_compared_field,
+                "问题描述": f"W{original_df_index + 2}民族与AB{original_df_index + 2}处置情况报告民族不一致",
+                "列名": app_config['COLUMN_MAPPINGS']['ethnicity']
+            })
+            error_count += 1
+            logger.warning(f"<线索 - （8.民族）> - 行 {original_df_index + 2} - 民族不匹配: Excel '{excel_ethnicity}' vs 报告 '{extracted_ethnicity}'")
+        elif excel_ethnicity and not extracted_ethnicity and disposal_report_content:
+            # 构建比对字段和被比对字段的描述
+            compared_field = f"W{original_df_index + 2}民族"
+            being_compared_field = f"AB{original_df_index + 2}处置情况报告"
+            issues_list.append({
+                "受理线索编码": accepted_clue_code,
+                "受理人员编码": accepted_personnel_code,
+                "行号": original_df_index + 2,
+                "比对字段": compared_field,
+                "被比对字段": being_compared_field,
+                "问题描述": f"W{original_df_index + 2}民族有值但AB{original_df_index + 2}处置情况报告中未提取到民族，无法比对",
+                "列名": app_config['COLUMN_MAPPINGS']['ethnicity']
+            })
+            error_count += 1
+            logger.warning(f"<线索 - （8.民族）> - 行 {original_df_index + 2} - 民族有值但报告中未提取到民族，无法比对")
+
+        # 规则9: 出生年月比对
         excel_birth_date = str(row.get(app_config['COLUMN_MAPPINGS']['birth_date'], '')).strip()
         extracted_birth_date_str = extract_birth_date_from_report(disposal_report_content)
         if excel_birth_date and extracted_birth_date_str and excel_birth_date != extracted_birth_date_str:
@@ -277,36 +311,7 @@ def validate_clue_data(df, app_config, agency_mapping_db):
             logger.warning(f"行 {original_df_index + 2} - 出生年月有值但报告中未提取到出生年月，无法比对")
 
 
-        # 规则6: 民族比对
-        excel_ethnicity = str(row.get(app_config['COLUMN_MAPPINGS']['ethnicity'], '')).strip()
-        extracted_ethnicity = extract_ethnicity_from_report(disposal_report_content)
-        if excel_ethnicity and extracted_ethnicity and excel_ethnicity != extracted_ethnicity:
-            issues_list.append({
-                "受理线索编码": accepted_clue_code,
-                "受理人员编码": accepted_personnel_code,
-                "行号": original_df_index + 2,
-                "比对字段": "",
-                "被比对字段": "",
-                "问题描述": f"行 {original_df_index + 2} - 民族不匹配: Excel '{excel_ethnicity}' vs 报告 '{extracted_ethnicity}'",
-                "列名": app_config['COLUMN_MAPPINGS']['ethnicity']
-            })
-            error_count += 1
-            logger.warning(f"行 {original_df_index + 2} - 民族不匹配: Excel '{excel_ethnicity}' vs 报告 '{extracted_ethnicity}'")
-        elif excel_ethnicity and not extracted_ethnicity and disposal_report_content:
-            issues_list.append({
-                "受理线索编码": accepted_clue_code,
-                "受理人员编码": accepted_personnel_code,
-                "行号": original_df_index + 2,
-                "比对字段": "",
-                "被比对字段": "",
-                "问题描述": f"行 {original_df_index + 2} - 民族有值但报告中未提取到民族，无法比对",
-                "列名": app_config['COLUMN_MAPPINGS']['ethnicity']
-            })
-            error_count += 1
-            logger.warning(f"行 {original_df_index + 2} - 民族有值但报告中未提取到民族，无法比对")
-
-
-        # 规则8: 入党时间比对
+        # 规则10: 入党时间比对
         excel_party_joining_date = str(row.get(app_config['COLUMN_MAPPINGS']['party_joining_date'], '')).strip()
         extracted_party_joining_date = extract_party_joining_date_from_report(disposal_report_content)
         
@@ -337,7 +342,7 @@ def validate_clue_data(df, app_config, agency_mapping_db):
 
 
 
-        # 规则9: 组织措施与处置情况报告比对
+        # 规则11: 组织措施与处置情况报告比对
         excel_organization_measure = str(row.get(app_config['COLUMN_MAPPINGS']['organization_measure'], '')).strip()
 
         # 获取受理人员编码
@@ -364,7 +369,7 @@ def validate_clue_data(df, app_config, agency_mapping_db):
                 error_count += 1
                 logger.warning(f"行 {original_df_index + 2} - 组织措施 ('{excel_organization_measure}') 与处置情况报告不一致。")
 
-        # 规则10: 受理时间与处置情况报告落款时间比对
+        # 规则12: 受理时间与处置情况报告落款时间比对
         excel_acceptance_time = row.get(app_config['COLUMN_MAPPINGS']['acceptance_time'])
         
         if pd.notna(excel_acceptance_time) and disposal_report_content:
@@ -416,7 +421,7 @@ def validate_clue_data(df, app_config, agency_mapping_db):
             error_count += 1
             logger.warning(f"行 {original_df_index + 2} - 受理时间有值但处置情况报告为空，无法比对。")
         
-        # 规则11: 办结时间与处置情况报告落款时间比对
+        # 规则13: 办结时间与处置情况报告落款时间比对
         excel_completion_time = row.get(app_config['COLUMN_MAPPINGS']['completion_time'])
         
         if pd.notna(excel_completion_time) and disposal_report_content:
@@ -467,7 +472,7 @@ def validate_clue_data(df, app_config, agency_mapping_db):
             error_count += 1
             logger.warning(f"行 {original_df_index + 2} - 办结时间有值但处置情况报告为空，无法比对。")
 
-        # 规则12: 处置方式1二级与处置情况报告比对
+        # 规则14: 处置方式1二级与处置情况报告比对
         excel_disposal_method_1 = str(row.get(app_config['COLUMN_MAPPINGS']['disposal_method_1'], '')).strip()
         
         # 假设处置方式1二级的值会出现在处置情况报告中
