@@ -111,37 +111,11 @@ def process_clue_upload(request, app):
         original_path_copy = os.path.join(app.config['CLUE_FOLDER'], original_filename_copy) # 直接使用 app.config
 
         # 由于 clue_file_processor 中的 format_excel 不使用 case_file_processor 中的大量高亮参数
-        # 且您传入的都是 set()，这里我们只传入 issues_list，其余默认值即可
-        # 确保 format_excel 函数的定义允许只传递部分参数，或者需要调整它的默认值
         format_excel(df,
-                     issues_list=issues_list,
-                     output_path=original_path_copy,
-                     # 如果 format_excel 函数没有针对这些参数设置默认值，以下参数可能仍然需要传递空集合
-                     all_mismatch_indices=set(),
-                     gender_mismatch_indices=set(), age_mismatch_indices=set(),
-                     birth_date_mismatch_indices=set(), education_mismatch_indices=set(), ethnicity_mismatch_indices=set(),
-                     party_member_mismatch_indices=set(), party_joining_date_mismatch_indices=set(),
-                     brief_case_details_mismatch_indices=set(), filing_time_mismatch_indices=set(),
-                     disciplinary_committee_filing_time_mismatch_indices=set(),
-                     disciplinary_committee_filing_authority_mismatch_indices=set(),
-                     supervisory_committee_filing_time_mismatch_indices=set(),
-                     supervisory_committee_filing_authority_mismatch_indices=set(),
-                     case_report_keyword_mismatch_indices=set(), disposal_spirit_mismatch_indices=set(),
-                     voluntary_confession_highlight_indices=set(), closing_time_mismatch_indices=set(),
-                     no_party_position_warning_mismatch_indices=set(),
-                     recovery_amount_highlight_indices=set(),
-                     trial_acceptance_time_mismatch_indices=set(),
-                     trial_closing_time_mismatch_indices=set(),
-                     trial_authority_agency_mismatch_indices=set(),
-                     disposal_decision_keyword_mismatch_indices=set(),
-                     trial_report_non_representative_mismatch_indices=set(),
-                     trial_report_detention_mismatch_indices=set(),
-                     confiscation_amount_indices=set(),
-                     confiscation_of_property_amount_indices=set(),
-                     compensation_amount_highlight_indices=set(),
-                     registered_handover_amount_indices=set(),
-                     disciplinary_sanction_mismatch_indices=set(),
-                     administrative_sanction_mismatch_indices=set()
+                          mismatch_indices=set(),
+                          issues_list=issues_list,
+                          output_path=original_path_copy,
+
                      )
 
         logger.info("线索登记表处理成功")

@@ -61,14 +61,6 @@ def extract_education_from_report(report_content):
             return keyword
     return None
 
-def extract_party_member_from_report(report_content):
-    """从报告文本中提取是否中共党员信息。"""
-    if "加入中国共产党" in report_content or "中共党员" in report_content or "共产党员" in report_content:
-        return "是"
-    if "非中共党员" in report_content:
-        return "否"
-    return None
-
 def extract_party_joining_date_from_report(report_content):
     """从报告文本中提取入党时间。"""
     match = re.search(r'(\d{4}年\d{1,2}月)加入中国共产党', report_content)
@@ -87,12 +79,9 @@ def validate_clue_data(df, app_config):
     required_columns = [
         app_config['COLUMN_MAPPINGS']['mentioned_person'],
         app_config['COLUMN_MAPPINGS']['disposal_report'],
-        app_config['COLUMN_MAPPINGS']['gender'],
-        app_config['COLUMN_MAPPINGS']['age'],
         app_config['COLUMN_MAPPINGS']['birth_date'],
         app_config['COLUMN_MAPPINGS']['ethnicity'],
-        app_config['COLUMN_MAPPINGS']['education'],
-        app_config['COLUMN_MAPPINGS']['party_member'],
+
         app_config['COLUMN_MAPPINGS']['party_joining_date'],
         app_config['COLUMN_MAPPINGS']['organization_measure'],
         app_config['COLUMN_MAPPINGS']['acceptance_time'],
@@ -140,70 +129,11 @@ def validate_clue_data(df, app_config):
              logger.warning(f"行 {original_df_index + 2} - 姓名不匹配: Excel '{investigated_person_excel}' vs 报告为空或未提取到姓名")
 
 
-        # 规则2: 性别比对
-        excel_gender = str(row.get(app_config['COLUMN_MAPPINGS']['gender'], '')).strip()
-        extracted_gender = extract_gender_from_report(disposal_report_content)
-        if excel_gender and extracted_gender and excel_gender != extracted_gender:
-            issues_list.append({
-                "受理线索编码": accepted_clue_code,
-                "问题描述": f"行 {original_df_index + 2} - 性别不匹配: Excel '{excel_gender}' vs 报告 '{extracted_gender}'",
-                "风险等级": "中"
-            })
-            error_count += 1
-            logger.warning(f"行 {original_df_index + 2} - 性别不匹配: Excel '{excel_gender}' vs 报告 '{extracted_gender}'")
-        elif excel_gender and not extracted_gender and disposal_report_content:
-            issues_list.append({
-                "受理线索编码": accepted_clue_code,
-                "问题描述": f"行 {original_df_index + 2} - 性别不匹配: Excel '{excel_gender}' 有值，但报告中未提取到性别",
-                "风险等级": "中"
-            })
-            error_count += 1
-            logger.warning(f"行 {original_df_index + 2} - 性别不匹配: Excel '{excel_gender}' 有值，但报告中未提取到性别")
-
-
-        # 规则3: 年龄比对 (根据出生年月和当前年份推算)
-        excel_age = None
-        if pd.notna(row.get(app_config['COLUMN_MAPPINGS']['age'])):
-            try:
-                excel_age = int(row.get(app_config['COLUMN_MAPPINGS']['age']))
-            except ValueError:
-                issues_list.append({
-                    "受理线索编码": accepted_clue_code,
-                    "问题描述": f"行 {original_df_index + 2} - 年龄字段格式不正确",
-                    "风险等级": "高"
-                })
-                error_count += 1
-                logger.warning(f"行 {original_df_index + 2} - Excel 年龄字段 '{row.get(app_config['COLUMN_MAPPINGS']['age'])}' 不是有效数字。")
-
-        extracted_birth_date_str = extract_birth_date_from_report(disposal_report_content)
-        if excel_age is not None and extracted_birth_date_str:
-            try:
-                extracted_birth_year = int(extracted_birth_date_str.split('/')[0])
-                current_year = datetime.now().year
-                calculated_age = current_year - extracted_birth_year
-                # 允许1岁的误差
-                if not (excel_age == calculated_age or excel_age == calculated_age - 1 or excel_age == calculated_age + 1):
-                    issues_list.append({
-                        "受理线索编码": accepted_clue_code,
-                        "问题描述": f"行 {original_df_index + 2} - 年龄不匹配: Excel '{excel_age}' vs 报告推算 '{calculated_age}'",
-                        "风险等级": "中"
-                    })
-                    error_count += 1
-                    logger.warning(f"行 {original_df_index + 2} - 年龄不匹配: Excel '{excel_age}' vs 报告推算 '{calculated_age}'")
-            except ValueError:
-                logger.warning(f"行 {original_df_index + 2} - 从报告中提取的出生年份 '{extracted_birth_date_str}' 无法解析。")
-        elif excel_age is not None and not extracted_birth_date_str and disposal_report_content:
-            issues_list.append({
-                "受理线索编码": accepted_clue_code,
-                "问题描述": f"行 {original_df_index + 2} - 年龄有值但报告中未提取到出生年月，无法比对",
-                "风险等级": "中"
-            })
-            error_count += 1
-            logger.warning(f"行 {original_df_index + 2} - 年龄有值但报告中未提取到出生年月，无法比对")
 
 
         # 规则4: 出生年月比对
         excel_birth_date = str(row.get(app_config['COLUMN_MAPPINGS']['birth_date'], '')).strip()
+        extracted_birth_date_str = extract_birth_date_from_report(disposal_report_content)
         if excel_birth_date and extracted_birth_date_str and excel_birth_date != extracted_birth_date_str:
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
@@ -220,27 +150,6 @@ def validate_clue_data(df, app_config):
             })
             error_count += 1
             logger.warning(f"行 {original_df_index + 2} - 出生年月有值但报告中未提取到出生年月，无法比对")
-
-
-        # 规则5: 学历比对
-        excel_education = str(row.get(app_config['COLUMN_MAPPINGS']['education'], '')).strip()
-        extracted_education = extract_education_from_report(disposal_report_content)
-        if excel_education and extracted_education and excel_education not in extracted_education and extracted_education not in excel_education:
-            issues_list.append({
-                "受理线索编码": accepted_clue_code,
-                "问题描述": f"行 {original_df_index + 2} - 学历不匹配: Excel '{excel_education}' vs 报告 '{extracted_education}'",
-                "风险等级": "中"
-            })
-            error_count += 1
-            logger.warning(f"行 {original_df_index + 2} - 学历不匹配: Excel '{excel_education}' vs 报告 '{extracted_education}'")
-        elif excel_education and not extracted_education and disposal_report_content:
-            issues_list.append({
-                "受理线索编码": accepted_clue_code,
-                "问题描述": f"行 {original_df_index + 2} - 学历有值但报告中未提取到学历，无法比对",
-                "风险等级": "中"
-            })
-            error_count += 1
-            logger.warning(f"行 {original_df_index + 2} - 学历有值但报告中未提取到学历，无法比对")
 
 
         # 规则6: 民族比对
@@ -264,56 +173,27 @@ def validate_clue_data(df, app_config):
             logger.warning(f"行 {original_df_index + 2} - 民族有值但报告中未提取到民族，无法比对")
 
 
-        # 规则7: 是否中共党员比对
-        excel_party_member = str(row.get(app_config['COLUMN_MAPPINGS']['party_member'], '')).strip()
-        extracted_party_member = extract_party_member_from_report(disposal_report_content)
-        if excel_party_member and extracted_party_member and excel_party_member != extracted_party_member:
-            issues_list.append({
-                "受理线索编码": accepted_clue_code,
-                "问题描述": f"行 {original_df_index + 2} - 是否中共党员不匹配: Excel '{excel_party_member}' vs 报告 '{extracted_party_member}'",
-                "风险等级": "中"
-            })
-            error_count += 1
-            logger.warning(f"行 {original_df_index + 2} - 是否中共党员不匹配: Excel '{excel_party_member}' vs 报告 '{extracted_party_member}'")
-        elif excel_party_member and not extracted_party_member and disposal_report_content:
-            issues_list.append({
-                "受理线索编码": accepted_clue_code,
-                "问题描述": f"行 {original_df_index + 2} - 是否中共党员有值但报告中未提取到，无法比对",
-                "风险等级": "中"
-            })
-            error_count += 1
-            logger.warning(f"行 {original_df_index + 2} - 是否中共党员有值但报告中未提取到，无法比对")
-
-
-        # 规则8: 入党时间比对 (仅当Excel中“是否中共党员”为“是”时才比对)
+        # 规则8: 入党时间比对
         excel_party_joining_date = str(row.get(app_config['COLUMN_MAPPINGS']['party_joining_date'], '')).strip()
         extracted_party_joining_date = extract_party_joining_date_from_report(disposal_report_content)
         
-        if excel_party_member == '是':
-            if excel_party_joining_date and extracted_party_joining_date and excel_party_joining_date != extracted_party_joining_date:
-                issues_list.append({
-                    "受理线索编码": accepted_clue_code,
-                    "问题描述": f"行 {original_df_index + 2} - 入党时间不匹配: Excel '{excel_party_joining_date}' vs 报告 '{extracted_party_joining_date}'",
-                    "风险等级": "中"
-                })
-                error_count += 1
-                logger.warning(f"行 {original_df_index + 2} - 入党时间不匹配: Excel '{excel_party_joining_date}' vs 报告 '{extracted_party_joining_date}'")
-            elif excel_party_joining_date and not extracted_party_joining_date and disposal_report_content:
-                issues_list.append({
-                    "受理线索编码": accepted_clue_code,
-                    "问题描述": f"行 {original_df_index + 2} - 入党时间有值但报告中未提取到，无法比对",
-                    "风险等级": "中"
-                })
-                error_count += 1
-                logger.warning(f"行 {original_df_index + 2} - 入党时间有值但报告中未提取到，无法比对")
-        elif excel_party_member == '否' and excel_party_joining_date:
+        if excel_party_joining_date and extracted_party_joining_date and excel_party_joining_date != extracted_party_joining_date:
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
-                "问题描述": f"行 {original_df_index + 2} - Excel是否中共党员为“否”，但入党时间字段不为空 ('{excel_party_joining_date}')。",
-                "风险等级": "低"
+                "问题描述": f"行 {original_df_index + 2} - 入党时间不匹配: Excel '{excel_party_joining_date}' vs 报告 '{extracted_party_joining_date}'",
+                "风险等级": "中"
             })
             error_count += 1
-            logger.warning(f"行 {original_df_index + 2} - Excel是否中共党员为“否”，但入党时间字段不为空 ('{excel_party_joining_date}')。")
+            logger.warning(f"行 {original_df_index + 2} - 入党时间不匹配: Excel '{excel_party_joining_date}' vs 报告 '{extracted_party_joining_date}'")
+        elif excel_party_joining_date and not extracted_party_joining_date and disposal_report_content:
+            issues_list.append({
+                "受理线索编码": accepted_clue_code,
+                "问题描述": f"行 {original_df_index + 2} - 入党时间有值但报告中未提取到，无法比对",
+                "风险等级": "中"
+            })
+            error_count += 1
+            logger.warning(f"行 {original_df_index + 2} - 入党时间有值但报告中未提取到，无法比对")
+
 
 
         # 规则9: 组织措施与处置情况报告比对
