@@ -170,7 +170,8 @@ def validate_case_relationships(df, app_config, issues_list):
     authority_agency_db_data = get_authority_agency_dict()
     # 将数据库查询结果转换为更易于查找的列表，只包含SL类别的
     sl_authority_agency_mappings = []
-    for record in authority_agency_db_data:
+    for record_raw in authority_agency_db_data:
+        record = record_raw # record_raw 已经是字典
         if record['category'] == 'SL':
             sl_authority_agency_mappings.append({
                 'authority': record['authority'],
