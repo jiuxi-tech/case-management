@@ -86,7 +86,7 @@ class Config:
         "empty_report": "E2被反映人与AB2处置情况报告姓名不一致 (报告为空)",
         "confirm_acceptance_time": "AF2受理时间请再次确认",
         "inconsistent_organization_measure": "CC2组织措施与AB2处置情况报告不一致",
-        "inconsistent_joining_party_time": "AC2入党时间与AB2处置情况报告不一致",
+        "inconsistent_joining_party_time": "AC.*入党时间与AB.*处置情况报告的入党时间不一致",
         "highlight_collection_amount": "收缴金额（万元）与.*处置情况报告对比结果是.*处置情况报告出现收缴二字",
         "highlight_confiscation_amount": "没收金额与.*处置情况报告对比结果是.*处置情况报告出现没收二字",
         "highlight_compensation_amount": "责令退赔金额与.*处置情况报告对比结果是.*处置情况报告出现责令退赔字样",

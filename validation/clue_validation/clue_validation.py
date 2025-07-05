@@ -340,30 +340,49 @@ def validate_clue_data(df, app_config, agency_mapping_db):
         excel_party_joining_date = str(row.get(app_config['COLUMN_MAPPINGS']['party_joining_date'], '')).strip()
         extracted_party_joining_date = extract_party_joining_date_from_report(disposal_report_content)
         
-        if excel_party_joining_date and extracted_party_joining_date and excel_party_joining_date != extracted_party_joining_date:
+        # 构建字段信息
+        compared_field = f"AC{original_df_index + 2}入党时间"
+        being_compared_field = f"AB{original_df_index + 2}处置情况报告的入党时间"
+        
+        # 使用智能日期比较，避免格式差异导致的误判（如'1990/01' vs '1990/1'）
+        def normalize_date_format(date_str):
+            """标准化日期格式，将'1990/1'转换为'1990/01'"""
+            if not date_str:
+                return date_str
+            # 匹配YYYY/M或YYYY/MM格式
+            match = re.match(r'(\d{4})/(\d{1,2})$', str(date_str))
+            if match:
+                year, month = match.groups()
+                return f"{year}/{month.zfill(2)}"
+            return str(date_str)
+        
+        normalized_excel_date = normalize_date_format(excel_party_joining_date)
+        normalized_extracted_date = normalize_date_format(extracted_party_joining_date)
+        
+        if excel_party_joining_date and extracted_party_joining_date and normalized_excel_date != normalized_extracted_date:
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
                 "受理人员编码": accepted_personnel_code,
                 "行号": original_df_index + 2,
-                "比对字段": "",
-                "被比对字段": "",
-                "问题描述": f"行 {original_df_index + 2} - 入党时间不匹配: Excel '{excel_party_joining_date}' vs 报告 '{extracted_party_joining_date}'",
+                "比对字段": compared_field,
+                "被比对字段": being_compared_field,
+                "问题描述": f"AC{original_df_index + 2}入党时间与AB{original_df_index + 2}处置情况报告的入党时间不一致",
                 "列名": app_config['COLUMN_MAPPINGS']['party_joining_date']
             })
             error_count += 1
-            logger.warning(f"行 {original_df_index + 2} - 入党时间不匹配: Excel '{excel_party_joining_date}' vs 报告 '{extracted_party_joining_date}'")
+            logger.warning(f"<线索 - （10.入党时间）> - 行 {original_df_index + 2} - 入党时间不匹配: Excel '{excel_party_joining_date}' vs 报告 '{extracted_party_joining_date}'")
         elif excel_party_joining_date and not extracted_party_joining_date and disposal_report_content:
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
                 "受理人员编码": accepted_personnel_code,
                 "行号": original_df_index + 2,
-                "比对字段": "",
-                "被比对字段": "",
-                "问题描述": f"行 {original_df_index + 2} - 入党时间有值但报告中未提取到，无法比对",
+                "比对字段": compared_field,
+                "被比对字段": being_compared_field,
+                "问题描述": f"AC{original_df_index + 2}入党时间有值但AB{original_df_index + 2}处置情况报告中未提取到入党时间，无法比对",
                 "列名": app_config['COLUMN_MAPPINGS']['party_joining_date']
             })
             error_count += 1
-            logger.warning(f"行 {original_df_index + 2} - 入党时间有值但报告中未提取到，无法比对")
+            logger.warning(f"<线索 - （10.入党时间）> - 行 {original_df_index + 2} - 入党时间有值但报告中未提取到入党时间，无法比对")
 
 
 
