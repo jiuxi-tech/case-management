@@ -240,7 +240,24 @@ def validate_clue_data(df, app_config, agency_mapping_db):
             error_count += 1
             logger.warning(f"<线索 - （6.登记上交金额）> - 行 {original_df_index + 2} - 处置情况报告出现【登记上交金额】字样。")
 
-        # 规则7: 出生年月比对
+        # 规则7: 追缴失职渎职滥用职权造成的损失金额检查
+        if "追缴失职渎职滥用职权造成的损失金额" in df.columns and disposal_report_content and "追缴" in disposal_report_content:
+            # 构建比对字段和被比对字段的描述
+            compared_field = f"U{original_df_index + 2}追缴失职渎职滥用职权造成的损失金额"
+            being_compared_field = f"AB{original_df_index + 2}处置情况报告"
+            issues_list.append({
+                "受理线索编码": accepted_clue_code,
+                "受理人员编码": accepted_personnel_code,
+                "行号": original_df_index + 2,
+                "比对字段": compared_field,
+                "被比对字段": being_compared_field,
+                "问题描述": f"U{original_df_index + 2}追缴失职渎职滥用职权造成的损失金额与AB{original_df_index + 2}处置情况报告对比结果是AB{original_df_index + 2}处置情况报告出现追缴字样",
+                "列名": "追缴失职渎职滥用职权造成的损失金额" # 添加列名用于标黄
+            })
+            error_count += 1
+            logger.warning(f"<线索 - （7.追缴失职渎职滥用职权造成的损失金额）> - 行 {original_df_index + 2} - 处置情况报告出现【追缴】字样。")
+
+        # 规则8: 出生年月比对
         excel_birth_date = str(row.get(app_config['COLUMN_MAPPINGS']['birth_date'], '')).strip()
         extracted_birth_date_str = extract_birth_date_from_report(disposal_report_content)
         if excel_birth_date and extracted_birth_date_str and excel_birth_date != extracted_birth_date_str:

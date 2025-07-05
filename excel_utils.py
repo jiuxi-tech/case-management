@@ -67,7 +67,8 @@ def apply_clue_table_formats(worksheet, df, row, idx, issues_list, is_case_table
         ("收缴金额（万元）", Config.VALIDATION_RULES["highlight_collection_amount"]),
         ("没收金额", Config.VALIDATION_RULES["highlight_confiscation_amount"]),
         ("责令退赔金额", Config.VALIDATION_RULES["highlight_compensation_amount"]),
-        ("登记上交金额", Config.VALIDATION_RULES["highlight_registration_amount"])
+        ("登记上交金额", Config.VALIDATION_RULES["highlight_registration_amount"]),
+        ("追缴失职渎职滥用职权造成的损失金额", Config.VALIDATION_RULES["highlight_recovery_amount"])
     ]:
         if field in df.columns:
             col_letter = get_column_letter(df, field)
