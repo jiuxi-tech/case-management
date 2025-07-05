@@ -17,20 +17,33 @@ def apply_format(worksheet, row_idx, col_idx, value, condition, cell_format):
     Applies a given format to a cell if the condition is met.
     """
     if condition:
-        worksheet.write(row_idx + 1, col_idx, str(value), cell_format)
+        # 处理空值和nan值，保持原始显示
+        if pd.isna(value) or value is None or str(value).lower() == 'nan':
+            display_value = ''
+        else:
+            display_value = str(value)
+        worksheet.write(row_idx + 1, col_idx, display_value, cell_format)
 
 def _check_issue_condition(issues_list, idx, rule, is_case_table_issues):
     """Helper to check if a specific issue exists for a given row and rule."""
+    import re
+    
     if not issues_list:
         return False
     
     if isinstance(issues_list[0], dict):
-        return any(issue_item.get('问题描述') == rule and issue_item.get('行号', 0) - 2 == idx for issue_item in issues_list)
+        # 支持正则表达式匹配
+        for issue_item in issues_list:
+            if issue_item.get('行号', 0) - 2 == idx:
+                issue_desc = issue_item.get('问题描述', '')
+                if issue_desc == rule or re.search(rule, issue_desc):
+                    return True
+        return False
     elif isinstance(issues_list[0], tuple):
         if is_case_table_issues:
-            return any(issue_desc == rule for i, _, _, issue_desc in issues_list if i == idx)
+            return any(issue_desc == rule or re.search(rule, issue_desc) for i, _, _, issue_desc in issues_list if i == idx)
         else:
-            return any(issue_desc == rule for i, _, issue_desc in issues_list if i == idx)
+            return any(issue_desc == rule or re.search(rule, issue_desc) for i, _, issue_desc in issues_list if i == idx)
     return False
 
 def apply_clue_table_formats(worksheet, df, row, idx, issues_list, is_case_table_issues, yellow_format, red_format):

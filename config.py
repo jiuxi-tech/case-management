@@ -87,7 +87,7 @@ class Config:
         "confirm_acceptance_time": "AF2受理时间请再次确认",
         "inconsistent_organization_measure": "CC2组织措施与AB2处置情况报告不一致",
         "inconsistent_joining_party_time": "AC2入党时间与AB2处置情况报告不一致",
-        "highlight_collection_amount": "Q2收缴金额请再次确认",
+        "highlight_collection_amount": "收缴金额（万元）与.*处置情况报告对比结果是.*处置情况报告出现收缴二字",
         "highlight_confiscation_amount": "R2没收金额请再次确认",
         "highlight_compensation_amount": "S2责令退赔金额请再次确认",
         "highlight_registration_amount": "T2登记上交金额请再次确认",

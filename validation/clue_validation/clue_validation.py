@@ -183,7 +183,7 @@ def validate_clue_data(df, app_config, agency_mapping_db):
                 "行号": original_df_index + 2,
                 "比对字段": compared_field,
                 "被比对字段": being_compared_field,
-                "问题描述": f"Q{original_df_index + 2}收缴金额（万元）与AB{original_df_index + 2}处置情况报告对比中出现收缴二字",
+                "问题描述": f"Q{original_df_index + 2}收缴金额（万元）与AB{original_df_index + 2}处置情况报告对比结果是AB{original_df_index + 2}处置情况报告出现收缴二字",
                 "列名": "收缴金额（万元）" # 添加列名用于标黄
             })
             error_count += 1
