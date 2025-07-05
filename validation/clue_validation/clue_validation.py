@@ -547,57 +547,27 @@ def validate_clue_data(df, app_config, agency_mapping_db):
                 error_count += 1
                 logger.warning(f"<线索 - （12.组织措施）> - 行 {original_df_index + 2} - 组织措施字段为空但处置情况报告包含关键词'{matched_keyword}'")
 
-        # 规则13: 受理时间与处置情况报告落款时间比对
+        # 规则13: 受理时间字段标黄提醒
         excel_acceptance_time = row.get(app_config['COLUMN_MAPPINGS']['acceptance_time'])
         
-        if pd.notna(excel_acceptance_time) and disposal_report_content:
-            lines = disposal_report_content.strip().split('\n')
-            report_date = None
-            if lines:
-                # 尝试从最后一行提取日期
-                last_line = lines[-1].strip()
-                match = re.search(r'(\d{4}年\d{1,2}月\d{1,2}日)', last_line)
-                if match:
-                    try:
-                        report_date_str = match.group(1)
-                        report_date = datetime.strptime(report_date_str, '%Y年%m月%d日').date()
-                    except ValueError:
-                        pass # 继续尝试其他行
-
-            if report_date:
-                excel_date_obj = None
-                if isinstance(excel_acceptance_time, datetime):
-                    excel_date_obj = excel_acceptance_time.date()
-                elif isinstance(excel_acceptance_time, str):
-                    try:
-                        excel_date_obj = pd.to_datetime(excel_acceptance_time).date()
-                    except ValueError:
-                        pass
-
-                if excel_date_obj and excel_date_obj > report_date:
-                    issues_list.append({
-                        "受理线索编码": accepted_clue_code,
-                        "问题描述": f"行 {original_df_index + 2} - 受理时间 ('{excel_acceptance_time}') 晚于处置情况报告落款时间 ('{report_date}')。",
-       
-                    })
-                    error_count += 1
-                    logger.warning(f"行 {original_df_index + 2} - 受理时间晚于处置情况报告落款时间。")
-            else:
-                issues_list.append({
-                    "受理线索编码": accepted_clue_code,
-                    "问题描述": f"行 {original_df_index + 2} - 处置情况报告中未能提取到有效的落款时间。",
-    
-
-                })
-                error_count += 1
-                logger.warning(f"行 {original_df_index + 2} - 处置情况报告中未能提取到有效的落款时间。")
-        elif pd.notna(excel_acceptance_time) and not disposal_report_content:
+        # 只要受理时间字段有值，就直接标黄提醒人工确认
+        if pd.notna(excel_acceptance_time):
+            # 构建字段信息
+            compared_field = f"AF{original_df_index + 2}受理时间"
+            being_compared_field = f"AB{original_df_index + 2}处置情况"
+            
             issues_list.append({
                 "受理线索编码": accepted_clue_code,
-                "问题描述": f"行 {original_df_index + 2} - 受理时间有值但处置情况报告为空，无法比对。",
+                "受理人员编码": accepted_personnel_code,
+                "行号": original_df_index + 2,
+                "比对字段": compared_field,
+                "被比对字段": being_compared_field,
+                "问题描述": f"AF{original_df_index + 2}受理时间与AB{original_df_index + 2}处置情况做对比，人工再次确认",
+                "列名": app_config['COLUMN_MAPPINGS']['acceptance_time']
             })
             error_count += 1
-            logger.warning(f"行 {original_df_index + 2} - 受理时间有值但处置情况报告为空，无法比对。")
+            logger.warning(f"<线索 - （13.受理时间）> - 行 {original_df_index + 2} - 受理时间字段标黄，需人工确认")
+        # 受理时间为空时跳过验证
         
         # 规则14: 处置方式1二级与处置情况报告比对
         excel_disposal_method_1 = str(row.get(app_config['COLUMN_MAPPINGS']['disposal_method_1'], '')).strip()

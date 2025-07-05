@@ -84,7 +84,7 @@ class Config:
         "inconsistent_agency": "CR审理机关与A填报单位不一致",
         "inconsistent_name": "E2被反映人与AB2处置情况报告姓名不一致",
         "empty_report": "E2被反映人与AB2处置情况报告姓名不一致 (报告为空)",
-        "confirm_acceptance_time": "AF2受理时间请再次确认",
+        "confirm_acceptance_time": "AF.*受理时间与AB.*处置情况做对比，人工再次确认",
         "inconsistent_organization_measure": "CC.*组织措施与AB.*处置情况报告的组织措施不一致",
         "inconsistent_joining_party_time": "AC.*入党时间与AB.*处置情况报告的入党时间不一致",
         "highlight_collection_amount": "收缴金额（万元）与.*处置情况报告对比结果是.*处置情况报告出现收缴二字",
