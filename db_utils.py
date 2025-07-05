@@ -1,6 +1,8 @@
 import sqlite3
 import logging
 
+logger = logging.getLogger(__name__)
+
 DATABASE = 'case_management.db'
 
 def get_db():
@@ -110,11 +112,18 @@ def create_user(username, hashed_password):
                       (username, hashed_password))
         conn.commit()
 
-def get_authority_agency_dict():
+def get_authority_agency_dict(category=None):
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM authority_agency_dict')
-        return cursor.fetchall()
+        if category:
+            sql_query = 'SELECT authority, agency FROM authority_agency_dict WHERE category = ?'
+            logger.info(f"Executing SQL: {sql_query} with category='{category}'")
+            cursor.execute(sql_query, (category,))
+        else:
+            sql_query = 'SELECT * FROM authority_agency_dict'
+            logger.info(f"Executing SQL: {sql_query}")
+            cursor.execute(sql_query)
+        return set((row['authority'], row['agency']) for row in cursor.fetchall())
 
 def add_authority_agency(authority, category, agency):
     with get_db() as conn:

@@ -12,6 +12,7 @@ from .upload_utils import handle_file_upload_and_initial_checks
 try:
     from validation.clue_validation.clue_validation import validate_clue_data
     from excel_formatter import format_excel
+    from db_utils import get_db, get_authority_agency_dict
 except ImportError as e:
     # 打印到标准错误输出，确保能看到
     print(f"ERROR: 无法导入必要的模块或函数: {e}", file=sys.stderr)
@@ -64,8 +65,11 @@ def process_clue_upload(request, app):
             flash(f'线索登记表“{disposal_report_column}”字段为空', 'error')
             return redirect(request.url)
 
-        # 调用线索数据验证函数
-        issues_list, error_count = validate_clue_data(df, app.config)
+        # 获取机构映射数据
+        agency_mapping_db = get_authority_agency_dict(category='NSL')
+
+        # 调用线索数据验证函数，并传入 agency_mapping_db
+        issues_list, error_count = validate_clue_data(df, app.config, agency_mapping_db)
         logger.info(f"validate_clue_data 返回了 {len(issues_list)} 个问题和 {error_count} 个错误。")
 
         # 处理并生成问题报告文件

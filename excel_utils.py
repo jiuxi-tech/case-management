@@ -62,11 +62,24 @@ def apply_clue_table_formats(worksheet, df, row, idx, issues_list, is_case_table
             apply_format(worksheet, idx, col_letter, value, condition, yellow_format)
 
     # Agency (Clue Table) - Red
-    if "填报单位名称" in df.columns and "办理机关" in df.columns:
-        condition = _check_issue_condition(issues_list, idx, Config.VALIDATION_RULES["inconsistent_agency"], is_case_table_issues)
-        if condition:
-            apply_format(worksheet, idx, get_column_letter(df, "填报单位名称"), row.get("填报单位名称"), True, red_format)
-            apply_format(worksheet, idx, get_column_letter(df, "办理机关"), row.get("办理机关"), True, red_format)
+    if Config.COLUMN_MAPPINGS.get("reporting_agency") in df.columns and Config.COLUMN_MAPPINGS.get("authority") in df.columns:
+        # 检查是否有针对 'inconsistent_agency_clue' 规则的问题
+        issue_found = False
+        for issue_item in issues_list:
+            if isinstance(issue_item, dict) and issue_item.get('问题描述') == Config.VALIDATION_RULES["inconsistent_agency_clue"] and issue_item.get('行号', 0) - 2 == idx:
+                issue_found = True
+                # 根据 '列名' 标红相应的单元格
+                column_to_highlight = issue_item.get('列名')
+                if column_to_highlight:
+                    col_letter = get_column_letter(df, column_to_highlight)
+                    if col_letter is not None:
+                        apply_format(worksheet, idx, col_letter, row.get(column_to_highlight), True, red_format)
+                # 如果问题描述是 'inconsistent_agency_clue'，则同时标红填报单位名称和办理机关
+                if column_to_highlight == Config.COLUMN_MAPPINGS["reporting_agency"]:
+                    apply_format(worksheet, idx, get_column_letter(df, Config.COLUMN_MAPPINGS["reporting_agency"]), row.get(Config.COLUMN_MAPPINGS["reporting_agency"]), True, red_format)
+                    apply_format(worksheet, idx, get_column_letter(df, Config.COLUMN_MAPPINGS["authority"]), row.get(Config.COLUMN_MAPPINGS["authority"]), True, red_format)
+                break
+
 
     # Reflected Person (Clue Table) - Red
     if "被反映人" in df.columns:
@@ -292,7 +305,7 @@ def create_issues_sheet(writer, issues_list):
                 ])
             else:
                 issues_df = pd.DataFrame([
-                    {'序号': i + 1, '受理线索编码': item.get('受理线索编码', ''), '问题': item.get('问题描述', '')}
+                    {'序号': i + 1, '受理线索编码': item.get('受理线索编码', ''), '问题': item.get('问题描述', ''), '行号': item.get('行号', ''), '列名': item.get('列名', '')}
                     for i, item in enumerate(issues_list)
                 ])
         elif isinstance(issues_list[0], tuple):

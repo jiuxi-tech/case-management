@@ -63,7 +63,8 @@ class Config:
         "confiscation_of_property_amount": "没收金额",
         "compensation_amount": "责令退赔金额",
         "registered_handover_amount": "登记上交金额",
-        "reporting_agency": "填报单位名称"
+        "reporting_agency": "填报单位名称",
+        "authority": "办理机关"
     }
 
     # Excel 单元格格式定义。
@@ -99,7 +100,8 @@ class Config:
         "highlight_confiscation_of_property_amount": "CY审理报告中含有没收金额四字，请人工再次确认CG没收金额",
         "highlight_compensation_from_trial_report": "CY审理报告中含有责令退赔四字，请人工再次确认CH责令退赔金额",
         "disciplinary_sanction_party_member_mismatch": "党纪处分（处分决定）中出现开除党籍，但被调查人非中共党员，请核实！",
-        "administrative_sanction_mismatch": "BR政务处分与CU处分决定不一致"
+        "administrative_sanction_mismatch": "BR政务处分与CU处分决定不一致",
+        "inconsistent_agency_clue": "C2填报单位名称与H2办理机关不一致"
     }
 
     # 组织措施相关的关键词列表。
