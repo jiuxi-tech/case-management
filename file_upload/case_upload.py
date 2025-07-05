@@ -12,7 +12,7 @@ from .upload_utils import handle_file_upload_and_initial_checks
 try:
     from validation.case_validation.case_validators import validate_case_relationships
     from validation.case_validation.case_generators import generate_case_files
-    from excel_formatter import format_excel
+    from excel_formatter import format_case_excel
 except ImportError as e:
     # 打印到标准错误输出，确保能看到
     print(f"ERROR: 无法导入必要的模块或函数: {e}", file=sys.stderr)

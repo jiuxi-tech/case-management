@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 import xlsxwriter 
 from config import Config 
-from excel_formatter import format_excel 
+from excel_formatter import format_case_excel 
 
 logger = logging.getLogger(__name__)
 
@@ -88,27 +88,27 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     copy_path = os.path.join(case_dir, copy_filename)
     
     try:
-        format_excel(
-            df, 
-            mismatch_indices, 
-            copy_path, 
-            issues_list, 
-            gender_mismatch_indices, 
+        format_case_excel(
+            df,
+            mismatch_indices,
+            copy_path,
+            issues_list,
+            gender_mismatch_indices,
             age_mismatch_indices,
-            birth_date_mismatch_indices, 
-            education_mismatch_indices, 
+            birth_date_mismatch_indices,
+            education_mismatch_indices,
             ethnicity_mismatch_indices,
-            party_member_mismatch_indices, 
+            party_member_mismatch_indices,
             party_joining_date_mismatch_indices,
-            brief_case_details_mismatch_indices, 
+            brief_case_details_mismatch_indices,
             filing_time_mismatch_indices,
             disciplinary_committee_filing_time_mismatch_indices,
             disciplinary_committee_filing_authority_mismatch_indices,
             supervisory_committee_filing_time_mismatch_indices,
             supervisory_committee_filing_authority_mismatch_indices,
-            case_report_keyword_mismatch_indices, 
+            case_report_keyword_mismatch_indices,
             disposal_spirit_mismatch_indices,
-            voluntary_confession_highlight_indices, 
+            voluntary_confession_highlight_indices,
             closing_time_mismatch_indices,
             no_party_position_warning_mismatch_indices,
             recovery_amount_highlight_indices,
@@ -116,14 +116,14 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
             trial_closing_time_mismatch_indices,
             trial_authority_agency_mismatch_indices,
             disposal_decision_keyword_mismatch_indices,
-            trial_report_non_representative_mismatch_indices, 
+            trial_report_non_representative_mismatch_indices,
             trial_report_detention_mismatch_indices,
             confiscation_amount_indices,
             confiscation_of_property_amount_indices,
             compensation_amount_highlight_indices,
             registered_handover_amount_indices,
             disciplinary_sanction_mismatch_indices,
-            administrative_sanction_mismatch_indices # <-- 【新增】在这里添加这个参数
+            administrative_sanction_mismatch_indices
         )
         logger.info(f"Generated copy file with highlights: {copy_path}")
     except Exception as e:

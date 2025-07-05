@@ -116,11 +116,11 @@ def get_authority_agency_dict(category=None):
     with get_db() as conn:
         cursor = conn.cursor()
         if category:
-            sql_query = 'SELECT authority, agency, category FROM authority_agency_dict WHERE category = ?'
+            sql_query = 'SELECT id, authority, agency, category FROM authority_agency_dict WHERE category = ?'
             logger.info(f"Executing SQL: {sql_query} with category='{category}'")
             cursor.execute(sql_query, (category,))
         else:
-            sql_query = 'SELECT authority, agency, category FROM authority_agency_dict'
+            sql_query = 'SELECT id, authority, agency, category FROM authority_agency_dict'
             logger.info(f"Executing SQL: {sql_query}")
             cursor.execute(sql_query)
         return [dict(row) for row in cursor.fetchall()]

@@ -11,7 +11,7 @@ from .upload_utils import handle_file_upload_and_initial_checks
 # 导入验证规则模块和辅助函数
 try:
     from validation.clue_validation.clue_validation import validate_clue_data
-    from excel_formatter import format_excel
+    from excel_formatter import format_clue_excel
     from db_utils import get_db, get_authority_agency_dict
 except ImportError as e:
     # 打印到标准错误输出，确保能看到
@@ -115,11 +115,9 @@ def process_clue_upload(request, app):
         original_path_copy = os.path.join(app.config['CLUE_FOLDER'], original_filename_copy) # 直接使用 app.config
 
         # 由于 clue_file_processor 中的 format_excel 不使用 case_file_processor 中的大量高亮参数
-        format_excel(df,
-                          mismatch_indices=set(),
+        format_clue_excel(df,
                           issues_list=issues_list,
-                          output_path=original_path_copy,
-
+                          output_path=original_path_copy
                      )
 
         logger.info("线索登记表处理成功")

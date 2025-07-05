@@ -292,36 +292,29 @@ def apply_case_table_formats(worksheet, df, row, idx, mismatch_indices, issues_l
         apply_format(worksheet, idx, get_column_letter(df, "政务处分"), row.get("政务处分"), True, red_format)
 
 
-def create_issues_sheet(writer, issues_list):
+def create_clue_issues_sheet(writer, issues_list):
     """
-    Creates a new sheet for issues if issues_list is not empty.
+    Creates a new sheet for clue issues if issues_list is not empty.
     """
     if issues_list:
-        if isinstance(issues_list[0], dict):
-            if "涉案人员编码" in issues_list[0]:
-                issues_df = pd.DataFrame([
-                    {'序号': i + 1, '案件编码': item.get('案件编码', ''), '涉案人员编码': item.get('涉案人员编码', ''), '问题': item.get('问题描述', '')}
-                    for i, item in enumerate(issues_list)
-                ])
-            else:
-                issues_df = pd.DataFrame([
-                    {'序号': i + 1, '受理线索编码': item.get('受理线索编码', ''), '问题': item.get('问题描述', ''), '行号': item.get('行号', ''), '列名': item.get('列名', '')}
-                    for i, item in enumerate(issues_list)
-                ])
-        elif isinstance(issues_list[0], tuple):
-            if len(issues_list[0]) == 4:
-                issues_df = pd.DataFrame([
-                    {'序号': i + 1, '案件编码': item[1], '涉案人员编码': item[2], '问题': item[3]}
-                    for i, item in enumerate(issues_list)
-                ])
-            else:
-                issues_df = pd.DataFrame([
-                    {'序号': i + 1, '受理线索编码': item[1], '问题': item[2]}
-                    for i, item in enumerate(issues_list)
-                ])
+        issues_df = pd.DataFrame([
+            {'序号': i + 1, '受理线索编码': item.get('受理线索编码', ''), '问题': item.get('问题描述', ''), '行号': item.get('行号', ''), '列名': item.get('列名', '')}
+            for i, item in enumerate(issues_list)
+        ])
+        issues_df.to_excel(writer, sheet_name='问题列表', index=False)
+
+def create_case_issues_sheet(writer, issues_list):
+    """
+    Creates a new sheet for case issues if issues_list is not empty.
+    """
+    if issues_list:
+        issues_df = pd.DataFrame([
+            {'序号': i + 1, '案件编码': item.get('案件编码', ''), '涉案人员编码': item.get('涉案人员编码', ''), '问题': item.get('问题描述', '')}
+            for i, item in enumerate(issues_list)
+        ])
         issues_df.to_excel(writer, sheet_name='问题列表', index=False)
         logger.info(f"Issues written to '问题列表' sheet.")
     else:
         no_issues_df = pd.DataFrame({'提示': ['未发现任何问题。']})
         no_issues_df.to_excel(writer, sheet_name='问题列表', index=False)
-        logger.info("No issues found. '问题列表' sheet created with a no-issues message.")
+        logger.info(f"No issues found for case data.")

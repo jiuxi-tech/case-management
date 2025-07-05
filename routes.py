@@ -145,6 +145,8 @@ def init_routes(app):
                 cursor = conn.cursor()
                 cursor.execute('SELECT * FROM authority_agency_dict WHERE id = ?', (id,))
                 record = cursor.fetchone()
+                if record:
+                    record = dict(record)
         except Exception as e:
             flash(f"获取记录失败: {e}", 'error')
             current_app.logger.error(f"获取机关单位记录失败 (ID: {id}): {e}", exc_info=True)
