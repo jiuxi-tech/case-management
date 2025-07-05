@@ -11,13 +11,11 @@ class Config:
     ALLOWED_EXTENSIONS = {'xlsx', 'xls'}
     REQUIRED_FILENAME_PATTERN = '线索登记表'
 
-    @property
-    def TODAY_DATE(self):
-        """
-        获取当前日期字符串，格式为YYYYMMDD。
-        作为属性，每次访问时都会获取最新日期。
-        """
-        return datetime.now().strftime('%Y%m%d')
+    TODAY_DATE = datetime.now().strftime('%Y%m%d')
+    """
+    获取当前日期字符串，格式为YYYYMMDD。
+    在应用启动时确定，保持不变。
+    """
 
     # Excel 列名与内部字段名的映射。
     # 用于将 Excel 表格中的中文列名转换为代码中使用的英文键名。
