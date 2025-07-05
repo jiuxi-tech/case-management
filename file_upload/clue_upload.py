@@ -57,12 +57,12 @@ def process_clue_upload(request, app):
         disposal_report_column = app.config['COLUMN_MAPPINGS'].get("disposal_report", "处置情况报告")
         if disposal_report_column not in df.columns:
             logger.error(f"Excel文件缺少必要表头: {disposal_report_column}")
-            flash(f'Excel文件缺少必要的表头“{disposal_report_column}”', 'error')
+            flash(f'Excel文件缺少必要的表头"{disposal_report_column}"', 'error')
             return redirect(request.url)
 
         if df[disposal_report_column].isnull().all():
-            logger.error(f"线索登记表“{disposal_report_column}”字段为空")
-            flash(f'线索登记表“{disposal_report_column}”字段为空', 'error')
+            logger.error(f'线索登记表"{disposal_report_column}"字段为空')
+            flash(f'线索登记表"{disposal_report_column}"字段为空', 'error')
             return redirect(request.url)
 
         # 获取机构映射数据
@@ -74,24 +74,39 @@ def process_clue_upload(request, app):
 
         # 处理并生成问题报告文件
         if issues_list:
-            data_for_issues_df = []
-            seen_issues = set() # 用于去重
+            # 将问题分为两类：填报单位名称相关的问题和其他问题
+            reporting_agency_issues = []
+            other_issues = []
+            
             for issue_item in issues_list:
                 # 确保 issue_item 是字典，并处理可能的元组格式
                 if isinstance(issue_item, tuple):
-                    # 假设元组格式为 (行号, 受理线索编码, 问题描述, 风险等级)
+                    # 假设元组格式为 (行号, 受理线索编码, 问题描述)
                     issue_dict = {
                         "行号": issue_item[0] + 2, # 调整行号，因为Excel从1开始，且有表头
                         "受理线索编码": issue_item[1],
-                        "问题描述": issue_item[2],
-                        "风险等级": issue_item[3] if len(issue_item) > 3 else "中"
+                        "问题描述": issue_item[2]
                     }
                 elif isinstance(issue_item, dict):
                     issue_dict = issue_item
                 else:
                     logger.warning(f"issues_list 中发现未知类型项: {type(issue_item)}. 跳过处理。")
                     continue
-
+                
+                # 检查问题描述是否与填报单位名称相关
+                if "填报单位名称" in issue_dict.get('问题描述', '') or \
+                   (issue_dict.get('比对字段', '') and "填报单位名称" in issue_dict.get('比对字段', '')):
+                    reporting_agency_issues.append(issue_dict)
+                else:
+                    other_issues.append(issue_dict)
+            
+            # 合并两个列表，确保填报单位名称相关的问题排在前面
+            sorted_issues = reporting_agency_issues + other_issues
+            
+            data_for_issues_df = []
+            seen_issues = set() # 用于去重
+            
+            for issue_dict in sorted_issues:
                 # 使用 frozenset 来判断字典是否重复
                 issue_hashable = frozenset(issue_dict.items())
                 if issue_hashable not in seen_issues:
@@ -102,8 +117,7 @@ def process_clue_upload(request, app):
                         '行号': issue_dict.get('行号', ''),
                         '比对字段': issue_dict.get('比对字段', ''),
                         '被比对字段': issue_dict.get('被比对字段', ''),
-                        '问题': issue_dict.get('问题描述', '无描述'),
-                        '风险等级': issue_dict.get('风险等级', '中')
+                        '问题': issue_dict.get('问题描述', '无描述')
                     })
                     seen_issues.add(issue_hashable)
 

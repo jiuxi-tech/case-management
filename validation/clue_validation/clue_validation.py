@@ -110,7 +110,36 @@ def validate_clue_data(df, app_config, agency_mapping_db):
         accepted_clue_code = str(row.get(app_config['COLUMN_MAPPINGS']['accepted_clue_code'], 'N/A')).strip()
         accepted_personnel_code = str(row.get(app_config['COLUMN_MAPPINGS']['accepted_personnel_code'], 'N/A')).strip()
 
-        # 规则1: E2被反映人与AB2处置情况报告姓名不一致
+        # 规则1: 填报单位名称与办理机关不一致 (统一处理)
+        reporting_agency_excel = str(row.get(app_config['COLUMN_MAPPINGS']['reporting_agency'], '')).strip()
+        authority_excel = str(row.get(app_config['COLUMN_MAPPINGS']['authority'], '')).strip()
+
+        if reporting_agency_excel and authority_excel:
+            # 检查是否存在匹配的记录
+            match_found = False
+            for mapping in agency_mapping_db:
+                if mapping['authority'] == authority_excel and mapping['agency'] == reporting_agency_excel:
+                    match_found = True
+                    break
+                    
+            if not match_found:
+                # 构建比对字段和被比对字段的描述
+                compared_field = f"C{original_df_index + 2}填报单位名称"
+                being_compared_field = f"H{original_df_index + 2}办理机关"
+                issues_list.append({
+                    "受理线索编码": accepted_clue_code,
+                    "受理人员编码": accepted_personnel_code,
+                    "行号": original_df_index + 2,
+                    "比对字段": compared_field,
+                    "被比对字段": being_compared_field,
+                    "问题描述": f"C{original_df_index + 2}填报单位名称与H{original_df_index + 2}办理机关不一致",
+                    "列名": app_config['COLUMN_MAPPINGS']['reporting_agency'] # 添加列名用于标红
+                })
+                error_count += 1
+                logger.warning(
+                    f"<线索 - （1.填报单位名称）> - 行 {original_df_index + 2} - 填报单位名称 '{reporting_agency_excel}' (len: {len(reporting_agency_excel)}) 与办理机关 '{authority_excel}' (len: {len(authority_excel)}) 不一致，且不在数据库映射中。数据库查询语句为：SELECT authority, agency FROM authority_agency_dict WHERE category = 'NSL' AND authority = '{authority_excel}' AND agency = '{reporting_agency_excel}'")
+
+        # 规则2: E2被反映人与AB2处置情况报告姓名不一致
         extracted_name = extract_name_from_report(disposal_report_content, investigated_person_excel)
         if investigated_person_excel and extracted_name and investigated_person_excel != extracted_name:
             issues_list.append({
@@ -216,29 +245,6 @@ def validate_clue_data(df, app_config, agency_mapping_db):
         excel_organization_measure = str(row.get(app_config['COLUMN_MAPPINGS']['organization_measure'], '')).strip()
 
         # 获取受理人员编码
-
-        # 规则10: 填报单位名称与办理机关不一致 (统一处理)
-
-        reporting_agency_excel = str(row.get(app_config['COLUMN_MAPPINGS']['reporting_agency'], '')).strip()
-        authority_excel = str(row.get(app_config['COLUMN_MAPPINGS']['authority'], '')).strip()
-
-        if reporting_agency_excel and authority_excel:
-            if (authority_excel, reporting_agency_excel) not in agency_mapping_db:
-                # 构建比对字段和被比对字段的描述
-                compared_field = f"C{original_df_index + 2}填报单位名称"
-                being_compared_field = f"H{original_df_index + 2}办理机关"
-                issues_list.append({
-                    "受理线索编码": accepted_clue_code,
-                    "受理人员编码": accepted_personnel_code,
-                    "行号": original_df_index + 2,
-                    "比对字段": compared_field,
-                    "被比对字段": being_compared_field,
-                    "问题描述": f"C{original_df_index + 2}填报单位名称与H{original_df_index + 2}办理机关不一致",
-                    "列名": app_config['COLUMN_MAPPINGS']['reporting_agency'] # 添加列名用于标红
-                })
-                error_count += 1
-                logger.warning(
-                    f"<线索> - 行 {original_df_index + 2} - 填报单位名称 '{reporting_agency_excel}' (len: {len(reporting_agency_excel)}) 与办理机关 '{authority_excel}' (len: {len(authority_excel)}) 不一致，且不在数据库映射中。数据库查询语句为：SELECT authority, agency FROM authority_agency_dict WHERE category = 'NSL' AND authority = '{authority_excel}' AND agency = '{reporting_agency_excel}'")
         
         # 使用Config中的关键词列表
         organization_measure_keywords = app_config['ORGANIZATION_MEASURE_KEYWORDS']
@@ -261,7 +267,7 @@ def validate_clue_data(df, app_config, agency_mapping_db):
                 })
                 error_count += 1
                 logger.warning(f"行 {original_df_index + 2} - 组织措施 ('{excel_organization_measure}') 与处置情况报告不一致。")
-        
+
         # 规则10: 受理时间与处置情况报告落款时间比对
         excel_acceptance_time = row.get(app_config['COLUMN_MAPPINGS']['acceptance_time'])
         
