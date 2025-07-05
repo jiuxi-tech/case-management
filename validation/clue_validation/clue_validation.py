@@ -189,7 +189,24 @@ def validate_clue_data(df, app_config, agency_mapping_db):
             error_count += 1
             logger.warning(f"<线索 - （3.收缴金额（万元））> - 行 {original_df_index + 2} - 处置情况报告出现【收缴】二字。")
 
-        # 规则4: 出生年月比对
+        # 规则4: 没收金额检查
+        if "没收金额" in df.columns and disposal_report_content and "没收" in disposal_report_content:
+            # 构建比对字段和被比对字段的描述
+            compared_field = f"R{original_df_index + 2}没收金额"
+            being_compared_field = f"AB{original_df_index + 2}处置情况报告"
+            issues_list.append({
+                "受理线索编码": accepted_clue_code,
+                "受理人员编码": accepted_personnel_code,
+                "行号": original_df_index + 2,
+                "比对字段": compared_field,
+                "被比对字段": being_compared_field,
+                "问题描述": f"R{original_df_index + 2}没收金额与AB{original_df_index + 2}处置情况报告对比结果是AB{original_df_index + 2}处置情况报告出现没收二字",
+                "列名": "没收金额" # 添加列名用于标黄
+            })
+            error_count += 1
+            logger.warning(f"<线索 - （4.没收金额）> - 行 {original_df_index + 2} - 处置情况报告出现【没收】二字。")
+
+        # 规则5: 出生年月比对
         excel_birth_date = str(row.get(app_config['COLUMN_MAPPINGS']['birth_date'], '')).strip()
         extracted_birth_date_str = extract_birth_date_from_report(disposal_report_content)
         if excel_birth_date and extracted_birth_date_str and excel_birth_date != extracted_birth_date_str:
