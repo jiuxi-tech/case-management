@@ -103,6 +103,7 @@ class Config:
         "disposal_decision_keyword_highlight": "CU处分决定中出现非人大代表、非政协委员、非committee、非中共党代表、非纪委委员等字样",
         "highlight_confiscation_of_property_amount": "CY审理报告中含有没收金额四字，请人工再次确认CG没收金额",
         "highlight_compensation_from_trial_report": "CY审理报告中含有责令退赔四字，请人工再次确认CH责令退赔金额",
+        "highlight_case_registered_handover_amount": "CY审理报告中含有登记上交金额字样，请人工再次确认CG登记上交金额",
         "disciplinary_sanction_party_member_mismatch": "党纪处分（处分决定）中出现开除党籍，但被调查人非中共党员，请核实！",
         "administrative_sanction_mismatch": "BR政务处分与CU处分决定不一致",
         "inconsistent_closing_time_with_decision": "BN结案时间与CU处分决定不一致",

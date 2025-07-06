@@ -115,29 +115,46 @@ def _configure_logging(app, base_path):
     # 获取当前模块的日志器
     logger = logging.getLogger(__name__)
     
-    # 定义日志格式
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    # 定义业务日志过滤器
+    class BusinessLogFilter(logging.Filter):
+        def filter(self, record):
+            # 只允许以 <立案 开头的业务日志消息通过
+            return record.getMessage().startswith('<立案')
+    
+    # 定义业务日志格式器
+    class BusinessLogFormatter(logging.Formatter):
+        def format(self, record):
+            # 只显示消息内容，不显示时间戳等信息
+            return record.getMessage()
+    
+    # 定义标准日志格式（用于文件记录）
+    standard_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    business_formatter = BusinessLogFormatter()
 
     # 移除所有现有的处理器，防止重复添加日志处理器
     if root_logger.handlers:
         for handler in root_logger.handlers:
             root_logger.removeHandler(handler)
 
-    # 文件处理器：将日志写入文件
+    # 文件处理器：将日志写入文件（使用标准格式记录所有日志）
     file_handler = logging.FileHandler(log_file, encoding='utf-8')
     file_handler.setLevel(logging.DEBUG)
-    file_handler.setFormatter(formatter)
+    file_handler.setFormatter(standard_formatter)
     root_logger.addHandler(file_handler)
 
-    # 控制台处理器：将日志输出到控制台
+    # 控制台处理器：将日志输出到控制台（只显示业务日志）
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.DEBUG)
-    console_handler.setFormatter(formatter)
+    console_handler.setFormatter(business_formatter)
+    console_handler.addFilter(BusinessLogFilter())  # 添加过滤器
     root_logger.addHandler(console_handler)
 
     # 将日志处理器也添加到 Flask 应用的日志器中
     app.logger.addHandler(file_handler)
     app.logger.addHandler(console_handler)
+    
+    # 设置Flask应用日志器级别
+    app.logger.setLevel(logging.DEBUG)
 
     # 记录应用启动信息和关键路径
     logger.info("Application started in %s", base_path)

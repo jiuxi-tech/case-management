@@ -33,7 +33,8 @@ from .case_validation_additional import (
 # 导入立案时间规则
 from .case_timestamp_rules import (
     validate_filing_time,
-    validate_registered_handover_amount
+    validate_registered_handover_amount,
+    validate_registered_handover_amount_single_row
 )
 # 导入处分和金额相关规则
 from .case_disposal_amount_rules import validate_disposal_and_amount_rules
@@ -300,26 +301,23 @@ def validate_case_relationships(df, app_config, issues_list):
         
         # 责令退赔金额验证规则（已在 validate_trial_report_keywords 中处理，这里不重复调用）
         
+        # 登记上交金额验证规则
+        validate_registered_handover_amount_single_row(row, index, excel_case_code, excel_person_code, issues_list, registered_handover_amount_indices, app_config)
+        
         # 政务处分验证规则
         excel_administrative_sanction = row.get(app_config['COLUMN_MAPPINGS']["administrative_sanction"])
         validate_administrative_sanction_rules(row, index, excel_case_code, excel_person_code, issues_list, administrative_sanction_mismatch_indices,
                                               excel_administrative_sanction, decision_text_raw, app_config)
 
     # 调用立案时间规则验证函数
-    validate_filing_time(df, issues_list, filing_time_mismatch_indices,
-                         disciplinary_committee_filing_time_mismatch_indices,
-                         disciplinary_committee_filing_authority_mismatch_indices,
-                         supervisory_committee_filing_time_mismatch_indices,
-                         supervisory_committee_filing_authority_mismatch_indices, app_config)
+    validate_filing_time(df, issues_list, app_config)
 
     # 调用处分和金额相关规则验证函数
     validate_disposal_and_amount_rules(df, issues_list, disposal_spirit_mismatch_indices, closing_time_mismatch_indices, app_config)
 
     # 注意：没收金额验证已移至逐行验证中，使用 validate_confiscation_of_property_amount_rules 函数
     # 注意：收缴金额验证已移至逐行验证中，使用 validate_confiscation_amount_rules 函数
-
-    # 调用登记上交金额验证函数
-    validate_registered_handover_amount(df, issues_list, registered_handover_amount_indices, app_config)
+    # 注意：登记上交金额验证已移至逐行验证中，使用 validate_registered_handover_amount_single_row 函数
 
     # 注意：党纪处分验证已移至逐行验证中，使用 validate_disciplinary_sanction_rules 函数
 
