@@ -1104,6 +1104,82 @@ def validate_voluntary_confession_rules(row, index, excel_case_code, excel_perso
         logger.warning(f"<立案 - （1.是否主动交代问题与审理报告）> - 行 {index + 2} - 审理报告中发现'主动交代'关键字，需要人工确认是否主动交代问题字段")
         
 
+def validate_disciplinary_sanction_rules(row, index, excel_case_code, excel_person_code, issues_list, disciplinary_sanction_mismatch_indices,
+                                         excel_disciplinary_sanction, decision_text_raw, app_config):
+    """验证党纪处分规则。
+    比较 Excel 中的党纪处分与处分决定中的内容是否一致。
+
+    参数:
+        row (pd.Series): DataFrame 的当前行数据。
+        index (int): 当前行的索引。
+        excel_case_code (str): Excel 中的案件编码。
+        excel_person_code (str): Excel 中的涉案人员编码。
+        issues_list (list): 用于收集所有发现问题的列表。
+        disciplinary_sanction_mismatch_indices (set): 用于收集党纪处分不匹配的行索引。
+        excel_disciplinary_sanction (str or None): Excel 中提取的党纪处分。
+        decision_text_raw (str): 处分决定的原始文本。
+        app_config (dict): Flask 应用的配置字典。
+    """
+    
+    logger.info(f"<立案 - （1.党纪处分验证）> - 行 {index + 2} - 开始验证党纪处分字段")
+    logger.debug(f"<立案 - （1.党纪处分验证）> - 行 {index + 2} - 党纪处分值: '{excel_disciplinary_sanction}', 处分决定长度: {len(str(decision_text_raw)) if decision_text_raw else 0}")
+    
+    # 检查党纪处分字段是否为空
+    if not excel_disciplinary_sanction or str(excel_disciplinary_sanction).strip() == "":
+        logger.debug(f"<立案 - （1.党纪处分验证）> - 行 {index + 2} - 党纪处分字段为空，跳过验证")
+        return
+    
+    # 检查处分决定字段是否为空
+    if not decision_text_raw or str(decision_text_raw).strip() == "":
+        logger.warning(f"<立案 - （1.党纪处分验证）> - 行 {index + 2} - 处分决定字段为空，无法进行比对")
+        disciplinary_sanction_mismatch_indices.add(index)
+        issues_list.append({
+             '案件编码': excel_case_code,
+             '涉案人员编码': excel_person_code,
+             '行号': index + 2,
+             '比对字段': f"BO{app_config['COLUMN_MAPPINGS']['disciplinary_sanction']}",
+             '被比对字段': f"CU{app_config['COLUMN_MAPPINGS']['disciplinary_decision']}",
+             '问题描述': app_config['VALIDATION_RULES'].get('inconsistent_disciplinary_sanction_with_decision', f"BO{index + 2}{app_config['COLUMN_MAPPINGS']['disciplinary_sanction']}与CU{index + 2}处分决定不一致"),
+             '列名': app_config['COLUMN_MAPPINGS']['disciplinary_sanction']
+         })
+        return
+    
+    # 获取党纪处分关键词
+    sanction_keywords = app_config.get('DISCIPLINARY_SANCTION_KEYWORDS', [])
+    
+    # 规则1: 党纪处分与处分决定内容一致性验证
+    excel_disciplinary_sanction_str = str(excel_disciplinary_sanction).strip()
+    decision_text_str = str(decision_text_raw).strip()
+    
+    # 检查党纪处分字段中的内容是否在处分决定中出现
+    sanction_found = False
+    
+    # 如果有配置的关键词，检查关键词是否在处分决定中
+    if sanction_keywords:
+        for keyword in sanction_keywords:
+            if keyword in excel_disciplinary_sanction_str and keyword in decision_text_str:
+                sanction_found = True
+                break
+    else:
+        # 如果没有配置关键词，直接检查党纪处分内容是否在处分决定中
+        if excel_disciplinary_sanction_str in decision_text_str:
+            sanction_found = True
+    
+    if not sanction_found:
+        logger.warning(f"<立案 - （1.党纪处分验证）> - 行 {index + 2} - 党纪处分 '{excel_disciplinary_sanction}' 与处分决定内容不一致")
+        disciplinary_sanction_mismatch_indices.add(index)
+        issues_list.append({
+             '案件编码': excel_case_code,
+             '涉案人员编码': excel_person_code,
+             '行号': index + 2,
+             '比对字段': f"BO{app_config['COLUMN_MAPPINGS']['disciplinary_sanction']}",
+             '被比对字段': f"CU{app_config['COLUMN_MAPPINGS']['disciplinary_decision']}",
+             '问题描述': app_config['VALIDATION_RULES'].get('inconsistent_disciplinary_sanction_with_decision', f"BO{index + 2}{app_config['COLUMN_MAPPINGS']['disciplinary_sanction']}与CU{index + 2}处分决定不一致"),
+             '列名': app_config['COLUMN_MAPPINGS']['disciplinary_sanction']
+         })
+    else:
+        logger.debug(f"<立案 - （1.党纪处分验证）> - 行 {index + 2} - 党纪处分验证通过")
+
 def validate_case_closing_time_rules(row, index, excel_case_code, excel_person_code, issues_list, closing_time_mismatch_indices,
                                      excel_closing_time, decision_text_raw, app_config):
     """验证结案时间规则。
@@ -1123,9 +1199,6 @@ def validate_case_closing_time_rules(row, index, excel_case_code, excel_person_c
     import re
     from datetime import datetime
     import pandas as pd
-    import logging
-    
-    logger = logging.getLogger(__name__)
     
     logger.info(f"开始结案时间验证 - 行{index+1}: excel_closing_time='{excel_closing_time}', decision_text_raw长度={len(decision_text_raw)}")
     

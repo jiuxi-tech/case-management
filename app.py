@@ -109,28 +109,31 @@ def _configure_logging(app, base_path):
             log_file = os.path.join(temp_log_folder, f'{today_date}.log')
 
     # 获取根日志器并设置级别
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+    
+    # 获取当前模块的日志器
     logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
     
     # 定义日志格式
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     # 移除所有现有的处理器，防止重复添加日志处理器
-    if logger.handlers:
-        for handler in logger.handlers:
-            logger.removeHandler(handler)
+    if root_logger.handlers:
+        for handler in root_logger.handlers:
+            root_logger.removeHandler(handler)
 
     # 文件处理器：将日志写入文件
     file_handler = logging.FileHandler(log_file, encoding='utf-8')
-    file_handler.setLevel(logging.INFO)
+    file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
+    root_logger.addHandler(file_handler)
 
     # 控制台处理器：将日志输出到控制台
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
+    console_handler.setLevel(logging.DEBUG)
     console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
+    root_logger.addHandler(console_handler)
 
     # 将日志处理器也添加到 Flask 应用的日志器中
     app.logger.addHandler(file_handler)

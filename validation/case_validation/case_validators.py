@@ -25,6 +25,7 @@ from .case_validation_additional import (
     validate_brief_case_details_rules,
     validate_case_report_keywords_rules,
     validate_voluntary_confession_rules,
+    validate_disciplinary_sanction_rules,
     validate_case_closing_time_rules,
     validate_no_party_position_warning_rules
 )
@@ -262,6 +263,11 @@ def validate_case_relationships(df, app_config, issues_list):
         validate_case_closing_time_rules(row, index, excel_case_code, excel_person_code, issues_list, closing_time_mismatch_indices,
                                         excel_closing_time, decision_text_raw, app_config)
 
+        # 党纪处分验证规则
+        excel_disciplinary_sanction = row.get(app_config['COLUMN_MAPPINGS']["disciplinary_sanction"])
+        validate_disciplinary_sanction_rules(row, index, excel_case_code, excel_person_code, issues_list, disciplinary_sanction_mismatch_indices,
+                                            excel_disciplinary_sanction, decision_text_raw, app_config)
+
         validate_no_party_position_warning_rules(row, index, excel_case_code, excel_person_code, issues_list, no_party_position_warning_mismatch_indices,
                                                  excel_no_party_position_warning, decision_text_raw, app_config)
 
@@ -295,10 +301,7 @@ def validate_case_relationships(df, app_config, issues_list):
     # 调用登记上交金额验证函数
     validate_registered_handover_amount(df, issues_list, registered_handover_amount_indices, app_config)
 
-    # 【党纪处分功能新增】: 调用党纪处分相关规则验证函数
-    # validate_disciplinary_sanction 应该返回不匹配的行索引，并直接修改 issues_list
-    new_disciplinary_mismatches = validate_disciplinary_sanction(df, issues_list, app_config)
-    disciplinary_sanction_mismatch_indices.update(new_disciplinary_mismatches)
+    # 注意：党纪处分验证已移至逐行验证中，使用 validate_disciplinary_sanction_rules 函数
 
     # 【新增】调用政务处分规则，并将其不匹配索引合并到总的索引和问题列表中
     new_administrative_mismatches = validate_administrative_sanction(df, issues_list, app_config)

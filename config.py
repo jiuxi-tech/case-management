@@ -106,6 +106,7 @@ class Config:
         "disciplinary_sanction_party_member_mismatch": "党纪处分（处分决定）中出现开除党籍，但被调查人非中共党员，请核实！",
         "administrative_sanction_mismatch": "BR政务处分与CU处分决定不一致",
         "inconsistent_closing_time_with_decision": "BN结案时间与CU处分决定不一致",
+        "inconsistent_disciplinary_sanction_with_decision": "BO党纪处分与CU处分决定不一致",
         "inconsistent_agency_clue": "C2填报单位名称与H2办理机关不一致"
     }
 
