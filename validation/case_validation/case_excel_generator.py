@@ -4,7 +4,7 @@ from datetime import datetime
 import logging
 import os
 from db_utils import get_authority_agency_dict
-from .case_validation_additional import validate_name_rules, validate_gender_rules, validate_age_rules, validate_birth_date_rules, validate_education_rules, validate_ethnicity_rules, validate_party_member_rules, validate_party_joining_date_rules, validate_brief_case_details_rules, validate_filing_time_rules, validate_disciplinary_committee_filing_time_rules, validate_supervisory_committee_filing_time_rules, validate_disciplinary_committee_filing_authority_rules
+from .case_validation_additional import validate_name_rules, validate_gender_rules, validate_age_rules, validate_birth_date_rules, validate_education_rules, validate_ethnicity_rules, validate_party_member_rules, validate_party_joining_date_rules, validate_brief_case_details_rules, validate_filing_time_rules, validate_disciplinary_committee_filing_time_rules, validate_supervisory_committee_filing_time_rules, validate_disciplinary_committee_filing_authority_rules, validate_supervisory_committee_filing_authority_rules
 
 logger = logging.getLogger(__name__)
 
@@ -167,6 +167,14 @@ def generate_investigatee_number_file(df, original_filename, upload_dir, app_con
                 validate_disciplinary_committee_filing_authority_rules(
                     row, index, excel_case_code, excel_person_code, issues_list, disciplinary_committee_filing_authority_mismatch_indices,
                     excel_disciplinary_committee_filing_authority, excel_reporting_unit_name, authority_agency_lookup, app_config
+                )
+                
+                # 执行监委立案机关验证规则
+                excel_supervisory_committee_filing_authority = str(row.get(app_config['COLUMN_MAPPINGS']['supervisory_committee_filing_authority'], '')).strip()
+                supervisory_committee_filing_authority_mismatch_indices = set()
+                validate_supervisory_committee_filing_authority_rules(
+                    row, index, excel_case_code, excel_person_code, issues_list, supervisory_committee_filing_authority_mismatch_indices,
+                    excel_supervisory_committee_filing_authority, excel_reporting_unit_name, authority_agency_lookup, app_config
                 )
                 
             except Exception as e:
