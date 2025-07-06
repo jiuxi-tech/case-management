@@ -109,6 +109,7 @@ class Config:
         "inconsistent_disciplinary_sanction_with_decision": "BO党纪处分与CU处分决定不一致",
         "inconsistent_no_party_position_warning_with_decision": "BP是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分与CU处分决定不一致",
         "inconsistent_administrative_sanction_with_decision": "BR政务处分与CU处分决定不一致",
+        "inconsistent_case_confiscation_amount_with_trial_report": "CF收缴金额（万元）与CY审理报告不一致",
         "inconsistent_agency_clue": "C2填报单位名称与H2办理机关不一致"
     }
 
