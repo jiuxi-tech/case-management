@@ -268,6 +268,8 @@ def validate_case_relationships(df, app_config, issues_list):
         validate_disciplinary_sanction_rules(row, index, excel_case_code, excel_person_code, issues_list, disciplinary_sanction_mismatch_indices,
                                             excel_disciplinary_sanction, decision_text_raw, app_config)
 
+        # 是否属于本应撤销党内职务验证规则
+        excel_no_party_position_warning = row.get(app_config['COLUMN_MAPPINGS']["no_party_position_warning"])
         validate_no_party_position_warning_rules(row, index, excel_case_code, excel_person_code, issues_list, no_party_position_warning_mismatch_indices,
                                                  excel_no_party_position_warning, decision_text_raw, app_config)
 

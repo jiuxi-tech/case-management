@@ -1259,23 +1259,39 @@ def validate_case_closing_time_rules(row, index, excel_case_code, excel_person_c
 
 def validate_no_party_position_warning_rules(row, index, excel_case_code, excel_person_code, issues_list, no_party_position_warning_mismatch_indices,
                                              excel_no_party_position_warning, decision_text_raw, app_config):
-    """验证是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分规则。
-    新增 app_config 参数以匹配调用方传递的参数数量。
+    """
+    验证是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分规则。
+    比较 Excel 中的BP字段与处分决定中的相关内容。
+
+    参数:
+        row (pd.Series): DataFrame 的当前行数据。
+        index (int): 当前行的索引。
+        excel_case_code (str): Excel 中的案件编码。
+        excel_person_code (str): Excel 中的涉案人员编码。
+        issues_list (list): 用于收集所有发现问题的列表。
+        no_party_position_warning_mismatch_indices (set): 用于收集BP字段不匹配的行索引。
+        excel_no_party_position_warning (str): Excel 中的BP字段值。
+        decision_text_raw (str): 处分决定的原始文本。
+        app_config (dict): Flask 应用的配置字典。
     """
     
     target_string = "属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分"
     decision_contains_warning = target_string in decision_text_raw
     extracted_no_party_position_warning = "是" if decision_contains_warning else "否"
     
-    # 处理 Excel 值，确保空值、NaN 或 'nan' 视为“否”
-    excel_value = str(row.get("是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分", "")).strip()
+    # 处理 Excel 值，确保空值、NaN 或 'nan' 视为"否"
+    excel_value = str(excel_no_party_position_warning or "").strip()
     excel_no_party_position_warning = "否" if not excel_value or excel_value.lower() == 'nan' else excel_value
-
-    logger.info(f"行 {index + 1} - 字段 '是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分' Excel值: '{excel_no_party_position_warning}'。处分决定中匹配结果: {decision_contains_warning} (提取值: '{extracted_no_party_position_warning}')。")
-    print(f"行 {index + 1} - 字段 '是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分' Excel值: '{excel_no_party_position_warning}'。处分决定中匹配结果: {decision_contains_warning} (提取值: '{extracted_no_party_position_warning}')。")
 
     if excel_no_party_position_warning != extracted_no_party_position_warning:
         no_party_position_warning_mismatch_indices.add(index)
-        issues_list.append((index, excel_case_code, excel_person_code, "BP是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分与CU处分决定不一致"))
-        logger.warning(f"行 {index + 1} - 规则违规: Excel值 ('{excel_no_party_position_warning}') 与处分决定提取值 ('{extracted_no_party_position_warning}') 不一致，已标记字段为红色。")
-        print(f"行 {index + 1} - 规则违规: Excel值 ('{excel_no_party_position_warning}') 与处分决定提取值 ('{extracted_no_party_position_warning}') 不一致，已标记字段为红色。")
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': f"BP{app_config['COLUMN_MAPPINGS']['no_party_position_warning']}",
+            '被比对字段': f"CU{app_config['COLUMN_MAPPINGS']['disciplinary_decision']}",
+            '问题描述': f"BP{index + 2}{app_config['COLUMN_MAPPINGS']['no_party_position_warning']}与CU{index + 2}处分决定不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['no_party_position_warning']
+        })
+        logger.warning(f"<立案 - （1.BP字段与处分决定）> - 行 {index + 2} - BP字段 '{excel_no_party_position_warning}' 与处分决定提取值 '{extracted_no_party_position_warning}' 不一致")

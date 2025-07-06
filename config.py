@@ -107,6 +107,7 @@ class Config:
         "administrative_sanction_mismatch": "BR政务处分与CU处分决定不一致",
         "inconsistent_closing_time_with_decision": "BN结案时间与CU处分决定不一致",
         "inconsistent_disciplinary_sanction_with_decision": "BO党纪处分与CU处分决定不一致",
+        "inconsistent_no_party_position_warning_with_decision": "BP是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分与CU处分决定不一致",
         "inconsistent_agency_clue": "C2填报单位名称与H2办理机关不一致"
     }
 
