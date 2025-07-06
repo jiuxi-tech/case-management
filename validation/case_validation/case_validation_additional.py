@@ -1104,6 +1104,92 @@ def validate_voluntary_confession_rules(row, index, excel_case_code, excel_perso
         logger.warning(f"<立案 - （1.是否主动交代问题与审理报告）> - 行 {index + 2} - 审理报告中发现'主动交代'关键字，需要人工确认是否主动交代问题字段")
         
 
+def validate_case_closing_time_rules(row, index, excel_case_code, excel_person_code, issues_list, closing_time_mismatch_indices,
+                                     excel_closing_time, decision_text_raw, app_config):
+    """验证结案时间规则。
+    检查结案时间字段与处分决定中的生效日期是否一致。
+    
+    参数:
+        row (pd.Series): DataFrame 的当前行数据。
+        index (int): 当前行的索引。
+        excel_case_code (str): Excel 中的案件编码。
+        excel_person_code (str): Excel 中的涉案人员编码。
+        issues_list (list): 用于收集所有发现问题的列表。
+        closing_time_highlight_indices (set): 用于收集结案时间不匹配的行索引。
+        excel_closing_time (str): Excel 中的结案时间字段值。
+        decision_text_raw (str): 处分决定的原始文本。
+        app_config (dict): Flask 应用的配置字典。
+    """
+    import re
+    from datetime import datetime
+    import pandas as pd
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    logger.info(f"开始结案时间验证 - 行{index+1}: excel_closing_time='{excel_closing_time}', decision_text_raw长度={len(decision_text_raw)}")
+    
+    # 规则1: 结案时间与处分决定比对
+    excel_closing_time_obj = None
+    if pd.notna(excel_closing_time) and excel_closing_time:
+        try:
+            # 尝试将Excel中的结案时间转换为日期对象，忽略时间部分
+            if isinstance(excel_closing_time, datetime):
+                excel_closing_time_obj = excel_closing_time.date()
+            else:
+                # pd.to_datetime 可以很好地处理多种日期格式
+                excel_closing_time_obj = pd.to_datetime(excel_closing_time).date()
+        except Exception as e:
+            logger.warning(f"<立案 - （1.结案时间格式）> - 行 {index + 2} - 无法解析结案时间字段 '{excel_closing_time}': {e}")
+            closing_time_mismatch_indices.add(index)
+            issues_list.append({
+                '案件编码': excel_case_code,
+                '涉案人员编码': excel_person_code,
+                '行号': index + 2,
+                '比对字段': f"BN{app_config['COLUMN_MAPPINGS']['closing_time']}",
+                '被比对字段': f"BN{app_config['COLUMN_MAPPINGS']['closing_time']}",
+                '问题描述': f"BN{index + 2}{app_config['COLUMN_MAPPINGS']['closing_time']}格式不正确",
+                '列名': app_config['COLUMN_MAPPINGS']['closing_time']
+            })
+            return
+    
+    # 使用正则表达式从处分决定中提取生效日期
+    match = re.search(r"本处分决定自(\d{4}年\d{1,2}月\d{1,2}日)起生效", decision_text_raw)
+    extracted_disposal_date = None
+    
+    if match:
+        date_str = match.group(1)
+        try:
+            # 转换提取到的日期字符串为 datetime.date 对象
+            formatted_date_str = date_str.replace('年', '-').replace('月', '-').replace('日', '')
+            extracted_disposal_date = datetime.strptime(formatted_date_str, "%Y-%m-%d").date()
+            logger.info(f"行 {index + 2} - 从处分决定中提取的生效日期: '{date_str}' (格式化后: {extracted_disposal_date})")
+        except ValueError as ve:
+            logger.warning(f"行 {index + 2} - 无法解析处分决定中提取的日期 '{date_str}': {ve}")
+    else:
+        logger.info(f"行 {index + 2} - 处分决定中未找到匹配的生效日期模式")
+    
+    # 进行结案时间与提取日期之间的比对
+    if excel_closing_time_obj and extracted_disposal_date:
+        if excel_closing_time_obj != extracted_disposal_date:
+            closing_time_mismatch_indices.add(index)
+            issues_list.append({
+                '案件编码': excel_case_code,
+                '涉案人员编码': excel_person_code,
+                '行号': index + 2,
+                '比对字段': f"BN{app_config['COLUMN_MAPPINGS']['closing_time']}",
+                '被比对字段': f"CU{app_config['COLUMN_MAPPINGS']['disciplinary_decision']}",
+                '问题描述': f"BN{index + 2}{app_config['COLUMN_MAPPINGS']['closing_time']}与CU{index + 2}处分决定不一致",
+                '列名': app_config['COLUMN_MAPPINGS']['closing_time']
+            })
+            logger.warning(f"<立案 - （1.结案时间与处分决定）> - 行 {index + 2} - 结案时间 '{excel_closing_time_obj}' 与处分决定中提取的生效日期 '{extracted_disposal_date}' 不一致")
+        else:
+            logger.info(f"<立案 - （1.结案时间与处分决定）> - 行 {index + 2} - 结案时间与处分决定中提取的生效日期一致")
+    elif excel_closing_time_obj is None:
+        logger.info(f"行 {index + 2} - 结案时间字段为空，跳过比对")
+    elif extracted_disposal_date is None:
+        logger.info(f"行 {index + 2} - 未能从处分决定中提取到生效日期，跳过比对")
+
 def validate_no_party_position_warning_rules(row, index, excel_case_code, excel_person_code, issues_list, no_party_position_warning_mismatch_indices,
                                              excel_no_party_position_warning, decision_text_raw, app_config):
     """验证是否属于本应撤销党内职务，但本人没有党内职务而给予严重警告处分规则。

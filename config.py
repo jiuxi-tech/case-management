@@ -105,6 +105,7 @@ class Config:
         "highlight_compensation_from_trial_report": "CY审理报告中含有责令退赔四字，请人工再次确认CH责令退赔金额",
         "disciplinary_sanction_party_member_mismatch": "党纪处分（处分决定）中出现开除党籍，但被调查人非中共党员，请核实！",
         "administrative_sanction_mismatch": "BR政务处分与CU处分决定不一致",
+        "inconsistent_closing_time_with_decision": "BN结案时间与CU处分决定不一致",
         "inconsistent_agency_clue": "C2填报单位名称与H2办理机关不一致"
     }
 

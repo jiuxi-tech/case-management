@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime
 from config import Config # 导入Config
 import re
+import logging
 from db_utils import get_authority_agency_dict
 
 # 从 case_validation_helpers 导入核心验证函数
@@ -24,6 +25,7 @@ from .case_validation_additional import (
     validate_brief_case_details_rules,
     validate_case_report_keywords_rules,
     validate_voluntary_confession_rules,
+    validate_case_closing_time_rules,
     validate_no_party_position_warning_rules
 )
 
@@ -254,6 +256,11 @@ def validate_case_relationships(df, app_config, issues_list):
         
         validate_voluntary_confession_rules(row, index, excel_case_code, excel_person_code, issues_list, voluntary_confession_highlight_indices,
                                             excel_voluntary_confession, trial_text_raw, app_config)
+
+        # 结案时间验证规则
+        excel_closing_time = row.get(app_config['COLUMN_MAPPINGS']["closing_time"])
+        validate_case_closing_time_rules(row, index, excel_case_code, excel_person_code, issues_list, closing_time_mismatch_indices,
+                                        excel_closing_time, decision_text_raw, app_config)
 
         validate_no_party_position_warning_rules(row, index, excel_case_code, excel_person_code, issues_list, no_party_position_warning_mismatch_indices,
                                                  excel_no_party_position_warning, decision_text_raw, app_config)
