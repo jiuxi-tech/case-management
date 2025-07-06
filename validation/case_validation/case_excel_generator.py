@@ -4,7 +4,7 @@ from datetime import datetime
 import logging
 import os
 from db_utils import get_authority_agency_dict
-from .case_validation_additional import validate_name_rules, validate_gender_rules, validate_age_rules, validate_birth_date_rules, validate_education_rules, validate_ethnicity_rules, validate_party_member_rules, validate_party_joining_date_rules, validate_brief_case_details_rules, validate_filing_time_rules, validate_disciplinary_committee_filing_time_rules, validate_supervisory_committee_filing_time_rules, validate_disciplinary_committee_filing_authority_rules, validate_supervisory_committee_filing_authority_rules
+from .case_validation_additional import validate_name_rules, validate_gender_rules, validate_age_rules, validate_birth_date_rules, validate_education_rules, validate_ethnicity_rules, validate_party_member_rules, validate_party_joining_date_rules, validate_brief_case_details_rules, validate_filing_time_rules, validate_disciplinary_committee_filing_time_rules, validate_supervisory_committee_filing_time_rules, validate_disciplinary_committee_filing_authority_rules, validate_supervisory_committee_filing_authority_rules, validate_case_report_rules, validate_central_eight_provisions_rules, validate_voluntary_confession_rules
 
 logger = logging.getLogger(__name__)
 
@@ -176,6 +176,50 @@ def generate_investigatee_number_file(df, original_filename, upload_dir, app_con
                     row, index, excel_case_code, excel_person_code, issues_list, supervisory_committee_filing_authority_mismatch_indices,
                     excel_supervisory_committee_filing_authority, excel_reporting_unit_name, authority_agency_lookup, app_config
                 )
+                
+                # 立案报告规则验证
+                excel_case_report = row.get(app_config['COLUMN_MAPPINGS']['case_report'], '')
+                case_report_mismatch_indices = set()
+                
+                if pd.notna(excel_case_report) and excel_case_report.strip():
+                    # 获取其他报告字段
+                    excel_disciplinary_decision = row.get(app_config['COLUMN_MAPPINGS']['disciplinary_decision'], '')
+                    excel_trial_report = row.get(app_config['COLUMN_MAPPINGS']['trial_report'], '')
+                    excel_investigation_report = row.get(app_config['COLUMN_MAPPINGS']['investigation_report'], '')
+                    
+                    # 定义需要检查的关键字
+                    case_report_keywords_to_check = ['贪污', '受贿', '挪用', '滥用职权', '玩忽职守']
+                    
+                    validate_case_report_rules(
+                        row, index, excel_case_code, excel_person_code, issues_list, case_report_mismatch_indices,
+                        case_report_keywords_to_check, excel_case_report, excel_disciplinary_decision, 
+                        excel_investigation_report, excel_trial_report, app_config
+                    )
+                
+                # 是否违反中央八项规定精神规则验证
+                excel_central_eight_provisions = row.get(app_config['COLUMN_MAPPINGS']['central_eight_provisions'], '')
+                central_eight_provisions_mismatch_indices = set()
+                
+                if pd.notna(excel_central_eight_provisions):
+                    excel_central_eight_provisions = str(excel_central_eight_provisions).strip()
+                    
+                    validate_central_eight_provisions_rules(
+                        row, index, excel_case_code, excel_person_code, issues_list, central_eight_provisions_mismatch_indices,
+                        excel_central_eight_provisions, excel_disciplinary_decision, app_config
+                    )
+                
+                # 是否主动交代问题规则
+                excel_voluntary_confession = row.get(app_config['COLUMN_MAPPINGS']['voluntary_confession'], "")
+                excel_trial_report = row.get(app_config['COLUMN_MAPPINGS']['trial_report'], "")
+                voluntary_confession_highlight_indices = set()
+                
+                if pd.notna(excel_trial_report):
+                    excel_trial_report = str(excel_trial_report).strip()
+                    
+                    validate_voluntary_confession_rules(
+                        row, index, excel_case_code, excel_person_code, issues_list, voluntary_confession_highlight_indices,
+                        excel_voluntary_confession, excel_trial_report, app_config
+                    )
                 
             except Exception as e:
                 logger.error(f"处理第 {index + 2} 行时发生错误: {str(e)}")

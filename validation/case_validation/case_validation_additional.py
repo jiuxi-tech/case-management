@@ -965,6 +965,89 @@ def validate_supervisory_committee_filing_authority_rules(row, index, excel_case
         })
         logger.warning(f"<立案 - （1.监委立案机关与填报单位名称）> - 行 {index + 2} - 监委立案机关 '{excel_supervisory_committee_filing_authority}' 与填报单位名称 '{excel_reporting_unit_name}' 不匹配")
 
+def validate_case_report_rules(row, index, excel_case_code, excel_person_code, issues_list, case_report_mismatch_indices,
+                               case_report_keywords_to_check, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config):
+    """
+    验证立案报告相关规则。
+    检查立案报告中的关键字是否在处分决定、审理报告、审查调查报告中存在。
+
+    参数:
+        row (pd.Series): DataFrame 的当前行数据。
+        index (int): 当前行的索引。
+        excel_case_code (str): Excel 中的案件编码。
+        excel_person_code (str): Excel 中的涉案人员编码。
+        issues_list (list): 用于收集所有发现问题的列表。
+        case_report_mismatch_indices (set): 用于收集立案报告不匹配的行索引。
+        case_report_keywords_to_check (list): 需要检查的关键字列表。
+        report_text_raw (str): 立案报告的原始文本。
+        decision_text_raw (str): 处分决定的原始文本。
+        investigation_text_raw (str): 审查调查报告的原始文本。
+        trial_text_raw (str): 审理报告的原始文本。
+        app_config (dict): Flask 应用的配置字典。
+    """
+    
+    # 规则1: 立案报告关键字与其他报告的一致性检查
+    found_keywords_in_case_report = [kw for kw in case_report_keywords_to_check if kw in report_text_raw]
+    
+    if found_keywords_in_case_report:
+        keyword_mismatch_in_other_reports = False
+        for keyword in found_keywords_in_case_report:
+            if not (keyword in decision_text_raw and keyword in trial_text_raw and keyword in investigation_text_raw):
+                keyword_mismatch_in_other_reports = True
+                break
+
+        if keyword_mismatch_in_other_reports:
+            case_report_mismatch_indices.add(index)
+            issues_list.append({
+                '案件编码': excel_case_code,
+                '涉案人员编码': excel_person_code,
+                '行号': index + 2,
+                '比对字段': f"BF{app_config['COLUMN_MAPPINGS']['case_report']}",
+                '被比对字段': f"CU{app_config['COLUMN_MAPPINGS']['disciplinary_decision']}",
+                '问题描述': f"BF{index + 2}{app_config['COLUMN_MAPPINGS']['case_report']}与CU{index + 2}处分决定、CY{index + 2}审理报告、CX{index + 2}审查调查报告不一致",
+                '列名': app_config['COLUMN_MAPPINGS']['case_report']
+            })
+            logger.warning(f"<立案 - （1.立案报告与其他报告）> - 行 {index + 2} - 立案报告中关键字与处分决定、审理报告、审查调查报告不一致")
+
+def validate_central_eight_provisions_rules(row, index, excel_case_code, excel_person_code, issues_list, central_eight_provisions_mismatch_indices,
+                                           excel_central_eight_provisions, decision_text_raw, app_config):
+    """
+    验证是否违反中央八项规定精神相关规则。
+    检查是否违反中央八项规定精神字段与处分决定内容的一致性。
+
+    参数:
+        row (pd.Series): DataFrame 的当前行数据。
+        index (int): 当前行的索引。
+        excel_case_code (str): Excel 中的案件编码。
+        excel_person_code (str): Excel 中的涉案人员编码。
+        issues_list (list): 用于收集所有发现问题的列表。
+        central_eight_provisions_mismatch_indices (set): 用于收集是否违反中央八项规定精神不匹配的行索引。
+        excel_central_eight_provisions (str): Excel 中的是否违反中央八项规定精神字段值。
+        decision_text_raw (str): 处分决定的原始文本。
+        app_config (dict): Flask 应用的配置字典。
+    """
+    
+    # 规则1: 是否违反中央八项规定精神与处分决定的一致性检查
+    decision_contains_violation_phrase = "违反中央八项规定精神" in decision_text_raw
+    expected_central_eight_provisions = "是" if decision_contains_violation_phrase else "否"
+    
+    # 处理Excel值，确保空值、NaN或'nan'视为"否"
+    if not excel_central_eight_provisions or excel_central_eight_provisions.lower() in ['nan', 'none', '']:
+        excel_central_eight_provisions = "否"
+    
+    if excel_central_eight_provisions != expected_central_eight_provisions:
+        central_eight_provisions_mismatch_indices.add(index)
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': f"BI{app_config['COLUMN_MAPPINGS']['central_eight_provisions']}",
+            '被比对字段': f"CU{app_config['COLUMN_MAPPINGS']['disciplinary_decision']}",
+            '问题描述': f"BI{index + 2}{app_config['COLUMN_MAPPINGS']['central_eight_provisions']}与CU{index + 2}处分决定不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['central_eight_provisions']
+        })
+        logger.warning(f"<立案 - （1.是否违反中央八项规定精神与处分决定）> - 行 {index + 2} - 是否违反中央八项规定精神 '{excel_central_eight_provisions}' 与处分决定内容不一致，预期为 '{expected_central_eight_provisions}'")
+
 def validate_case_report_keywords_rules(row, index, excel_case_code, excel_person_code, issues_list, case_report_keyword_mismatch_indices,
                                         case_report_keywords_to_check, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config):
     """验证立案报告关键字规则。
@@ -1005,14 +1088,21 @@ def validate_voluntary_confession_rules(row, index, excel_case_code, excel_perso
     
     trial_report_contains_confession = "主动交代" in trial_text_raw
 
-    logger.info(f"行 {index + 1} - 字段 '是否主动交代问题' Excel值: '{excel_voluntary_confession}'。审理报告中'主动交代'匹配结果: {trial_report_contains_confession}。")
-    print(f"行 {index + 1} - 字段 '是否主动交代问题' Excel值: '{excel_voluntary_confession}'。审理报告中'主动交代'匹配结果: {trial_report_contains_confession}。")
+    # 规则1: 是否主动交代问题与审理报告比对
 
     if trial_report_contains_confession:
         voluntary_confession_highlight_indices.add(index)
-        issues_list.append((index, excel_case_code, excel_person_code, "请基于CY审理报告进行人工确认主动交代"))
-        logger.warning(f"行 {index + 1} - 规则触发: 审理报告中发现“主动交代”，已标记“是否主动交代问题”字段为黄色并添加问题描述。")
-        print(f"行 {index + 1} - 规则触发: 审理报告中发现“主动交代”，已标记“是否主动交代问题”字段为黄色并添加问题描述。")
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': f"BK{app_config['COLUMN_MAPPINGS']['voluntary_confession']}",
+            '被比对字段': f"CY{app_config['COLUMN_MAPPINGS']['trial_report']}",
+            '问题描述': f"BK{index + 2}{app_config['COLUMN_MAPPINGS']['voluntary_confession']}与CY{index + 2}审理报告不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['voluntary_confession']
+        })
+        logger.warning(f"<立案 - （1.是否主动交代问题与审理报告）> - 行 {index + 2} - 审理报告中发现'主动交代'关键字，需要人工确认是否主动交代问题字段")
+        
 
 def validate_no_party_position_warning_rules(row, index, excel_case_code, excel_person_code, issues_list, no_party_position_warning_mismatch_indices,
                                              excel_no_party_position_warning, decision_text_raw, app_config):
