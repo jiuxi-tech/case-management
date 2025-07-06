@@ -3,7 +3,8 @@ import pandas as pd
 from datetime import datetime
 import logging
 import os
-from .case_validation_additional import validate_name_rules, validate_gender_rules, validate_age_rules, validate_birth_date_rules, validate_education_rules, validate_ethnicity_rules, validate_party_member_rules, validate_party_joining_date_rules, validate_brief_case_details_rules, validate_filing_time_rules, validate_disciplinary_committee_filing_time_rules, validate_supervisory_committee_filing_time_rules
+from db_utils import get_authority_agency_dict
+from .case_validation_additional import validate_name_rules, validate_gender_rules, validate_age_rules, validate_birth_date_rules, validate_education_rules, validate_ethnicity_rules, validate_party_member_rules, validate_party_joining_date_rules, validate_brief_case_details_rules, validate_filing_time_rules, validate_disciplinary_committee_filing_time_rules, validate_supervisory_committee_filing_time_rules, validate_disciplinary_committee_filing_authority_rules
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,12 @@ def generate_investigatee_number_file(df, original_filename, upload_dir, app_con
         # 初始化问题列表和不匹配索引
         issues_list = []
         mismatch_indices = set()
+        
+        # 初始化机关单位对应表查询集合
+        authority_agency_data = get_authority_agency_dict()
+        authority_agency_lookup = set()
+        for row_db in authority_agency_data:
+            authority_agency_lookup.add((row_db['authority'], row_db['agency'], row_db['category']))
         
         # 遍历每一行数据，执行被调查人验证规则
         for index, row in df.iterrows():
@@ -151,6 +158,15 @@ def generate_investigatee_number_file(df, original_filename, upload_dir, app_con
                 validate_supervisory_committee_filing_time_rules(
                     row, index, excel_case_code, excel_person_code, issues_list, supervisory_committee_filing_time_mismatch_indices,
                     excel_supervisory_committee_filing_time, excel_filing_decision_doc, app_config
+                )
+                
+                # 执行纪委立案机关验证规则
+                excel_disciplinary_committee_filing_authority = str(row.get(app_config['COLUMN_MAPPINGS']['disciplinary_committee_filing_authority'], '')).strip()
+                excel_reporting_unit_name = str(row.get(app_config['COLUMN_MAPPINGS']['reporting_agency'], '')).strip()
+                disciplinary_committee_filing_authority_mismatch_indices = set()
+                validate_disciplinary_committee_filing_authority_rules(
+                    row, index, excel_case_code, excel_person_code, issues_list, disciplinary_committee_filing_authority_mismatch_indices,
+                    excel_disciplinary_committee_filing_authority, excel_reporting_unit_name, authority_agency_lookup, app_config
                 )
                 
             except Exception as e:

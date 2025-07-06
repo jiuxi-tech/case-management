@@ -891,6 +891,43 @@ def validate_supervisory_committee_filing_time_rules(row, index, excel_case_code
         })
         logger.warning(f"<立案 - （1.监委立案时间与立案决定书）> - 行 {index + 2} - 监委立案时间 '{excel_supervisory_committee_filing_time}' 与立案决定书落款时间 '{extracted_signature_time}' 不一致")
 
+def validate_disciplinary_committee_filing_authority_rules(row, index, excel_case_code, excel_person_code, issues_list, disciplinary_committee_filing_authority_mismatch_indices,
+                                                           excel_disciplinary_committee_filing_authority, excel_reporting_unit_name, authority_agency_lookup, app_config):
+    """
+    验证纪委立案机关相关规则。
+    检查纪委立案机关与填报单位名称是否在机关单位对应表中匹配。
+
+    参数:
+        row (pd.Series): DataFrame 的当前行数据。
+        index (int): 当前行的索引。
+        excel_case_code (str): Excel 中的案件编码。
+        excel_person_code (str): Excel 中的涉案人员编码。
+        issues_list (list): 用于收集所有发现问题的列表。
+        disciplinary_committee_filing_authority_mismatch_indices (set): 用于收集纪委立案机关不匹配的行索引。
+        excel_disciplinary_committee_filing_authority (str or None): Excel 中提取的纪委立案机关。
+        excel_reporting_unit_name (str or None): Excel 中的填报单位名称。
+        authority_agency_lookup (set): 机关单位对应表的查询集合。
+        app_config (dict): Flask 应用的配置字典。
+    """
+    
+    # 规则1: 纪委立案机关与填报单位名称匹配检查
+    found_match_disciplinary = False
+    if (excel_disciplinary_committee_filing_authority, excel_reporting_unit_name, "NSL") in authority_agency_lookup:
+        found_match_disciplinary = True
+    
+    if not found_match_disciplinary:
+        disciplinary_committee_filing_authority_mismatch_indices.add(index)
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': f"AV{app_config['COLUMN_MAPPINGS']['disciplinary_committee_filing_authority']}",
+            '被比对字段': f"A{app_config['COLUMN_MAPPINGS']['reporting_agency']}",
+            '问题描述': f"AV{index + 2}{app_config['COLUMN_MAPPINGS']['disciplinary_committee_filing_authority']}与A{index + 2}填报单位名称不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['disciplinary_committee_filing_authority']
+        })
+        logger.warning(f"<立案 - （1.纪委立案机关与填报单位名称）> - 行 {index + 2} - 纪委立案机关 '{excel_disciplinary_committee_filing_authority}' 与填报单位名称 '{excel_reporting_unit_name}' 不匹配")
+
 def validate_case_report_keywords_rules(row, index, excel_case_code, excel_person_code, issues_list, case_report_keyword_mismatch_indices,
                                         case_report_keywords_to_check, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config):
     """验证立案报告关键字规则。
