@@ -855,6 +855,42 @@ def validate_disciplinary_committee_filing_time_rules(row, index, excel_case_cod
         })
         logger.warning(f"<立案 - （1.纪委立案时间与立案决定书）> - 行 {index + 2} - 纪委立案时间 '{excel_disciplinary_committee_filing_time}' 与立案决定书落款时间 '{extracted_signature_time}' 不一致")
 
+def validate_supervisory_committee_filing_time_rules(row, index, excel_case_code, excel_person_code, issues_list, supervisory_committee_filing_time_mismatch_indices,
+                                                     excel_supervisory_committee_filing_time, excel_filing_decision_doc, app_config):
+    """
+    验证监委立案时间相关规则。
+    比较 Excel 中的监委立案时间与立案决定书中提取的落款时间。
+
+    参数:
+        row (pd.Series): DataFrame 的当前行数据。
+        index (int): 当前行的索引。
+        excel_case_code (str): Excel 中的案件编码。
+        excel_person_code (str): Excel 中的涉案人员编码。
+        issues_list (list): 用于收集所有发现问题的列表。
+        supervisory_committee_filing_time_mismatch_indices (set): 用于收集监委立案时间不匹配的行索引。
+        excel_supervisory_committee_filing_time (str or None): Excel 中提取的监委立案时间。
+        excel_filing_decision_doc (str or None): Excel 中的立案决定书内容。
+        app_config (dict): Flask 应用的配置字典。
+    """
+    
+    # 规则1: 监委立案时间与立案决定书落款时间比对
+    from .case_extractors_timestamp import extract_filing_decision_signature_time
+    extracted_signature_time = extract_filing_decision_signature_time(excel_filing_decision_doc)
+    
+    if (extracted_signature_time is None) or \
+       (excel_supervisory_committee_filing_time is not None and extracted_signature_time is not None and excel_supervisory_committee_filing_time != extracted_signature_time):
+        supervisory_committee_filing_time_mismatch_indices.add(index)
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': f"AZ{app_config['COLUMN_MAPPINGS']['supervisory_committee_filing_time']}",
+            '被比对字段': f"BG{app_config['COLUMN_MAPPINGS']['filing_decision_doc']}",
+            '问题描述': f"AZ{index + 2}{app_config['COLUMN_MAPPINGS']['supervisory_committee_filing_time']}与BG{index + 2}立案决定书落款时间不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['supervisory_committee_filing_time']
+        })
+        logger.warning(f"<立案 - （1.监委立案时间与立案决定书）> - 行 {index + 2} - 监委立案时间 '{excel_supervisory_committee_filing_time}' 与立案决定书落款时间 '{extracted_signature_time}' 不一致")
+
 def validate_case_report_keywords_rules(row, index, excel_case_code, excel_person_code, issues_list, case_report_keyword_mismatch_indices,
                                         case_report_keywords_to_check, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config):
     """验证立案报告关键字规则。
