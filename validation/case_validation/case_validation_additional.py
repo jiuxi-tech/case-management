@@ -1121,12 +1121,8 @@ def validate_disciplinary_sanction_rules(row, index, excel_case_code, excel_pers
         app_config (dict): Flask 应用的配置字典。
     """
     
-    logger.info(f"<立案 - （1.党纪处分验证）> - 行 {index + 2} - 开始验证党纪处分字段")
-    logger.debug(f"<立案 - （1.党纪处分验证）> - 行 {index + 2} - 党纪处分值: '{excel_disciplinary_sanction}', 处分决定长度: {len(str(decision_text_raw)) if decision_text_raw else 0}")
-    
     # 检查党纪处分字段是否为空
     if not excel_disciplinary_sanction or str(excel_disciplinary_sanction).strip() == "":
-        logger.debug(f"<立案 - （1.党纪处分验证）> - 行 {index + 2} - 党纪处分字段为空，跳过验证")
         return
     
     # 检查处分决定字段是否为空
@@ -1177,8 +1173,6 @@ def validate_disciplinary_sanction_rules(row, index, excel_case_code, excel_pers
              '问题描述': app_config['VALIDATION_RULES'].get('inconsistent_disciplinary_sanction_with_decision', f"BO{index + 2}{app_config['COLUMN_MAPPINGS']['disciplinary_sanction']}与CU{index + 2}处分决定不一致"),
              '列名': app_config['COLUMN_MAPPINGS']['disciplinary_sanction']
          })
-    else:
-        logger.debug(f"<立案 - （1.党纪处分验证）> - 行 {index + 2} - 党纪处分验证通过")
 
 def validate_case_closing_time_rules(row, index, excel_case_code, excel_person_code, issues_list, closing_time_mismatch_indices,
                                      excel_closing_time, decision_text_raw, app_config):
