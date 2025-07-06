@@ -1,5 +1,6 @@
 import re
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -38,3 +39,29 @@ def extract_timestamp_from_filing_decision(decision_text):
         logger.warning(msg)
         print(msg) # Added print statement
         return None, None # 返回两个None
+
+def extract_filing_decision_signature_time(decision_text):
+    """
+    从立案决定书内容中提取落款时间，返回标准化的日期格式用于与Excel中的立案时间比对。
+    """
+    if not decision_text or not isinstance(decision_text, str):
+        logger.info(f"extract_filing_decision_signature_time: decision_text is empty or invalid: {decision_text}")
+        return None
+
+    # 匹配"YYYY年M月D日"或"YYYY年MM月DD日"等形式的日期
+    pattern = r'(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日'
+    
+    match = re.search(pattern, decision_text)
+    if match:
+        year = match.group(1)
+        month = match.group(2)
+        day = match.group(3)
+        
+        # 格式化为标准YYYY-MM-DD 形式
+        standardized_date = f"{year}-{int(month):02d}-{int(day):02d}"
+        
+        logger.info(f"extract_filing_decision_signature_time: Extracted and standardized to '{standardized_date}'.")
+        return standardized_date
+    else:
+        logger.warning(f"extract_filing_decision_signature_time: No timestamp found in filing decision document: {decision_text[:100]}...")
+        return None

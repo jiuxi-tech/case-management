@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 import logging
 import os
-from .case_validation_additional import validate_name_rules, validate_gender_rules, validate_age_rules, validate_birth_date_rules, validate_education_rules, validate_ethnicity_rules, validate_party_member_rules, validate_party_joining_date_rules, validate_brief_case_details_rules
+from .case_validation_additional import validate_name_rules, validate_gender_rules, validate_age_rules, validate_birth_date_rules, validate_education_rules, validate_ethnicity_rules, validate_party_member_rules, validate_party_joining_date_rules, validate_brief_case_details_rules, validate_filing_time_rules
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +126,15 @@ def generate_investigatee_number_file(df, original_filename, upload_dir, app_con
                 validate_brief_case_details_rules(
                     row, index, excel_case_code, excel_person_code, issues_list, brief_case_details_mismatch_indices,
                     excel_brief_case_details, investigated_person, report_text_raw, decision_text_raw, app_config
+                )
+                
+                # 执行立案时间验证规则
+                excel_filing_time = str(row.get(app_config['COLUMN_MAPPINGS']['filing_time'], '')).strip()
+                excel_filing_decision_doc = str(row.get(app_config['COLUMN_MAPPINGS']['filing_decision_doc'], '')).strip()
+                filing_time_mismatch_indices = set()
+                validate_filing_time_rules(
+                    row, index, excel_case_code, excel_person_code, issues_list, filing_time_mismatch_indices,
+                    excel_filing_time, excel_filing_decision_doc, app_config
                 )
                 
             except Exception as e:
