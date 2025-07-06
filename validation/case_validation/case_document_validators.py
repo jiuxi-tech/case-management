@@ -220,7 +220,7 @@ def validate_disposal_decision_keywords(row, index, excel_case_code, excel_perso
         for keyword in app_config['DISPOSAL_DECISION_KEYWORDS']: # 从 app_config 获取关键词
             if keyword in decision_text_raw:
                 disposal_decision_keyword_mismatch_indices.add(index)
-                issues_list.append((index, excel_case_code, excel_person_code, app_config['VALIDATION_RULES'].get("disposal_decision_keyword_highlight", "处分决定中出现非人大代表、非政协委员、非党委委员、非中共党代表、非纪委委员等字样"), "高")) # 增加风险等级
+                issues_list.append((index, excel_case_code, excel_person_code, app_config['VALIDATION_RULES'].get("disposal_decision_keyword_highlight", "处分决定中出现非人大代表、非政协委员、非committee member、非中共党代表、非纪委委员等字样"), "高")) # 增加风险等级
                 logger.warning(f"行 {index + 1} - '{app_config['COLUMN_MAPPINGS']['disciplinary_decision']}' 字段包含禁用关键词: '{keyword}'。")
                 found_disposal_keyword = True
                 break # 找到一个关键词就退出循环，避免重复添加
@@ -232,7 +232,7 @@ def validate_trial_report_keywords(row, index, excel_case_code, excel_person_cod
                                    trial_report_detention_mismatch_indices, 
                                    compensation_amount_highlight_indices, app_config):
     """
-    检查 '审理报告' 字段是否包含特定关键词（如非人大代表/政协委员等字样，和扣押字样），
+    检查 '审理报告' 字段是否包含特定关键词（如非代表人等字样，和扣押字样），
     并检查是否包含“责令退赔”字样。
 
     Args:

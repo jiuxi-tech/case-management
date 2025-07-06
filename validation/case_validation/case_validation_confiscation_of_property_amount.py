@@ -22,8 +22,9 @@ def validate_confiscation_of_property_amount_rules(row, index, excel_case_code, 
         app_config (dict): Flask 应用的配置字典。
     """
     
-    # 检查审理报告中是否包含"没收金额"四字
-    if "没收金额" in trial_text_raw:
+    # 规则1: 没收金额与审理报告比对
+    # 当审理报告中包含"没收金额"关键词时，标记为需要人工确认
+    if trial_text_raw and "没收金额" in trial_text_raw:
         confiscation_of_property_amount_mismatch_indices.add(index)
         
         # 添加问题到issues_list，格式与年龄规则保持一致
@@ -33,7 +34,7 @@ def validate_confiscation_of_property_amount_rules(row, index, excel_case_code, 
             '行号': index + 2,
             '比对字段': f"CG{app_config['COLUMN_MAPPINGS']['confiscation_of_property_amount']}",
             '被比对字段': f"CY{app_config['COLUMN_MAPPINGS']['trial_report']}",
-            '问题描述': app_config['VALIDATION_RULES'].get('inconsistent_case_confiscation_of_property_amount_with_trial_report', f"CG{index + 2}{app_config['COLUMN_MAPPINGS']['confiscation_of_property_amount']}与CY{index + 2}审理报告不一致"),
+            '问题描述': f"CG{index + 2}{app_config['COLUMN_MAPPINGS']['confiscation_of_property_amount']}与CY{index + 2}审理报告不一致",
             '列名': app_config['COLUMN_MAPPINGS']['confiscation_of_property_amount']
         })
         logger.warning(f"<立案 - （1.没收金额与审理报告）> - 行 {index + 2} - 审理报告中含有没收金额四字，请人工再次确认没收金额 '{excel_confiscation_of_property_amount}'")

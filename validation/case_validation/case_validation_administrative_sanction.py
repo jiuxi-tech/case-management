@@ -35,7 +35,7 @@ def validate_administrative_sanction_rules(row, index, excel_case_code, excel_pe
                 '行号': index + 2,
                 '比对字段': f"BR{app_config['COLUMN_MAPPINGS']['administrative_sanction']}",
                 '被比对字段': f"CU{app_config['COLUMN_MAPPINGS']['disciplinary_decision']}",
-                '问题描述': app_config['VALIDATION_RULES'].get('inconsistent_administrative_sanction_with_decision', f"BR{index + 2}{app_config['COLUMN_MAPPINGS']['administrative_sanction']}与CU{index + 2}处分决定不一致"),
+                '问题描述': f"BR{index + 2}{app_config['COLUMN_MAPPINGS']['administrative_sanction']}与CU{index + 2}处分决定不一致",
                 '列名': app_config['COLUMN_MAPPINGS']['administrative_sanction']
             })
-            logger.warning(f"<立案 - （1.政务处分与处分决定）> - 行 {index + 2} - 政务处分 '{excel_administrative_sanction}' 与处分决定不一致（未找到相关关键词）")
+            logger.warning(f"<立案 - （1.政务处分验证）> - 行 {index + 2} - 政务处分 '{excel_administrative_sanction}' 与处分决定内容不一致")

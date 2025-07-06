@@ -1135,7 +1135,7 @@ def validate_disciplinary_sanction_rules(row, index, excel_case_code, excel_pers
              '行号': index + 2,
              '比对字段': f"BO{app_config['COLUMN_MAPPINGS']['disciplinary_sanction']}",
              '被比对字段': f"CU{app_config['COLUMN_MAPPINGS']['disciplinary_decision']}",
-             '问题描述': app_config['VALIDATION_RULES'].get('inconsistent_disciplinary_sanction_with_decision', f"BO{index + 2}{app_config['COLUMN_MAPPINGS']['disciplinary_sanction']}与CU{index + 2}处分决定不一致"),
+             '问题描述': f"BO{index + 2}{app_config['COLUMN_MAPPINGS']['disciplinary_sanction']}与CU{index + 2}处分决定不一致",
              '列名': app_config['COLUMN_MAPPINGS']['disciplinary_sanction']
          })
         return
@@ -1170,7 +1170,7 @@ def validate_disciplinary_sanction_rules(row, index, excel_case_code, excel_pers
              '行号': index + 2,
              '比对字段': f"BO{app_config['COLUMN_MAPPINGS']['disciplinary_sanction']}",
              '被比对字段': f"CU{app_config['COLUMN_MAPPINGS']['disciplinary_decision']}",
-             '问题描述': app_config['VALIDATION_RULES'].get('inconsistent_disciplinary_sanction_with_decision', f"BO{index + 2}{app_config['COLUMN_MAPPINGS']['disciplinary_sanction']}与CU{index + 2}处分决定不一致"),
+             '问题描述': f"BO{index + 2}{app_config['COLUMN_MAPPINGS']['disciplinary_sanction']}与CU{index + 2}处分决定不一致",
              '列名': app_config['COLUMN_MAPPINGS']['disciplinary_sanction']
          })
 

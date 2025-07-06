@@ -8,6 +8,7 @@ from .case_validation_additional import validate_name_rules, validate_gender_rul
 from .case_validation_administrative_sanction import validate_administrative_sanction_rules
 from .case_validation_confiscation_amount import validate_confiscation_amount_rules
 from .case_validation_confiscation_of_property_amount import validate_confiscation_of_property_amount_rules
+from .case_validation_compensation_amount import validate_compensation_amount_rules
 
 logger = logging.getLogger(__name__)
 
@@ -250,18 +251,26 @@ def generate_investigatee_number_file(df, original_filename, upload_dir, app_con
                 
                 # 执行收缴金额验证规则
                 excel_confiscation_amount = str(row.get(app_config['COLUMN_MAPPINGS']['confiscation_amount'], '')).strip()
-                confiscation_amount_mismatch_indices = set()
+                confiscation_amount_indices = set()
                 validate_confiscation_amount_rules(
-                    row, index, excel_case_code, excel_person_code, issues_list, confiscation_amount_mismatch_indices,
+                    row, index, excel_case_code, excel_person_code, issues_list, confiscation_amount_indices,
                     excel_confiscation_amount, excel_trial_report, app_config
                 )
                 
                 # 执行没收金额验证规则
                 excel_confiscation_of_property_amount = str(row.get(app_config['COLUMN_MAPPINGS']['confiscation_of_property_amount'], '')).strip()
-                confiscation_of_property_amount_mismatch_indices = set()
+                confiscation_of_property_amount_indices = set()
                 validate_confiscation_of_property_amount_rules(
-                    row, index, excel_case_code, excel_person_code, issues_list, confiscation_of_property_amount_mismatch_indices,
+                    row, index, excel_case_code, excel_person_code, issues_list, confiscation_of_property_amount_indices,
                     excel_confiscation_of_property_amount, excel_trial_report, app_config
+                )
+                
+                # 执行责令退赔金额验证规则
+                excel_compensation_amount = str(row.get(app_config['COLUMN_MAPPINGS']['compensation_amount'], '')).strip()
+                compensation_amount_highlight_indices = set()
+                validate_compensation_amount_rules(
+                    row, index, excel_case_code, excel_person_code, issues_list, compensation_amount_highlight_indices,
+                    excel_compensation_amount, excel_trial_report, app_config
                 )
                 
             except Exception as e:

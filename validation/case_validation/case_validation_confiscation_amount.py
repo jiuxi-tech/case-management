@@ -31,7 +31,7 @@ def validate_confiscation_amount_rules(row, index, excel_case_code, excel_person
             '行号': index + 2,
             '比对字段': f"CF{app_config['COLUMN_MAPPINGS']['confiscation_amount']}",
             '被比对字段': f"CY{app_config['COLUMN_MAPPINGS']['trial_report']}",
-            '问题描述': app_config['VALIDATION_RULES'].get('inconsistent_case_confiscation_amount_with_trial_report', f"CF{index + 2}{app_config['COLUMN_MAPPINGS']['confiscation_amount']}与CY{index + 2}审理报告不一致"),
+            '问题描述': f"CF{index + 2}{app_config['COLUMN_MAPPINGS']['confiscation_amount']}与CY{index + 2}审理报告不一致",
             '列名': app_config['COLUMN_MAPPINGS']['confiscation_amount']
         })
         logger.warning(f"<立案 - （1.收缴金额与审理报告）> - 行 {index + 2} - 审理报告中含有收缴二字，请人工再次确认收缴金额 '{excel_confiscation_amount}'")

@@ -51,6 +51,12 @@ from .case_document_validators import (
     highlight_recovery_amount
 )
 
+# 导入金额验证函数
+from .case_validation_confiscation_amount import validate_confiscation_amount_rules
+from .case_validation_confiscation_of_property_amount import validate_confiscation_of_property_amount_rules
+from .case_validation_compensation_amount import validate_compensation_amount_rules
+from .case_validation_administrative_sanction import validate_administrative_sanction_rules
+
 logger = logging.getLogger(__name__)
 
 def validate_case_relationships(df, app_config, issues_list):
@@ -281,6 +287,23 @@ def validate_case_relationships(df, app_config, issues_list):
                                        trial_report_non_representative_mismatch_indices, 
                                        trial_report_detention_mismatch_indices, 
                                        compensation_amount_highlight_indices, app_config)
+        
+        # 收缴金额验证规则
+        excel_confiscation_amount = str(row.get(app_config['COLUMN_MAPPINGS']['confiscation_amount'], '')).strip()
+        validate_confiscation_amount_rules(row, index, excel_case_code, excel_person_code, issues_list, confiscation_amount_indices,
+                                         excel_confiscation_amount, trial_text_raw, app_config)
+        
+        # 没收金额验证规则
+        excel_confiscation_of_property_amount = str(row.get(app_config['COLUMN_MAPPINGS']['confiscation_of_property_amount'], '')).strip()
+        validate_confiscation_of_property_amount_rules(row, index, excel_case_code, excel_person_code, issues_list, confiscation_of_property_amount_indices,
+                                                      excel_confiscation_of_property_amount, trial_text_raw, app_config)
+        
+        # 责令退赔金额验证规则（已在 validate_trial_report_keywords 中处理，这里不重复调用）
+        
+        # 政务处分验证规则
+        excel_administrative_sanction = row.get(app_config['COLUMN_MAPPINGS']["administrative_sanction"])
+        validate_administrative_sanction_rules(row, index, excel_case_code, excel_person_code, issues_list, administrative_sanction_mismatch_indices,
+                                              excel_administrative_sanction, decision_text_raw, app_config)
 
     # 调用立案时间规则验证函数
     validate_filing_time(df, issues_list, filing_time_mismatch_indices,

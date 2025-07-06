@@ -111,6 +111,7 @@ class Config:
         "inconsistent_administrative_sanction_with_decision": "BR政务处分与CU处分决定不一致",
         "inconsistent_case_confiscation_amount_with_trial_report": "CF收缴金额（万元）与CY审理报告不一致",
         "inconsistent_case_confiscation_of_property_amount_with_trial_report": "CG没收金额与CY审理报告不一致",
+        "inconsistent_case_compensation_amount_with_trial_report": "CH责令退赔金额与CY审理报告不一致",
         "inconsistent_agency_clue": "C2填报单位名称与H2办理机关不一致"
     }
 
