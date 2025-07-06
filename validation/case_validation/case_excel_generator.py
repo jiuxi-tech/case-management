@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from datetime import datetime
 import logging
-from .case_validation_additional import validate_name_rules, validate_gender_rules, validate_age_rules
+from .case_validation_additional import validate_name_rules, validate_gender_rules, validate_age_rules, validate_birth_date_rules
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +73,15 @@ def generate_investigatee_number_file(df, original_filename, upload_dir, app_con
                 validate_age_rules(
                     row, index, excel_case_code, excel_person_code, issues_list, age_mismatch_indices,
                     excel_age, current_year, report_text_raw, decision_text_raw,
+                    investigation_text_raw, trial_text_raw, app_config
+                )
+                
+                # 执行出生年月验证规则
+                excel_birth_date = str(row.get(app_config['COLUMN_MAPPINGS']['birth_date'], '')).strip()
+                birth_date_mismatch_indices = set()
+                validate_birth_date_rules(
+                    row, index, excel_case_code, excel_person_code, issues_list, birth_date_mismatch_indices,
+                    excel_birth_date, report_text_raw, decision_text_raw,
                     investigation_text_raw, trial_text_raw, app_config
                 )
                 

@@ -12,7 +12,6 @@ from .case_validation_helpers import (
 
 # 从 case_validation_extended 导入扩展验证函数
 from .case_validation_extended import (
-    validate_birth_date_rules,
     validate_education_rules,
     validate_ethnicity_rules,
     validate_party_member_rules,
@@ -24,6 +23,7 @@ from .case_validation_additional import (
     validate_name_rules,
     validate_gender_rules,
     validate_age_rules,
+    validate_birth_date_rules,
     validate_case_report_keywords_rules,
     validate_voluntary_confession_rules,
     validate_no_party_position_warning_rules
