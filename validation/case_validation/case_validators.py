@@ -41,7 +41,7 @@ from .case_timestamp_rules import (
 from .case_disposal_amount_rules import validate_disposal_and_amount_rules
 
 # 【党纪处分功能新增】: 导入党纪处分验证函数
-from .case_validation_sanctions import validate_disciplinary_sanction, validate_administrative_sanction # 确保导入了 validate_administrative_sanction
+from .case_validation_sanctions import validate_disciplinary_sanction
 
 # 导入新拆分的文件中的验证函数
 from .case_document_validators import ( 
@@ -305,9 +305,7 @@ def validate_case_relationships(df, app_config, issues_list):
 
     # 注意：党纪处分验证已移至逐行验证中，使用 validate_disciplinary_sanction_rules 函数
 
-    # 【新增】调用政务处分规则，并将其不匹配索引合并到总的索引和问题列表中
-    new_administrative_mismatches = validate_administrative_sanction(df, issues_list, app_config)
-    administrative_sanction_mismatch_indices.update(new_administrative_mismatches)
+    # 注意：政务处分验证已移至逐行验证中，使用 validate_administrative_sanction_rules 函数
 
     # 返回所有可能的不一致索引集以及更新后的 issues_list
     return (mismatch_indices, gender_mismatch_indices, age_mismatch_indices, brief_case_details_mismatch_indices, issues_list,
