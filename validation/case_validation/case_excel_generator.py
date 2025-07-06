@@ -7,6 +7,7 @@ from db_utils import get_authority_agency_dict
 from .case_validation_additional import validate_name_rules, validate_gender_rules, validate_age_rules, validate_birth_date_rules, validate_education_rules, validate_ethnicity_rules, validate_party_member_rules, validate_party_joining_date_rules, validate_brief_case_details_rules, validate_filing_time_rules, validate_disciplinary_committee_filing_time_rules, validate_supervisory_committee_filing_time_rules, validate_disciplinary_committee_filing_authority_rules, validate_supervisory_committee_filing_authority_rules, validate_case_report_rules, validate_central_eight_provisions_rules, validate_voluntary_confession_rules, validate_disciplinary_sanction_rules, validate_no_party_position_warning_rules
 from .case_validation_administrative_sanction import validate_administrative_sanction_rules
 from .case_validation_confiscation_amount import validate_confiscation_amount_rules
+from .case_validation_confiscation_of_property_amount import validate_confiscation_of_property_amount_rules
 
 logger = logging.getLogger(__name__)
 
@@ -253,6 +254,14 @@ def generate_investigatee_number_file(df, original_filename, upload_dir, app_con
                 validate_confiscation_amount_rules(
                     row, index, excel_case_code, excel_person_code, issues_list, confiscation_amount_mismatch_indices,
                     excel_confiscation_amount, excel_trial_report, app_config
+                )
+                
+                # 执行没收金额验证规则
+                excel_confiscation_of_property_amount = str(row.get(app_config['COLUMN_MAPPINGS']['confiscation_of_property_amount'], '')).strip()
+                confiscation_of_property_amount_mismatch_indices = set()
+                validate_confiscation_of_property_amount_rules(
+                    row, index, excel_case_code, excel_person_code, issues_list, confiscation_of_property_amount_mismatch_indices,
+                    excel_confiscation_of_property_amount, excel_trial_report, app_config
                 )
                 
             except Exception as e:

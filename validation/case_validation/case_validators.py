@@ -33,7 +33,6 @@ from .case_validation_additional import (
 # 导入立案时间规则
 from .case_timestamp_rules import (
     validate_filing_time,
-    validate_confiscation_of_property_amount,
     validate_registered_handover_amount
 )
 # 导入处分和金额相关规则
@@ -293,9 +292,7 @@ def validate_case_relationships(df, app_config, issues_list):
     # 调用处分和金额相关规则验证函数
     validate_disposal_and_amount_rules(df, issues_list, disposal_spirit_mismatch_indices, closing_time_mismatch_indices, app_config)
 
-    # 调用没收金额验证函数
-    validate_confiscation_of_property_amount(df, issues_list, confiscation_of_property_amount_indices, app_config)
-
+    # 注意：没收金额验证已移至逐行验证中，使用 validate_confiscation_of_property_amount_rules 函数
     # 注意：收缴金额验证已移至逐行验证中，使用 validate_confiscation_amount_rules 函数
 
     # 调用登记上交金额验证函数
