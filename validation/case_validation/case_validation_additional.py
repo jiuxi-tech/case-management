@@ -442,6 +442,192 @@ def validate_education_rules(row, index, excel_case_code, excel_person_code, iss
         })
         logger.warning(f"<立案 - （4.学历与审理报告）> - 行 {index + 2} - 学历 '{excel_education}' 与审理报告提取学历 '{extracted_education_from_trial}' 不一致")
 
+def validate_ethnicity_rules(row, index, excel_case_code, excel_person_code, issues_list, ethnicity_mismatch_indices,
+                             excel_ethnicity, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config):
+    """
+    验证民族相关规则。
+    
+    参数:
+    row: 当前行数据
+    index: 行索引
+    excel_case_code: Excel中的案件编码
+    excel_person_code: Excel中的涉案人员编码
+    issues_list: 问题列表
+    ethnicity_mismatch_indices (set): 用于收集民族不匹配的行索引。
+    excel_ethnicity: Excel中的民族
+    report_text_raw: 立案报告原始文本
+    decision_text_raw: 处分决定原始文本
+    investigation_text_raw: 审查调查报告原始文本
+    trial_text_raw: 审理报告原始文本
+    app_config: 应用配置
+    """
+    
+    # 规则1: 民族与立案报告比对
+    from .case_extractors_demographics import extract_ethnicity_from_case_report
+    extracted_ethnicity_from_report = extract_ethnicity_from_case_report(report_text_raw)
+    
+    if (excel_ethnicity and excel_ethnicity.strip() != '' and 
+        (extracted_ethnicity_from_report is None or excel_ethnicity != extracted_ethnicity_from_report)):
+        ethnicity_mismatch_indices.add(index)
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': f"Q{app_config['COLUMN_MAPPINGS']['ethnicity']}",
+            '被比对字段': f"BF{app_config['COLUMN_MAPPINGS']['case_report']}",
+            '问题描述': f"Q{index + 2}{app_config['COLUMN_MAPPINGS']['ethnicity']}与BF{index + 2}立案报告不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['ethnicity']
+        })
+        logger.warning(f"<立案 - （1.民族与立案报告）> - 行 {index + 2} - 民族 '{excel_ethnicity}' 与立案报告提取民族 '{extracted_ethnicity_from_report}' 不一致")
+
+    # 规则2: 民族与处分决定比对
+    from .case_extractors_demographics import extract_ethnicity_from_decision_report
+    extracted_ethnicity_from_decision = extract_ethnicity_from_decision_report(decision_text_raw)
+    
+    if (excel_ethnicity and excel_ethnicity.strip() != '' and 
+        (extracted_ethnicity_from_decision is None or excel_ethnicity != extracted_ethnicity_from_decision)):
+        ethnicity_mismatch_indices.add(index)
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': f"Q{app_config['COLUMN_MAPPINGS']['ethnicity']}",
+            '被比对字段': f"CU{app_config['COLUMN_MAPPINGS']['disciplinary_decision']}",
+            '问题描述': f"Q{index + 2}{app_config['COLUMN_MAPPINGS']['ethnicity']}与CU{index + 2}处分决定不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['ethnicity']
+        })
+        logger.warning(f"<立案 - （2.民族与处分决定）> - 行 {index + 2} - 民族 '{excel_ethnicity}' 与处分决定提取民族 '{extracted_ethnicity_from_decision}' 不一致")
+
+    # 规则3: 民族与审查调查报告比对
+    from .case_extractors_demographics import extract_ethnicity_from_investigation_report
+    extracted_ethnicity_from_investigation = extract_ethnicity_from_investigation_report(investigation_text_raw)
+    
+    if (excel_ethnicity and excel_ethnicity.strip() != '' and 
+        (extracted_ethnicity_from_investigation is None or excel_ethnicity != extracted_ethnicity_from_investigation)):
+        ethnicity_mismatch_indices.add(index)
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': f"Q{app_config['COLUMN_MAPPINGS']['ethnicity']}",
+            '被比对字段': f"CX{app_config['COLUMN_MAPPINGS']['investigation_report']}",
+            '问题描述': f"Q{index + 2}{app_config['COLUMN_MAPPINGS']['ethnicity']}与CX{index + 2}审查调查报告不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['ethnicity']
+        })
+        logger.warning(f"<立案 - （3.民族与审查调查报告）> - 行 {index + 2} - 民族 '{excel_ethnicity}' 与审查调查报告提取民族 '{extracted_ethnicity_from_investigation}' 不一致")
+
+    # 规则4: 民族与审理报告比对
+    from .case_extractors_demographics import extract_ethnicity_from_trial_report
+    extracted_ethnicity_from_trial = extract_ethnicity_from_trial_report(trial_text_raw)
+    
+    if (excel_ethnicity and excel_ethnicity.strip() != '' and 
+        (extracted_ethnicity_from_trial is None or excel_ethnicity != extracted_ethnicity_from_trial)):
+        ethnicity_mismatch_indices.add(index)
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': f"Q{app_config['COLUMN_MAPPINGS']['ethnicity']}",
+            '被比对字段': f"CY{app_config['COLUMN_MAPPINGS']['trial_report']}",
+            '问题描述': f"Q{index + 2}{app_config['COLUMN_MAPPINGS']['ethnicity']}与CY{index + 2}审理报告不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['ethnicity']
+        })
+        logger.warning(f"<立案 - （4.民族与审理报告）> - 行 {index + 2} - 民族 '{excel_ethnicity}' 与审理报告提取民族 '{extracted_ethnicity_from_trial}' 不一致")
+
+def validate_party_member_rules(row, index, excel_case_code, excel_person_code, issues_list, party_member_mismatch_indices,
+                               excel_party_member, report_text_raw, decision_text_raw, app_config):
+    """验证是否中共党员相关规则。
+    """
+    from .case_extractors_party_info import extract_party_member_from_case_report, extract_party_member_from_decision_report
+    
+    # 1. 是否中共党员与立案报告比对
+    extracted_party_member_from_report = extract_party_member_from_case_report(report_text_raw)
+    is_party_member_mismatch_report = False
+    if not excel_party_member:
+        if extracted_party_member_from_report == "是":
+            is_party_member_mismatch_report = True
+            issues_list.append({
+                '案件编码': excel_case_code,
+                '涉案人员编码': excel_person_code,
+                '行号': index + 2,
+                '比对字段': f"T{app_config['COLUMN_MAPPINGS']['party_member']}",
+                '被比对字段': f"BF{app_config['COLUMN_MAPPINGS']['case_report']}",
+                '问题描述': f"T{index + 2}{app_config['COLUMN_MAPPINGS']['party_member']}与BF{index + 2}立案报告不一致",
+                '列名': app_config['COLUMN_MAPPINGS']['party_member']
+            })
+            logger.warning(f"<立案 - （1.是否中共党员与立案报告）> - 行 {index + 2} - 是否中共党员 '{excel_party_member}' 与立案报告提取党员信息 '是' 不一致")
+    elif extracted_party_member_from_report is None:
+        is_party_member_mismatch_report = True
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': f"T{app_config['COLUMN_MAPPINGS']['party_member']}",
+            '被比对字段': f"BF{app_config['COLUMN_MAPPINGS']['case_report']}",
+            '问题描述': f"T{index + 2}{app_config['COLUMN_MAPPINGS']['party_member']}与BF{index + 2}立案报告不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['party_member']
+        })
+        logger.warning(f"<立案 - （1.是否中共党员与立案报告）> - 行 {index + 2} - 是否中共党员 '{excel_party_member}' 与立案报告提取党员信息 '未明确' 不一致")
+    elif excel_party_member != extracted_party_member_from_report:
+        is_party_member_mismatch_report = True
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': f"T{app_config['COLUMN_MAPPINGS']['party_member']}",
+            '被比对字段': f"BF{app_config['COLUMN_MAPPINGS']['case_report']}",
+            '问题描述': f"T{index + 2}{app_config['COLUMN_MAPPINGS']['party_member']}与BF{index + 2}立案报告不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['party_member']
+        })
+        logger.warning(f"<立案 - （1.是否中共党员与立案报告）> - 行 {index + 2} - 是否中共党员 '{excel_party_member}' 与立案报告提取党员信息 '{extracted_party_member_from_report}' 不一致")
+    if is_party_member_mismatch_report:
+        party_member_mismatch_indices.add(index)
+
+    # 2. 是否中共党员与处分决定比对
+    extracted_party_member_from_decision = extract_party_member_from_decision_report(decision_text_raw)
+    is_party_member_mismatch_decision = False
+    if not excel_party_member:
+        if extracted_party_member_from_decision == "是":
+            is_party_member_mismatch_decision = True
+            issues_list.append({
+                '案件编码': excel_case_code,
+                '涉案人员编码': excel_person_code,
+                '行号': index + 2,
+                '比对字段': f"T{app_config['COLUMN_MAPPINGS']['party_member']}",
+                '被比对字段': f"CU{app_config['COLUMN_MAPPINGS']['disciplinary_decision']}",
+                '问题描述': f"T{index + 2}{app_config['COLUMN_MAPPINGS']['party_member']}与CU{index + 2}处分决定不一致",
+                '列名': app_config['COLUMN_MAPPINGS']['party_member']
+            })
+            logger.warning(f"<立案 - （2.是否中共党员与处分决定）> - 行 {index + 2} - 是否中共党员 '{excel_party_member}' 与处分决定提取党员信息 '是' 不一致")
+        elif extracted_party_member_from_decision == "否":
+            pass  # 如果Excel为空且处分决定提取为否，则认为一致
+    elif extracted_party_member_from_decision is None:
+        is_party_member_mismatch_decision = True
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': f"T{app_config['COLUMN_MAPPINGS']['party_member']}",
+            '被比对字段': f"CU{app_config['COLUMN_MAPPINGS']['disciplinary_decision']}",
+            '问题描述': f"T{index + 2}{app_config['COLUMN_MAPPINGS']['party_member']}与CU{index + 2}处分决定不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['party_member']
+        })
+        logger.warning(f"<立案 - （2.是否中共党员与处分决定）> - 行 {index + 2} - 是否中共党员 '{excel_party_member}' 与处分决定提取党员信息 '未明确' 不一致")
+    elif excel_party_member != extracted_party_member_from_decision:
+        is_party_member_mismatch_decision = True
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': f"T{app_config['COLUMN_MAPPINGS']['party_member']}",
+            '被比对字段': f"CU{app_config['COLUMN_MAPPINGS']['disciplinary_decision']}",
+            '问题描述': f"T{index + 2}{app_config['COLUMN_MAPPINGS']['party_member']}与CU{index + 2}处分决定不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['party_member']
+        })
+        logger.warning(f"<立案 - （2.是否中共党员与处分决定）> - 行 {index + 2} - 是否中共党员 '{excel_party_member}' 与处分决定提取党员信息 '{extracted_party_member_from_decision}' 不一致")
+    if is_party_member_mismatch_decision:
+        party_member_mismatch_indices.add(index)
+
 def validate_case_report_keywords_rules(row, index, excel_case_code, excel_person_code, issues_list, case_report_keyword_mismatch_indices,
                                         case_report_keywords_to_check, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config):
     """验证立案报告关键字规则。
