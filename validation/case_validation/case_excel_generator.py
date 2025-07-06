@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from datetime import datetime
 import logging
-from .case_validation_additional import validate_name_rules
+from .case_validation_additional import validate_name_rules, validate_gender_rules
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +49,15 @@ def generate_investigatee_number_file(df, original_filename, upload_dir, app_con
                 validate_name_rules(
                     row, index, excel_case_code, excel_person_code, issues_list, mismatch_indices,
                     investigated_person, report_text_raw, decision_text_raw, 
+                    investigation_text_raw, trial_text_raw, app_config
+                )
+                
+                # 执行性别验证规则
+                excel_gender = str(row.get('性别', '')).strip()
+                gender_mismatch_indices = set()
+                validate_gender_rules(
+                    row, index, excel_case_code, excel_person_code, issues_list, gender_mismatch_indices,
+                    excel_gender, report_text_raw, decision_text_raw,
                     investigation_text_raw, trial_text_raw, app_config
                 )
                 

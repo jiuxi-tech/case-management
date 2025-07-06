@@ -8,12 +8,7 @@ from .case_extractors_names import (
     extract_name_from_decision,
     extract_name_from_trial_report
 )
-from .case_extractors_gender import (
-    extract_gender_from_case_report,
-    extract_gender_from_decision_report,
-    extract_gender_from_investigation_report,
-    extract_gender_from_trial_report
-)
+
 from .case_extractors_birth_info import (
     extract_birth_year_from_case_report,
     extract_birth_year_from_decision_report,
@@ -26,51 +21,6 @@ from .case_extractors_demographics import (
 )
 
 logger = logging.getLogger(__name__)
-
-def validate_gender_rules(row, index, excel_case_code, excel_person_code, issues_list, gender_mismatch_indices,
-                          excel_gender, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config):
-    """
-    验证性别相关规则。
-    比较 Excel 中的性别与立案报告、处分决定、审查调查报告、审理报告中提取的性别。
-
-    参数:
-        row (pd.Series): DataFrame 的当前行数据。
-        index (int): 当前行的索引。
-        excel_case_code (str): Excel 中的案件编码。
-        excel_person_code (str): Excel 中的涉案人员编码。
-        issues_list (list): 用于收集所有发现问题的列表。
-        gender_mismatch_indices (set): 用于收集性别不匹配的行索引。
-        excel_gender (str): Excel 中提取的性别。
-        report_text_raw (str): 立案报告的原始文本。
-        decision_text_raw (str): 处分决定的原始文本。
-        investigation_text_raw (str): 审查调查报告的原始文本。
-        trial_text_raw (str): 审理报告的原始文本。
-        app_config (dict): Flask 应用的配置字典。
-    """
-    
-    extracted_gender_from_report = extract_gender_from_case_report(report_text_raw)
-    if extracted_gender_from_report is None or (excel_gender and excel_gender != extracted_gender_from_report):
-        gender_mismatch_indices.add(index)
-        issues_list.append((index, excel_case_code, excel_person_code, app_config['VALIDATION_RULES']["inconsistent_name"].replace("E2被反映人", app_config['COLUMN_MAPPINGS']['gender'] + "与BF2立案报告不一致"), "中")) # 增加风险等级
-        logger.info(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 立案报告提取性别 ('{extracted_gender_from_report}')")
-
-    extracted_gender_from_decision = extract_gender_from_decision_report(decision_text_raw)
-    if extracted_gender_from_decision is None or (excel_gender and excel_gender != extracted_gender_from_decision):
-        gender_mismatch_indices.add(index) 
-        issues_list.append((index, excel_case_code, excel_person_code, app_config['VALIDATION_RULES']["inconsistent_name"].replace("E2被反映人", app_config['COLUMN_MAPPINGS']['gender'] + "与CU2处分决定不一致"), "中")) # 增加风险等级
-        logger.info(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 处分决定提取性别 ('{extracted_gender_from_decision}')")
-
-    extracted_gender_from_investigation = extract_gender_from_investigation_report(investigation_text_raw)
-    if extracted_gender_from_investigation is None or (excel_gender and excel_gender != extracted_gender_from_investigation):
-        gender_mismatch_indices.add(index)
-        issues_list.append((index, excel_case_code, excel_person_code, app_config['VALIDATION_RULES']["inconsistent_name"].replace("E2被反映人", app_config['COLUMN_MAPPINGS']['gender'] + "与CX2审查调查报告不一致"), "中")) # 增加风险等级
-        logger.info(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 审查调查报告提取性别 ('{extracted_gender_from_investigation}')")
-
-    extracted_gender_from_trial = extract_gender_from_trial_report(trial_text_raw)
-    if extracted_gender_from_trial is None or (excel_gender and excel_gender != extracted_gender_from_trial):
-        gender_mismatch_indices.add(index)
-        issues_list.append((index, excel_case_code, excel_person_code, app_config['VALIDATION_RULES']["inconsistent_name"].replace("E2被反映人", app_config['COLUMN_MAPPINGS']['gender'] + "与CY2审理报告不一致"), "中")) # 增加风险等级
-        logger.info(f"行 {index + 1} - 性别不匹配: Excel性别 ('{excel_gender}') vs 审理报告提取性别 ('{extracted_gender_from_trial}')")
 
 def validate_age_rules(row, index, excel_case_code, excel_person_code, issues_list, age_mismatch_indices,
                        excel_age, current_year, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config):

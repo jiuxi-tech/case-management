@@ -74,6 +74,76 @@ def validate_name_rules(row, index, excel_case_code, excel_person_code, issues_l
         })
         logger.warning(f"<立案 - （4.被调查人与审理报告）> - 行 {index + 2} - 被调查人 '{investigated_person}' 与审理报告姓名 '{trial_name}' 不一致")
 
+def validate_gender_rules(row, index, excel_case_code, excel_person_code, issues_list, gender_mismatch_indices,
+                         excel_gender, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config):
+    """验证性别相关规则。
+    统一日志风格和编号表字段结构，与被调查人规则保持一致。
+    """
+    
+    # 规则1: 性别与立案报告比对
+    from .case_extractors_gender import extract_gender_from_case_report
+    extracted_gender_from_report = extract_gender_from_case_report(report_text_raw)
+    if extracted_gender_from_report is None or (excel_gender and excel_gender != extracted_gender_from_report):
+        gender_mismatch_indices.add(index)
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': "D性别",
+            '被比对字段': "BF立案报告",
+            '问题描述': f"D{index + 2}性别与BF{index + 2}立案报告不一致",
+            '列名': "性别"
+        })
+        logger.warning(f"<立案 - （1.性别与立案报告）> - 行 {index + 2} - 性别 '{excel_gender}' 与立案报告性别 '{extracted_gender_from_report}' 不一致")
+
+    # 规则2: 性别与处分决定比对
+    from .case_extractors_gender import extract_gender_from_decision_report
+    extracted_gender_from_decision = extract_gender_from_decision_report(decision_text_raw)
+    if extracted_gender_from_decision is None or (excel_gender and excel_gender != extracted_gender_from_decision):
+        gender_mismatch_indices.add(index)
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': "D性别",
+            '被比对字段': "CU处分决定",
+            '问题描述': f"D{index + 2}性别与CU{index + 2}处分决定不一致",
+            '列名': "性别"
+        })
+        logger.warning(f"<立案 - （2.性别与处分决定）> - 行 {index + 2} - 性别 '{excel_gender}' 与处分决定性别 '{extracted_gender_from_decision}' 不一致")
+
+    # 规则3: 性别与审查调查报告比对
+    from .case_extractors_gender import extract_gender_from_investigation_report
+    extracted_gender_from_investigation = extract_gender_from_investigation_report(investigation_text_raw)
+    if extracted_gender_from_investigation is None or (excel_gender and excel_gender != extracted_gender_from_investigation):
+        gender_mismatch_indices.add(index)
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': "D性别",
+            '被比对字段': "CX审查调查报告",
+            '问题描述': f"D{index + 2}性别与CX{index + 2}审查调查报告不一致",
+            '列名': "性别"
+        })
+        logger.warning(f"<立案 - （3.性别与审查调查报告）> - 行 {index + 2} - 性别 '{excel_gender}' 与审查调查报告性别 '{extracted_gender_from_investigation}' 不一致")
+
+    # 规则4: 性别与审理报告比对
+    from .case_extractors_gender import extract_gender_from_trial_report
+    extracted_gender_from_trial = extract_gender_from_trial_report(trial_text_raw)
+    if extracted_gender_from_trial is None or (excel_gender and excel_gender != extracted_gender_from_trial):
+        gender_mismatch_indices.add(index)
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': "D性别",
+            '被比对字段': "CY审理报告",
+            '问题描述': f"D{index + 2}性别与CY{index + 2}审理报告不一致",
+            '列名': "性别"
+        })
+        logger.warning(f"<立案 - （4.性别与审理报告）> - 行 {index + 2} - 性别 '{excel_gender}' 与审理报告性别 '{extracted_gender_from_trial}' 不一致")
+
 def validate_case_report_keywords_rules(row, index, excel_case_code, excel_person_code, issues_list, case_report_keyword_mismatch_indices,
                                         case_report_keywords_to_check, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config):
     """验证立案报告关键字规则。
