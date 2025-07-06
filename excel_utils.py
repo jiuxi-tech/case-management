@@ -331,12 +331,57 @@ def create_clue_issues_sheet(writer, issues_list):
 def create_case_issues_sheet(writer, issues_list):
     """
     Creates a new sheet for case issues if issues_list is not empty.
+    支持元组和字典两种格式的issues_list，与线索表保持一致的字段结构。
     """
     if issues_list:
-        issues_df = pd.DataFrame([
-            {'序号': i + 1, '案件编码': item.get('案件编码', ''), '涉案人员编码': item.get('涉案人员编码', ''), '问题': item.get('问题描述', '')}
-            for i, item in enumerate(issues_list)
-        ])
+        # 检查issues_list的格式
+        if isinstance(issues_list[0], tuple):
+            # 元组格式: (index, case_code, person_code, issue_description, risk_level)
+            # 转换为与线索表一致的字典格式
+            issues_data = []
+            for item in issues_list:
+                if len(item) >= 5:
+                    issues_data.append({
+                        '案件编码': item[1],
+                        '涉案人员编码': item[2], 
+                        '行号': item[0] + 2,
+                        '比对字段': '',  # 立案表暂时为空，可根据具体规则填充
+                        '被比对字段': '',  # 立案表暂时为空，可根据具体规则填充
+                        '问题描述': item[3],
+                        '列名': ''  # 立案表暂时为空，可根据具体规则填充
+                    })
+            
+            issues_df = pd.DataFrame(issues_data)
+            # 确保列的顺序和名称与线索表一致
+            issues_df = issues_df[[
+                '案件编码',
+                '涉案人员编码',
+                '行号',
+                '比对字段',
+                '被比对字段',
+                '问题描述',
+                '列名'
+            ]]
+            issues_df.insert(0, '序号', range(1, 1 + len(issues_df)))
+            issues_df.rename(columns={'问题描述': '问题'}, inplace=True)
+            
+        elif isinstance(issues_list[0], dict):
+            # 字典格式: 直接使用DataFrame处理，与线索表保持一致
+            issues_df = pd.DataFrame(issues_list)
+            # 确保包含所有必要的列
+            required_columns = ['案件编码', '涉案人员编码', '行号', '比对字段', '被比对字段', '问题描述', '列名']
+            for col in required_columns:
+                if col not in issues_df.columns:
+                    issues_df[col] = ''
+            
+            # 确保列的顺序和名称与线索表一致
+            issues_df = issues_df[required_columns]
+            issues_df.insert(0, '序号', range(1, 1 + len(issues_df)))
+            issues_df.rename(columns={'问题描述': '问题'}, inplace=True)
+        else:
+            # 未知格式，使用默认处理
+            issues_df = pd.DataFrame([{'序号': i + 1, '问题': str(item)} for i, item in enumerate(issues_list)])
+        
         issues_df.to_excel(writer, sheet_name='问题列表', index=False)
         logger.info(f"Issues written to '问题列表' sheet.")
     else:

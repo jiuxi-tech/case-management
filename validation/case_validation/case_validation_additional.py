@@ -11,36 +11,68 @@ logger = logging.getLogger(__name__)
 def validate_name_rules(row, index, excel_case_code, excel_person_code, issues_list, mismatch_indices,
                         investigated_person, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config):
     """验证姓名相关规则。
-    新增 app_config 参数以匹配调用方传递的参数数量。
+    统一日志风格和编号表字段结构，与线索表保持一致。
     """
     
+    # 规则1: 被调查人与立案报告比对
     report_name = extract_name_from_case_report(report_text_raw)
     if report_name and investigated_person != report_name:
         mismatch_indices.add(index)
-        issues_list.append((index, excel_case_code, excel_person_code, "C2被调查人与BF2立案报告不一致"))
-        logger.info(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs BF2立案报告 ('{report_name}')")
-        print(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs BF2立案报告 ('{report_name}')")
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': "C被调查人",
+            '被比对字段': "BF立案报告",
+            '问题描述': f"C{index + 2}被调查人与BF{index + 2}立案报告不一致",
+            '列名': "被调查人"
+        })
+        logger.warning(f"<立案 - （1.被调查人与立案报告）> - 行 {index + 2} - 被调查人 '{investigated_person}' 与立案报告姓名 '{report_name}' 不一致")
 
+    # 规则2: 被调查人与处分决定比对
     decision_name = extract_name_from_decision(decision_text_raw)
     if not decision_name or (decision_name and investigated_person != decision_name):
         mismatch_indices.add(index)
-        issues_list.append((index, excel_case_code, excel_person_code, "C2被调查人与CU2处分决定不一致"))
-        logger.info(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CU2处分决定 ('{decision_name}')")
-        print(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CU2处分决定 ('{decision_name}')")
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': "C被调查人",
+            '被比对字段': "CU处分决定",
+            '问题描述': f"C{index + 2}被调查人与CU{index + 2}处分决定不一致",
+            '列名': "被调查人"
+        })
+        logger.warning(f"<立案 - （2.被调查人与处分决定）> - 行 {index + 2} - 被调查人 '{investigated_person}' 与处分决定姓名 '{decision_name}' 不一致")
 
+    # 规则3: 被调查人与审查调查报告比对
     investigation_name = extract_name_from_case_report(investigation_text_raw)
     if investigation_name and investigated_person != investigation_name:
         mismatch_indices.add(index)
-        issues_list.append((index, excel_case_code, excel_person_code, "C2被调查人与CX2审查调查报告不一致"))
-        logger.info(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CX2审查调查报告 ('{investigation_name}')")
-        print(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CX2审查调查报告 ('{investigation_name}')")
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': "C被调查人",
+            '被比对字段': "CX审查调查报告",
+            '问题描述': f"C{index + 2}被调查人与CX{index + 2}审查调查报告不一致",
+            '列名': "被调查人"
+        })
+        logger.warning(f"<立案 - （3.被调查人与审查调查报告）> - 行 {index + 2} - 被调查人 '{investigated_person}' 与审查调查报告姓名 '{investigation_name}' 不一致")
 
+    # 规则4: 被调查人与审理报告比对
     trial_name = extract_name_from_trial_report(trial_text_raw)
     if not trial_name or (trial_name and investigated_person != trial_name):
         mismatch_indices.add(index)
-        issues_list.append((index, excel_case_code, excel_person_code, "C2被调查人与CY2审理报告不一致"))
-        logger.info(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
-        print(f"行 {index + 1} - 姓名不匹配: C2被调查人 ('{investigated_person}') vs CY2审理报告 ('{trial_name}')")
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': "C被调查人",
+            '被比对字段': "CY审理报告",
+            '问题描述': f"C{index + 2}被调查人与CY{index + 2}审理报告不一致",
+            '列名': "被调查人"
+        })
+        logger.warning(f"<立案 - （4.被调查人与审理报告）> - 行 {index + 2} - 被调查人 '{investigated_person}' 与审理报告姓名 '{trial_name}' 不一致")
 
 def validate_case_report_keywords_rules(row, index, excel_case_code, excel_person_code, issues_list, case_report_keyword_mismatch_indices,
                                         case_report_keywords_to_check, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config):

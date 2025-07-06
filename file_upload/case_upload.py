@@ -12,6 +12,7 @@ from .upload_utils import handle_file_upload_and_initial_checks
 try:
     from validation.case_validation.case_validators import validate_case_relationships
     from validation.case_validation.case_generators import generate_case_files
+    from validation.case_validation.case_excel_generator import generate_investigatee_number_file
     from excel_formatter import format_case_excel
 except ImportError as e:
     # 打印到标准错误输出，确保能看到
@@ -184,6 +185,19 @@ def process_case_upload(request, app):
             disciplinary_sanction_mismatch_indices,
             administrative_sanction_mismatch_indices
         )
+        
+        # 生成独立的被调查人编号表
+        investigatee_num_path = generate_investigatee_number_file(
+            df,
+            original_filename,
+            app.config['CASE_FOLDER'],
+            app.config
+        )
+        
+        if investigatee_num_path:
+            logger.info(f"成功生成被调查人立案编号表: {investigatee_num_path}")
+        else:
+            logger.warning("被调查人立案编号表生成失败")
 
         flash('文件上传处理成功！', 'success')
         logger.info("立案登记表处理成功")
