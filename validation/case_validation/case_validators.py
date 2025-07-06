@@ -12,10 +12,14 @@ from .case_validation_helpers import (
 
 # 从 case_validation_extended 导入扩展验证函数
 from .case_validation_extended import (
-    validate_education_rules,
     validate_ethnicity_rules,
     validate_party_member_rules,
     validate_party_joining_date_rules
+)
+
+# 从 case_validation_additional 导入额外验证函数
+from .case_validation_additional import (
+    validate_education_rules
 )
 
 # 从 case_validation_additional 导入其他验证函数
@@ -237,7 +241,7 @@ def validate_case_relationships(df, app_config, issues_list):
                                   excel_birth_date, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config)
 
         validate_education_rules(row, index, excel_case_code, excel_person_code, issues_list, education_mismatch_indices,
-                                 excel_education, report_text_raw, app_config)
+                                 excel_education, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config)
 
         validate_ethnicity_rules(row, index, excel_case_code, excel_person_code, issues_list, ethnicity_mismatch_indices,
                                  excel_ethnicity, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config)

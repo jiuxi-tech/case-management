@@ -335,6 +335,113 @@ def validate_birth_date_rules(row, index, excel_case_code, excel_person_code, is
          })
          logger.warning(f"<立案 - （4.出生年月与审理报告）> - 行 {index + 2} - 出生年月 '{excel_birth_date}' 与审理报告提取出生年月 '{extracted_birth_date_from_trial}' 不一致")
 
+def validate_education_rules(row, index, excel_case_code, excel_person_code, issues_list, education_mismatch_indices,
+                            excel_education, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config):
+    """
+    验证学历相关规则。
+    
+    参数:
+    row: 当前行数据
+    index: 行索引
+    excel_case_code: Excel中的案件编码
+    excel_person_code: Excel中的涉案人员编码
+    issues_list: 问题列表
+    education_mismatch_indices (set): 用于收集学历不匹配的行索引。
+    excel_education: Excel中的学历
+    report_text_raw: 立案报告原始文本
+    decision_text_raw: 处分决定原始文本
+    investigation_text_raw: 审查调查报告原始文本
+    trial_text_raw: 审理报告原始文本
+    app_config: 应用配置
+    """
+    
+    # 规则1: 学历与立案报告比对
+    from .case_extractors_demographics import extract_education_from_case_report
+    extracted_education_from_report = extract_education_from_case_report(report_text_raw)
+    
+    # 标准化学历名称（处理"大学本科"与"本科"的匹配）
+    excel_education_normalized = excel_education
+    if excel_education == "大学本科":
+        excel_education_normalized = "本科"
+    extracted_education_normalized = extracted_education_from_report
+    if extracted_education_from_report == "大学本科":
+        extracted_education_normalized = "本科"
+    
+    if (excel_education and excel_education.strip() != '' and 
+        (extracted_education_from_report is None or excel_education_normalized != extracted_education_normalized)):
+        education_mismatch_indices.add(index)
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': f"P{app_config['COLUMN_MAPPINGS']['education']}",
+            '被比对字段': f"BF{app_config['COLUMN_MAPPINGS']['case_report']}",
+            '问题描述': f"P{index + 2}{app_config['COLUMN_MAPPINGS']['education']}与BF{index + 2}立案报告不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['education']
+        })
+        logger.warning(f"<立案 - （1.学历与立案报告）> - 行 {index + 2} - 学历 '{excel_education}' 与立案报告提取学历 '{extracted_education_from_report}' 不一致")
+
+    # 规则2: 学历与处分决定比对
+    # 注意：这里假设有对应的提取函数，如果没有可以使用相同的提取逻辑或创建新函数
+    extracted_education_from_decision = extract_education_from_case_report(decision_text_raw)  # 可以复用或创建专门函数
+    extracted_education_decision_normalized = extracted_education_from_decision
+    if extracted_education_from_decision == "大学本科":
+        extracted_education_decision_normalized = "本科"
+    
+    if (excel_education and excel_education.strip() != '' and 
+        (extracted_education_from_decision is None or excel_education_normalized != extracted_education_decision_normalized)):
+        education_mismatch_indices.add(index)
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': f"P{app_config['COLUMN_MAPPINGS']['education']}",
+            '被比对字段': f"CU{app_config['COLUMN_MAPPINGS']['disciplinary_decision']}",
+            '问题描述': f"P{index + 2}{app_config['COLUMN_MAPPINGS']['education']}与CU{index + 2}处分决定不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['education']
+        })
+        logger.warning(f"<立案 - （2.学历与处分决定）> - 行 {index + 2} - 学历 '{excel_education}' 与处分决定提取学历 '{extracted_education_from_decision}' 不一致")
+
+    # 规则3: 学历与审查调查报告比对
+    extracted_education_from_investigation = extract_education_from_case_report(investigation_text_raw)  # 可以复用或创建专门函数
+    extracted_education_investigation_normalized = extracted_education_from_investigation
+    if extracted_education_from_investigation == "大学本科":
+        extracted_education_investigation_normalized = "本科"
+    
+    if (excel_education and excel_education.strip() != '' and 
+        (extracted_education_from_investigation is None or excel_education_normalized != extracted_education_investigation_normalized)):
+        education_mismatch_indices.add(index)
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': f"P{app_config['COLUMN_MAPPINGS']['education']}",
+            '被比对字段': f"CX{app_config['COLUMN_MAPPINGS']['investigation_report']}",
+            '问题描述': f"P{index + 2}{app_config['COLUMN_MAPPINGS']['education']}与CX{index + 2}审查调查报告不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['education']
+        })
+        logger.warning(f"<立案 - （3.学历与审查调查报告）> - 行 {index + 2} - 学历 '{excel_education}' 与审查调查报告提取学历 '{extracted_education_from_investigation}' 不一致")
+
+    # 规则4: 学历与审理报告比对
+    extracted_education_from_trial = extract_education_from_case_report(trial_text_raw)  # 可以复用或创建专门函数
+    extracted_education_trial_normalized = extracted_education_from_trial
+    if extracted_education_from_trial == "大学本科":
+        extracted_education_trial_normalized = "本科"
+    
+    if (excel_education and excel_education.strip() != '' and 
+        (extracted_education_from_trial is None or excel_education_normalized != extracted_education_trial_normalized)):
+        education_mismatch_indices.add(index)
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': f"P{app_config['COLUMN_MAPPINGS']['education']}",
+            '被比对字段': f"CY{app_config['COLUMN_MAPPINGS']['trial_report']}",
+            '问题描述': f"P{index + 2}{app_config['COLUMN_MAPPINGS']['education']}与CY{index + 2}审理报告不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['education']
+        })
+        logger.warning(f"<立案 - （4.学历与审理报告）> - 行 {index + 2} - 学历 '{excel_education}' 与审理报告提取学历 '{extracted_education_from_trial}' 不一致")
+
 def validate_case_report_keywords_rules(row, index, excel_case_code, excel_person_code, issues_list, case_report_keyword_mismatch_indices,
                                         case_report_keywords_to_check, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config):
     """验证立案报告关键字规则。
