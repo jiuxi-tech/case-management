@@ -261,39 +261,3 @@ def validate_party_member_rules(row, index, excel_case_code, excel_person_code, 
         print(f"行 {index + 1} - 是否中共党员不匹配: Excel字段 ('{excel_party_member}') vs 处分决定提取 ('{extracted_party_member_from_decision}')。")
     if is_party_member_mismatch_decision:
         party_member_mismatch_indices.add(index)
-
-def validate_party_joining_date_rules(row, index, excel_case_code, excel_person_code, issues_list, party_joining_date_mismatch_indices,
-                                      excel_party_member, excel_party_joining_date, report_text_raw, app_config):
-    """验证入党时间相关规则。
-    新增 app_config 参数以匹配调用方传递的参数数量。
-    """
-    
-    extracted_party_joining_date_from_report = extract_party_joining_date_from_case_report(report_text_raw)
-    is_party_joining_date_mismatch = False
-
-    if excel_party_member == "是":
-        if not excel_party_joining_date:
-            if extracted_party_joining_date_from_report is not None:
-                is_party_joining_date_mismatch = True
-                issues_list.append((index, excel_case_code, excel_person_code, "V2入党时间与BF2立案报告不一致"))
-                logger.info(f"行 {index + 1} - 入党时间不匹配: Excel入党时间为空，但立案报告中提取到 ('{extracted_party_joining_date_from_report}')。")
-                print(f"行 {index + 1} - 入党时间不匹配: Excel入党时间为空，但立案报告中提取到 ('{extracted_party_joining_date_from_report}')。")
-        elif extracted_party_joining_date_from_report is None:
-            is_party_joining_date_mismatch = True
-            issues_list.append((index, excel_case_code, excel_person_code, "V2入党时间与BF2立案报告不一致"))
-            logger.info(f"行 {index + 1} - 入党时间不匹配: Excel入党时间 ('{excel_party_joining_date}') 有值，但立案报告中未提取到。")
-            print(f"行 {index + 1} - 入党时间不匹配: Excel入党时间 ('{excel_party_joining_date}') 有值，但立案报告中未提取到。")
-        elif excel_party_joining_date != extracted_party_joining_date_from_report:
-            is_party_joining_date_mismatch = True
-            issues_list.append((index, excel_case_code, excel_person_code, "V2入党时间与BF2立案报告不一致"))
-            logger.info(f"行 {index + 1} - 入党时间不匹配: Excel入党时间 ('{excel_party_joining_date}') vs 立案报告提取 ('{extracted_party_joining_date_from_report}')。")
-            print(f"行 {index + 1} - 入党时间不匹配: Excel入党时间 ('{excel_party_joining_date}') vs 立案报告提取 ('{extracted_party_joining_date_from_report}')。")
-    elif excel_party_member == "否":
-        if excel_party_joining_date:
-            is_party_joining_date_mismatch = True
-            issues_list.append((index, excel_case_code, excel_person_code, "V2入党时间与BF2立案报告不一致"))
-            logger.info(f"行 {index + 1} - 入党时间不匹配: Excel是否中共党员为“否”，但入党时间字段不为空 ('{excel_party_joining_date}')。")
-            print(f"行 {index + 1} - 入党时间不匹配: Excel是否中共党员为“否”，但入党时间字段不为空 ('{excel_party_joining_date}')。")
-
-    if is_party_joining_date_mismatch:
-        party_joining_date_mismatch_indices.add(index)

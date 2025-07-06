@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from datetime import datetime
 import logging
-from .case_validation_additional import validate_name_rules, validate_gender_rules, validate_age_rules, validate_birth_date_rules, validate_education_rules, validate_ethnicity_rules, validate_party_member_rules
+from .case_validation_additional import validate_name_rules, validate_gender_rules, validate_age_rules, validate_birth_date_rules, validate_education_rules, validate_ethnicity_rules, validate_party_member_rules, validate_party_joining_date_rules
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +109,14 @@ def generate_investigatee_number_file(df, original_filename, upload_dir, app_con
                 validate_party_member_rules(
                     row, index, excel_case_code, excel_person_code, issues_list, party_member_mismatch_indices,
                     excel_party_member, report_text_raw, decision_text_raw, app_config
+                )
+                
+                # 执行入党时间验证规则
+                excel_party_joining_date = str(row.get(app_config['COLUMN_MAPPINGS']['party_joining_date'], '')).strip()
+                party_joining_date_mismatch_indices = set()
+                validate_party_joining_date_rules(
+                    row, index, excel_case_code, excel_person_code, issues_list, party_joining_date_mismatch_indices,
+                    excel_party_member, excel_party_joining_date, report_text_raw, app_config
                 )
                 
             except Exception as e:

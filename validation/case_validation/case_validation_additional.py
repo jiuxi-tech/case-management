@@ -628,6 +628,69 @@ def validate_party_member_rules(row, index, excel_case_code, excel_person_code, 
     if is_party_member_mismatch_decision:
         party_member_mismatch_indices.add(index)
 
+def validate_party_joining_date_rules(row, index, excel_case_code, excel_person_code, issues_list, party_joining_date_mismatch_indices,
+                                      excel_party_member, excel_party_joining_date, report_text_raw, app_config):
+    """验证入党时间相关规则。"""
+    from .case_extractors_party_info import extract_party_joining_date_from_case_report
+    
+    extracted_party_joining_date_from_report = extract_party_joining_date_from_case_report(report_text_raw)
+    is_party_joining_date_mismatch = False
+
+    if excel_party_member == "是":
+        if not excel_party_joining_date:
+            if extracted_party_joining_date_from_report is not None:
+                is_party_joining_date_mismatch = True
+                issues_list.append({
+                    '案件编码': excel_case_code,
+                    '涉案人员编码': excel_person_code,
+                    '行号': index + 2,
+                    '比对字段': f"AC{app_config['COLUMN_MAPPINGS']['party_joining_date']}",
+                    '被比对字段': f"BF{app_config['COLUMN_MAPPINGS']['case_report']}",
+                    '问题描述': f"AC{index + 2}{app_config['COLUMN_MAPPINGS']['party_joining_date']}与BF{index + 2}立案报告不一致",
+                    '列名': app_config['COLUMN_MAPPINGS']['party_joining_date']
+                })
+                logger.warning(f"<立案 - （1.入党时间与立案报告）> - 行 {index + 2} - 入党时间 '{excel_party_joining_date}' 与立案报告提取入党时间 '{extracted_party_joining_date_from_report}' 不一致")
+        elif extracted_party_joining_date_from_report is None:
+            is_party_joining_date_mismatch = True
+            issues_list.append({
+                '案件编码': excel_case_code,
+                '涉案人员编码': excel_person_code,
+                '行号': index + 2,
+                '比对字段': f"AC{app_config['COLUMN_MAPPINGS']['party_joining_date']}",
+                '被比对字段': f"BF{app_config['COLUMN_MAPPINGS']['case_report']}",
+                '问题描述': f"AC{index + 2}{app_config['COLUMN_MAPPINGS']['party_joining_date']}与BF{index + 2}立案报告不一致",
+                '列名': app_config['COLUMN_MAPPINGS']['party_joining_date']
+            })
+            logger.warning(f"<立案 - （1.入党时间与立案报告）> - 行 {index + 2} - 入党时间 '{excel_party_joining_date}' 与立案报告提取入党时间 '未提取到' 不一致")
+        elif excel_party_joining_date != extracted_party_joining_date_from_report:
+            is_party_joining_date_mismatch = True
+            issues_list.append({
+                '案件编码': excel_case_code,
+                '涉案人员编码': excel_person_code,
+                '行号': index + 2,
+                '比对字段': f"AC{app_config['COLUMN_MAPPINGS']['party_joining_date']}",
+                '被比对字段': f"BF{app_config['COLUMN_MAPPINGS']['case_report']}",
+                '问题描述': f"AC{index + 2}{app_config['COLUMN_MAPPINGS']['party_joining_date']}与BF{index + 2}立案报告不一致",
+                '列名': app_config['COLUMN_MAPPINGS']['party_joining_date']
+            })
+            logger.warning(f"<立案 - （1.入党时间与立案报告）> - 行 {index + 2} - 入党时间 '{excel_party_joining_date}' 与立案报告提取入党时间 '{extracted_party_joining_date_from_report}' 不一致")
+    elif excel_party_member == "否":
+        if excel_party_joining_date:
+            is_party_joining_date_mismatch = True
+            issues_list.append({
+                '案件编码': excel_case_code,
+                '涉案人员编码': excel_person_code,
+                '行号': index + 2,
+                '比对字段': f"AC{app_config['COLUMN_MAPPINGS']['party_joining_date']}",
+                '被比对字段': f"T{app_config['COLUMN_MAPPINGS']['party_member']}",
+                '问题描述': f"AC{index + 2}{app_config['COLUMN_MAPPINGS']['party_joining_date']}与T{index + 2}是否中共党员不一致",
+                '列名': app_config['COLUMN_MAPPINGS']['party_joining_date']
+            })
+            logger.warning(f"<立案 - （2.入党时间与党员身份）> - 行 {index + 2} - 入党时间 '{excel_party_joining_date}' 与是否中共党员 '否' 不一致")
+
+    if is_party_joining_date_mismatch:
+        party_joining_date_mismatch_indices.add(index)
+
 def validate_case_report_keywords_rules(row, index, excel_case_code, excel_person_code, issues_list, case_report_keyword_mismatch_indices,
                                         case_report_keywords_to_check, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config):
     """验证立案报告关键字规则。
