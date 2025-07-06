@@ -6,9 +6,7 @@ import re
 from db_utils import get_authority_agency_dict
 
 # 从 case_validation_helpers 导入核心验证函数
-from .case_validation_helpers import (
-    validate_brief_case_details_rules
-)
+# from .case_validation_helpers import ()  # 当前无需导入
 
 # 从 case_validation_extended 导入扩展验证函数
 # from .case_validation_extended import ()  # 当前无需导入
@@ -23,6 +21,7 @@ from .case_validation_additional import (
     validate_age_rules,
     validate_birth_date_rules,
     validate_party_joining_date_rules,
+    validate_brief_case_details_rules,
     validate_case_report_keywords_rules,
     validate_voluntary_confession_rules,
     validate_no_party_position_warning_rules

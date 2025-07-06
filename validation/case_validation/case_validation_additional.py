@@ -1,5 +1,6 @@
 import logging
 import pandas as pd
+import re
 from .case_extractors_names import (
     extract_name_from_case_report,
     extract_name_from_decision,
@@ -690,6 +691,97 @@ def validate_party_joining_date_rules(row, index, excel_case_code, excel_person_
 
     if is_party_joining_date_mismatch:
         party_joining_date_mismatch_indices.add(index)
+
+def validate_brief_case_details_rules(row, index, excel_case_code, excel_person_code, issues_list, brief_case_details_mismatch_indices,
+                                      excel_brief_case_details, investigated_person, report_text_raw, decision_text_raw, app_config):
+    """
+    验证简要案情相关规则。
+    根据"处分决定"是否为空，从"立案报告"或"处分决定"中提取简要案情，并与Excel中的简要案情进行比较。
+
+    参数:
+        row (pd.Series): DataFrame 的当前行数据。
+        index (int): 当前行的索引。
+        excel_case_code (str): Excel 中的案件编码。
+        excel_person_code (str): Excel 中的涉案人员编码。
+        issues_list (list): 用于收集所有发现问题的列表。
+        brief_case_details_mismatch_indices (set): 用于收集简要案情不匹配的行索引。
+        excel_brief_case_details (str): Excel 中提取的简要案情。
+        investigated_person (str): 被调查人姓名。
+        report_text_raw (str): 立案报告的原始文本。
+        decision_text_raw (str): 处分决定的原始文本。
+        app_config (dict): Flask 应用的配置字典。
+    """
+    from .case_extractors_demographics import extract_suspected_violation_from_case_report, extract_suspected_violation_from_decision
+    
+    is_brief_case_details_mismatch = False
+    extracted_brief_case_details = None
+    source_document_for_issue = ""
+
+    # 规则1: 简要案情与立案报告或处分决定比对
+    if pd.isna(row[app_config['COLUMN_MAPPINGS']["disciplinary_decision"]]) or decision_text_raw == '':
+        extracted_brief_case_details = extract_suspected_violation_from_case_report(report_text_raw)
+        source_document_for_issue = "立案报告"
+        if extracted_brief_case_details is None:
+            if excel_brief_case_details:
+                is_brief_case_details_mismatch = True
+                brief_case_details_mismatch_indices.add(index)
+                issues_list.append({
+                    '案件编码': excel_case_code,
+                    '涉案人员编码': excel_person_code,
+                    '行号': index + 2,
+                    '比对字段': f"BE{app_config['COLUMN_MAPPINGS']['brief_case_details']}",
+                    '被比对字段': f"BF{app_config['COLUMN_MAPPINGS']['case_report']}",
+                    '问题描述': f"BE{index + 2}{app_config['COLUMN_MAPPINGS']['brief_case_details']}与BF{index + 2}立案报告不一致（未能提取到内容）",
+                    '列名': app_config['COLUMN_MAPPINGS']['brief_case_details']
+                })
+                logger.warning(f"<立案 - （1.简要案情与立案报告）> - 行 {index + 2} - 简要案情 '{excel_brief_case_details}' 与立案报告提取简要案情 '未提取到' 不一致")
+        else:
+            cleaned_excel_brief_case_details = re.sub(r'\s+', '', excel_brief_case_details) if excel_brief_case_details else ''
+            if cleaned_excel_brief_case_details != extracted_brief_case_details:
+                is_brief_case_details_mismatch = True
+                brief_case_details_mismatch_indices.add(index)
+                issues_list.append({
+                    '案件编码': excel_case_code,
+                    '涉案人员编码': excel_person_code,
+                    '行号': index + 2,
+                    '比对字段': f"BE{app_config['COLUMN_MAPPINGS']['brief_case_details']}",
+                    '被比对字段': f"BF{app_config['COLUMN_MAPPINGS']['case_report']}",
+                    '问题描述': f"BE{index + 2}{app_config['COLUMN_MAPPINGS']['brief_case_details']}与BF{index + 2}立案报告不一致",
+                    '列名': app_config['COLUMN_MAPPINGS']['brief_case_details']
+                })
+                logger.warning(f"<立案 - （1.简要案情与立案报告）> - 行 {index + 2} - 简要案情 '{cleaned_excel_brief_case_details}' 与立案报告提取简要案情 '{extracted_brief_case_details}' 不一致")
+    else:
+        extracted_brief_case_details = extract_suspected_violation_from_decision(decision_text_raw, investigated_person)
+        source_document_for_issue = "处分决定"
+        if extracted_brief_case_details is None:
+            if excel_brief_case_details:
+                is_brief_case_details_mismatch = True
+                brief_case_details_mismatch_indices.add(index)
+                issues_list.append({
+                    '案件编码': excel_case_code,
+                    '涉案人员编码': excel_person_code,
+                    '行号': index + 2,
+                    '比对字段': f"BE{app_config['COLUMN_MAPPINGS']['brief_case_details']}",
+                    '被比对字段': f"CU{app_config['COLUMN_MAPPINGS']['disciplinary_decision']}",
+                    '问题描述': f"BE{index + 2}{app_config['COLUMN_MAPPINGS']['brief_case_details']}与CU{index + 2}处分决定不一致（未能提取到内容）",
+                    '列名': app_config['COLUMN_MAPPINGS']['brief_case_details']
+                })
+                logger.warning(f"<立案 - （2.简要案情与处分决定）> - 行 {index + 2} - 简要案情 '{excel_brief_case_details}' 与处分决定提取简要案情 '未提取到' 不一致")
+        else:
+            cleaned_excel_brief_case_details = re.sub(r'\s+', '', excel_brief_case_details) if excel_brief_case_details else ''
+            if cleaned_excel_brief_case_details != extracted_brief_case_details:
+                is_brief_case_details_mismatch = True
+                brief_case_details_mismatch_indices.add(index)
+                issues_list.append({
+                    '案件编码': excel_case_code,
+                    '涉案人员编码': excel_person_code,
+                    '行号': index + 2,
+                    '比对字段': f"BE{app_config['COLUMN_MAPPINGS']['brief_case_details']}",
+                    '被比对字段': f"CU{app_config['COLUMN_MAPPINGS']['disciplinary_decision']}",
+                    '问题描述': f"BE{index + 2}{app_config['COLUMN_MAPPINGS']['brief_case_details']}与CU{index + 2}处分决定不一致",
+                    '列名': app_config['COLUMN_MAPPINGS']['brief_case_details']
+                })
+                logger.warning(f"<立案 - （2.简要案情与处分决定）> - 行 {index + 2} - 简要案情 '{cleaned_excel_brief_case_details}' 与处分决定提取简要案情 '{extracted_brief_case_details}' 不一致")
 
 def validate_case_report_keywords_rules(row, index, excel_case_code, excel_person_code, issues_list, case_report_keyword_mismatch_indices,
                                         case_report_keywords_to_check, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config):
