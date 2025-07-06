@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from datetime import datetime
 import logging
-from .case_validation_additional import validate_name_rules, validate_gender_rules
+from .case_validation_additional import validate_name_rules, validate_gender_rules, validate_age_rules
 
 logger = logging.getLogger(__name__)
 
@@ -32,14 +32,14 @@ def generate_investigatee_number_file(df, original_filename, upload_dir, app_con
         # 遍历每一行数据，执行被调查人验证规则
         for index, row in df.iterrows():
             try:
-                # 提取必要的字段
-                excel_case_code = str(row.get('案件编码', '')).strip()
-                excel_person_code = str(row.get('涉案人员编码', '')).strip()
-                investigated_person = str(row.get('被调查人', '')).strip()
-                report_text_raw = str(row.get('立案报告', '')).strip()
-                decision_text_raw = str(row.get('处分决定', '')).strip()
-                investigation_text_raw = str(row.get('审查调查报告', '')).strip()
-                trial_text_raw = str(row.get('审理报告', '')).strip()
+                # 提取必要的字段（使用动态列映射）
+                excel_case_code = str(row.get(app_config['COLUMN_MAPPINGS']['case_code'], '')).strip()
+                excel_person_code = str(row.get(app_config['COLUMN_MAPPINGS']['person_code'], '')).strip()
+                investigated_person = str(row.get(app_config['COLUMN_MAPPINGS']['investigated_person'], '')).strip()
+                report_text_raw = str(row.get(app_config['COLUMN_MAPPINGS']['case_report'], '')).strip()
+                decision_text_raw = str(row.get(app_config['COLUMN_MAPPINGS']['disciplinary_decision'], '')).strip()
+                investigation_text_raw = str(row.get(app_config['COLUMN_MAPPINGS']['investigation_report'], '')).strip()
+                trial_text_raw = str(row.get(app_config['COLUMN_MAPPINGS']['trial_report'], '')).strip()
                 
                 # 跳过空行或关键字段为空的行
                 if not investigated_person or not excel_case_code:
@@ -53,11 +53,26 @@ def generate_investigatee_number_file(df, original_filename, upload_dir, app_con
                 )
                 
                 # 执行性别验证规则
-                excel_gender = str(row.get('性别', '')).strip()
+                excel_gender = str(row.get(app_config['COLUMN_MAPPINGS']['gender'], '')).strip()
                 gender_mismatch_indices = set()
                 validate_gender_rules(
                     row, index, excel_case_code, excel_person_code, issues_list, gender_mismatch_indices,
                     excel_gender, report_text_raw, decision_text_raw,
+                    investigation_text_raw, trial_text_raw, app_config
+                )
+                
+                # 执行年龄验证规则
+                excel_age = None
+                if pd.notna(row.get(app_config['COLUMN_MAPPINGS']['age'])):
+                    try:
+                        excel_age = int(row.get(app_config['COLUMN_MAPPINGS']['age']))
+                    except ValueError:
+                        logger.warning(f"行 {index + 1} - Excel '{app_config['COLUMN_MAPPINGS']['age']}' 字段 '{row.get(app_config['COLUMN_MAPPINGS']['age'])}' 不是有效数字。")
+                age_mismatch_indices = set()
+                current_year = datetime.now().year
+                validate_age_rules(
+                    row, index, excel_case_code, excel_person_code, issues_list, age_mismatch_indices,
+                    excel_age, current_year, report_text_raw, decision_text_raw,
                     investigation_text_raw, trial_text_raw, app_config
                 )
                 

@@ -89,10 +89,10 @@ def validate_gender_rules(row, index, excel_case_code, excel_person_code, issues
             '案件编码': excel_case_code,
             '涉案人员编码': excel_person_code,
             '行号': index + 2,
-            '比对字段': "D性别",
-            '被比对字段': "BF立案报告",
-            '问题描述': f"D{index + 2}性别与BF{index + 2}立案报告不一致",
-            '列名': "性别"
+            '比对字段': f"M{app_config['COLUMN_MAPPINGS']['gender']}",
+            '被比对字段': f"BF{app_config['COLUMN_MAPPINGS']['case_report']}",
+            '问题描述': f"M{index + 2}{app_config['COLUMN_MAPPINGS']['gender']}与BF{index + 2}立案报告不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['gender']
         })
         logger.warning(f"<立案 - （1.性别与立案报告）> - 行 {index + 2} - 性别 '{excel_gender}' 与立案报告性别 '{extracted_gender_from_report}' 不一致")
 
@@ -105,10 +105,10 @@ def validate_gender_rules(row, index, excel_case_code, excel_person_code, issues
             '案件编码': excel_case_code,
             '涉案人员编码': excel_person_code,
             '行号': index + 2,
-            '比对字段': "D性别",
-            '被比对字段': "CU处分决定",
-            '问题描述': f"D{index + 2}性别与CU{index + 2}处分决定不一致",
-            '列名': "性别"
+            '比对字段': f"M{app_config['COLUMN_MAPPINGS']['gender']}",
+            '被比对字段': f"CU{app_config['COLUMN_MAPPINGS']['disciplinary_decision']}",
+            '问题描述': f"M{index + 2}{app_config['COLUMN_MAPPINGS']['gender']}与CU{index + 2}处分决定不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['gender']
         })
         logger.warning(f"<立案 - （2.性别与处分决定）> - 行 {index + 2} - 性别 '{excel_gender}' 与处分决定性别 '{extracted_gender_from_decision}' 不一致")
 
@@ -121,10 +121,10 @@ def validate_gender_rules(row, index, excel_case_code, excel_person_code, issues
             '案件编码': excel_case_code,
             '涉案人员编码': excel_person_code,
             '行号': index + 2,
-            '比对字段': "D性别",
-            '被比对字段': "CX审查调查报告",
-            '问题描述': f"D{index + 2}性别与CX{index + 2}审查调查报告不一致",
-            '列名': "性别"
+            '比对字段': f"M{app_config['COLUMN_MAPPINGS']['gender']}",
+            '被比对字段': f"CX{app_config['COLUMN_MAPPINGS']['investigation_report']}",
+            '问题描述': f"M{index + 2}{app_config['COLUMN_MAPPINGS']['gender']}与CX{index + 2}审查调查报告不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['gender']
         })
         logger.warning(f"<立案 - （3.性别与审查调查报告）> - 行 {index + 2} - 性别 '{excel_gender}' 与审查调查报告性别 '{extracted_gender_from_investigation}' 不一致")
 
@@ -137,12 +137,114 @@ def validate_gender_rules(row, index, excel_case_code, excel_person_code, issues
             '案件编码': excel_case_code,
             '涉案人员编码': excel_person_code,
             '行号': index + 2,
-            '比对字段': "D性别",
-            '被比对字段': "CY审理报告",
-            '问题描述': f"D{index + 2}性别与CY{index + 2}审理报告不一致",
-            '列名': "性别"
+            '比对字段': f"M{app_config['COLUMN_MAPPINGS']['gender']}",
+            '被比对字段': f"CY{app_config['COLUMN_MAPPINGS']['trial_report']}",
+            '问题描述': f"M{index + 2}{app_config['COLUMN_MAPPINGS']['gender']}与CY{index + 2}审理报告不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['gender']
         })
         logger.warning(f"<立案 - （4.性别与审理报告）> - 行 {index + 2} - 性别 '{excel_gender}' 与审理报告性别 '{extracted_gender_from_trial}' 不一致")
+
+def validate_age_rules(row, index, excel_case_code, excel_person_code, issues_list, age_mismatch_indices,
+                       excel_age, current_year, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config):
+    """
+    验证年龄相关规则。
+    比较 Excel 中的年龄与立案报告、处分决定、审查调查报告、审理报告中计算的年龄。
+
+    参数:
+        row (pd.Series): DataFrame 的当前行数据。
+        index (int): 当前行的索引。
+        excel_case_code (str): Excel 中的案件编码。
+        excel_person_code (str): Excel 中的涉案人员编码。
+        issues_list (list): 用于收集所有发现问题的列表。
+        age_mismatch_indices (set): 用于收集年龄不匹配的行索引。
+        excel_age (int or None): Excel 中提取的年龄。
+        current_year (int): 当前年份。
+        report_text_raw (str): 立案报告的原始文本。
+        decision_text_raw (str): 处分决定的原始文本。
+        investigation_text_raw (str): 审查调查报告的原始文本。
+        trial_text_raw (str): 审理报告的原始文本。
+        app_config (dict): Flask 应用的配置字典。
+    """
+    
+    # 规则1: 年龄与立案报告比对
+    from .case_extractors_birth_info import extract_birth_year_from_case_report
+    extracted_birth_year_from_report = extract_birth_year_from_case_report(report_text_raw)
+    calculated_age_from_report = None
+    if extracted_birth_year_from_report is not None:
+        calculated_age_from_report = current_year - extracted_birth_year_from_report
+    if (calculated_age_from_report is None) or \
+       (excel_age is not None and calculated_age_from_report is not None and excel_age != calculated_age_from_report):
+        age_mismatch_indices.add(index)
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': f"N{app_config['COLUMN_MAPPINGS']['age']}",
+            '被比对字段': f"BF{app_config['COLUMN_MAPPINGS']['case_report']}",
+            '问题描述': f"N{index + 2}{app_config['COLUMN_MAPPINGS']['age']}与BF{index + 2}立案报告不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['age']
+        })
+        logger.warning(f"<立案 - （1.年龄与立案报告）> - 行 {index + 2} - 年龄 '{excel_age}' 与立案报告计算年龄 '{calculated_age_from_report}' 不一致")
+
+    # 规则2: 年龄与处分决定比对
+    from .case_extractors_birth_info import extract_birth_year_from_decision_report
+    extracted_birth_year_from_decision = extract_birth_year_from_decision_report(decision_text_raw)
+    calculated_age_from_decision = None
+    if extracted_birth_year_from_decision is not None:
+        calculated_age_from_decision = current_year - extracted_birth_year_from_decision
+    if (calculated_age_from_decision is None) or \
+       (excel_age is not None and calculated_age_from_decision is not None and excel_age != calculated_age_from_decision):
+        age_mismatch_indices.add(index)
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': f"N{app_config['COLUMN_MAPPINGS']['age']}",
+            '被比对字段': f"CU{app_config['COLUMN_MAPPINGS']['disciplinary_decision']}",
+            '问题描述': f"N{index + 2}{app_config['COLUMN_MAPPINGS']['age']}与CU{index + 2}处分决定不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['age']
+        })
+        logger.warning(f"<立案 - （2.年龄与处分决定）> - 行 {index + 2} - 年龄 '{excel_age}' 与处分决定计算年龄 '{calculated_age_from_decision}' 不一致")
+
+    # 规则3: 年龄与审查调查报告比对
+    from .case_extractors_birth_info import extract_birth_year_from_investigation_report
+    extracted_birth_year_from_investigation = extract_birth_year_from_investigation_report(investigation_text_raw)
+    calculated_age_from_investigation = None
+    if extracted_birth_year_from_investigation is not None:
+        calculated_age_from_investigation = current_year - extracted_birth_year_from_investigation
+    if (calculated_age_from_investigation is None) or \
+       (excel_age is not None and calculated_age_from_investigation is not None and excel_age != calculated_age_from_investigation):
+        age_mismatch_indices.add(index)
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': f"N{app_config['COLUMN_MAPPINGS']['age']}",
+            '被比对字段': f"CX{app_config['COLUMN_MAPPINGS']['investigation_report']}",
+            '问题描述': f"N{index + 2}{app_config['COLUMN_MAPPINGS']['age']}与CX{index + 2}审查调查报告不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['age']
+        })
+        logger.warning(f"<立案 - （3.年龄与审查调查报告）> - 行 {index + 2} - 年龄 '{excel_age}' 与审查调查报告计算年龄 '{calculated_age_from_investigation}' 不一致")
+
+    # 规则4: 年龄与审理报告比对
+    from .case_extractors_birth_info import extract_birth_year_from_trial_report
+    extracted_birth_year_from_trial = extract_birth_year_from_trial_report(trial_text_raw)
+    calculated_age_from_trial = None
+    if extracted_birth_year_from_trial is not None:
+        calculated_age_from_trial = current_year - extracted_birth_year_from_trial
+    if (calculated_age_from_trial is None) or \
+       (excel_age is not None and calculated_age_from_trial is not None and excel_age != calculated_age_from_trial):
+        age_mismatch_indices.add(index)
+        issues_list.append({
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '行号': index + 2,
+            '比对字段': f"N{app_config['COLUMN_MAPPINGS']['age']}",
+            '被比对字段': f"CY{app_config['COLUMN_MAPPINGS']['trial_report']}",
+            '问题描述': f"N{index + 2}{app_config['COLUMN_MAPPINGS']['age']}与CY{index + 2}审理报告不一致",
+            '列名': app_config['COLUMN_MAPPINGS']['age']
+        })
+        logger.warning(f"<立案 - （4.年龄与审理报告）> - 行 {index + 2} - 年龄 '{excel_age}' 与审理报告计算年龄 '{calculated_age_from_trial}' 不一致")
 
 def validate_case_report_keywords_rules(row, index, excel_case_code, excel_person_code, issues_list, case_report_keyword_mismatch_indices,
                                         case_report_keywords_to_check, report_text_raw, decision_text_raw, investigation_text_raw, trial_text_raw, app_config):
