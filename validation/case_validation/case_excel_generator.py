@@ -15,6 +15,7 @@ from .case_validation_trial_closing_time import validate_trial_closing_time_rule
 from .case_validation_trial_authority import validate_trial_authority_rules
 from .case_validation_trial_report import validate_trial_report_rules
 from .case_validation_disciplinary_decision import validate_disciplinary_decision_rules
+from .case_timestamp_rules import validate_registered_handover_amount_single_row
 
 logger = logging.getLogger(__name__)
 
@@ -285,6 +286,12 @@ def generate_investigatee_number_file(df, original_filename, upload_dir, app_con
                 validate_recovery_amount_rules(
                     row, index, excel_case_code, excel_person_code, issues_list, recovery_amount_highlight_indices,
                     excel_recovery_amount, app_config
+                )
+                
+                # 执行登记上交金额验证规则
+                registered_handover_amount_indices = set()
+                validate_registered_handover_amount_single_row(
+                    row, index, excel_case_code, excel_person_code, issues_list, registered_handover_amount_indices, app_config
                 )
                 
                 # 执行审理受理时间验证规则

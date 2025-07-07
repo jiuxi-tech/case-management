@@ -91,9 +91,20 @@ def validate_registered_handover_amount_single_row(row, index, excel_case_code, 
     issue_description = app_config['VALIDATION_RULES'].get("highlight_case_registered_handover_amount", "CY审理报告中含有登记上交金额字样，请人工再次确认CG登记上交金额")
 
     if "登记上交金额" in trial_report_text:
-        issues_list.append((index, excel_case_code, excel_person_code, issue_description, "中")) # 增加风险等级
+        # 添加字典格式的问题记录，与generate_investigatee_number_file函数兼容
+        issue_dict = {
+            '行号': index + 2,  # Excel行号从1开始，且有表头
+            '案件编码': excel_case_code,
+            '涉案人员编码': excel_person_code,
+            '问题描述': f"CG{index + 2}{col_registered_handover_amount}与CY{index + 2}审理报告不一致",
+            '风险等级': '中',
+            '比对字段': f"CG{col_registered_handover_amount}",
+            '被比对字段': f"CY{app_config['COLUMN_MAPPINGS']['trial_report']}",
+            '列名': col_registered_handover_amount
+        }
+        issues_list.append(issue_dict)
         registered_handover_amount_indices.add(index)
-        logger.warning(f"<立案 - (CG.登记上交金额)> - 行 {index + 2} - CY审理报告中含有登记上交金额字样，请人工再次确认CG登记上交金额")
+        logger.warning(f"<立案 - (CG.登记上交金额)> - 行 {index + 2} - 审理报告中含有登记上交金额字样，请人工再次确认登记上交金额")
 
 
 def validate_registered_handover_amount(df, issues_list, registered_handover_amount_indices, app_config):
