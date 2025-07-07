@@ -49,7 +49,7 @@ from .case_document_validators import (
     # validate_trial_authority_vs_reporting_agency, # 已被新的审理机关验证规则替代
     validate_disposal_decision_keywords,
     validate_trial_report_keywords,
-    highlight_recovery_amount
+    # highlight_recovery_amount  # 已被新的追缴失职渎职滥用职权造成的损失金额验证规则替代
 )
 
 # 导入金额验证函数
@@ -57,6 +57,7 @@ from .case_validation_confiscation_amount import validate_confiscation_amount_ru
 from .case_validation_confiscation_of_property_amount import validate_confiscation_of_property_amount_rules
 from .case_validation_compensation_amount import validate_compensation_amount_rules
 from .case_validation_trial_acceptance_time import validate_trial_acceptance_time_rules
+from .case_validation_recovery_amount import validate_recovery_amount_rules
 from .case_validation_trial_closing_time import validate_trial_closing_time_rules
 from .case_validation_trial_authority import validate_trial_authority_rules
 from .case_validation_trial_report import validate_trial_report_rules
@@ -284,7 +285,7 @@ def validate_case_relationships(df, app_config, issues_list):
                                                  excel_no_party_position_warning, decision_text_raw, app_config)
 
         # 调用新拆分的函数来处理这些特定验证
-        highlight_recovery_amount(row, index, excel_case_code, excel_person_code, issues_list, recovery_amount_highlight_indices, app_config)
+        # highlight_recovery_amount 已被新的追缴失职渎职滥用职权造成的损失金额验证规则替代
         # validate_trial_acceptance_time_vs_report 已被新的审理受理时间验证规则替代
         # validate_trial_closing_time_vs_report 已被新的审结时间验证规则替代
         # validate_trial_authority_vs_reporting_agency 已被新的审理机关验证规则替代
@@ -311,6 +312,11 @@ def validate_case_relationships(df, app_config, issues_list):
                                                       excel_confiscation_of_property_amount, trial_text_raw, app_config)
         
         # 责令退赔金额验证规则（已在 validate_trial_report_keywords 中处理，这里不重复调用）
+        
+        # 追缴失职渎职滥用职权造成的损失金额验证规则
+        excel_recovery_amount = row.get(app_config['COLUMN_MAPPINGS']['recovery_amount'])
+        validate_recovery_amount_rules(row, index, excel_case_code, excel_person_code, issues_list, recovery_amount_highlight_indices,
+                                     excel_recovery_amount, app_config)
         
         # 审理受理时间验证规则
         excel_trial_acceptance_time = row.get(app_config['COLUMN_MAPPINGS']['trial_acceptance_time'])

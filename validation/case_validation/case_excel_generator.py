@@ -10,6 +10,7 @@ from .case_validation_confiscation_amount import validate_confiscation_amount_ru
 from .case_validation_confiscation_of_property_amount import validate_confiscation_of_property_amount_rules
 from .case_validation_compensation_amount import validate_compensation_amount_rules
 from .case_validation_trial_acceptance_time import validate_trial_acceptance_time_rules
+from .case_validation_recovery_amount import validate_recovery_amount_rules
 from .case_validation_trial_closing_time import validate_trial_closing_time_rules
 from .case_validation_trial_authority import validate_trial_authority_rules
 from .case_validation_trial_report import validate_trial_report_rules
@@ -276,6 +277,14 @@ def generate_investigatee_number_file(df, original_filename, upload_dir, app_con
                 validate_compensation_amount_rules(
                     row, index, excel_case_code, excel_person_code, issues_list, compensation_amount_highlight_indices,
                     excel_compensation_amount, excel_trial_report, app_config
+                )
+                
+                # 执行追缴失职渎职滥用职权造成的损失金额验证规则
+                excel_recovery_amount = row.get(app_config['COLUMN_MAPPINGS']['recovery_amount'])
+                recovery_amount_highlight_indices = set()
+                validate_recovery_amount_rules(
+                    row, index, excel_case_code, excel_person_code, issues_list, recovery_amount_highlight_indices,
+                    excel_recovery_amount, app_config
                 )
                 
                 # 执行审理受理时间验证规则
