@@ -46,7 +46,7 @@ from .case_validation_sanctions import validate_disciplinary_sanction
 from .case_document_validators import (
     validate_trial_acceptance_time_vs_report,
     # validate_trial_closing_time_vs_report,  # 已被新的审结时间验证规则替代
-    validate_trial_authority_vs_reporting_agency,
+    # validate_trial_authority_vs_reporting_agency, # 已被新的审理机关验证规则替代
     validate_disposal_decision_keywords,
     validate_trial_report_keywords,
     highlight_recovery_amount
@@ -57,6 +57,7 @@ from .case_validation_confiscation_amount import validate_confiscation_amount_ru
 from .case_validation_confiscation_of_property_amount import validate_confiscation_of_property_amount_rules
 from .case_validation_compensation_amount import validate_compensation_amount_rules
 from .case_validation_trial_closing_time import validate_trial_closing_time_rules
+from .case_validation_trial_authority import validate_trial_authority_rules
 from .case_validation_trial_report import validate_trial_report_rules
 from .case_validation_disciplinary_decision import validate_disciplinary_decision_rules
 from .case_validation_administrative_sanction import validate_administrative_sanction_rules
@@ -285,7 +286,7 @@ def validate_case_relationships(df, app_config, issues_list):
         highlight_recovery_amount(row, index, excel_case_code, excel_person_code, issues_list, recovery_amount_highlight_indices, app_config)
         validate_trial_acceptance_time_vs_report(row, index, excel_case_code, excel_person_code, issues_list, trial_acceptance_time_mismatch_indices, app_config)
         # validate_trial_closing_time_vs_report 已被新的审结时间验证规则替代
-        validate_trial_authority_vs_reporting_agency(row, index, excel_case_code, excel_person_code, issues_list, trial_authority_agency_mismatch_indices, sl_authority_agency_mappings, app_config)
+        # validate_trial_authority_vs_reporting_agency 已被新的审理机关验证规则替代
         validate_disposal_decision_keywords(row, index, excel_case_code, excel_person_code, issues_list, disposal_decision_keyword_mismatch_indices, app_config)
         validate_trial_report_keywords(row, index, excel_case_code, excel_person_code, issues_list, 
                                        trial_report_non_representative_mismatch_indices, 
@@ -309,6 +310,13 @@ def validate_case_relationships(df, app_config, issues_list):
                                                       excel_confiscation_of_property_amount, trial_text_raw, app_config)
         
         # 责令退赔金额验证规则（已在 validate_trial_report_keywords 中处理，这里不重复调用）
+        
+        # 审理机关验证规则
+        excel_trial_authority = str(row.get(app_config['COLUMN_MAPPINGS']['trial_authority'], '')).strip()
+        excel_reporting_agency = str(row.get(app_config['COLUMN_MAPPINGS']['reporting_agency'], '')).strip()
+        trial_authority_mismatch_indices = set()
+        validate_trial_authority_rules(row, index, excel_case_code, excel_person_code, issues_list, trial_authority_mismatch_indices,
+                                     excel_trial_authority, excel_reporting_agency, sl_authority_agency_mappings, app_config)
         
         # 审结时间验证规则
         excel_trial_closing_time = row.get(app_config['COLUMN_MAPPINGS']['trial_closing_time'])

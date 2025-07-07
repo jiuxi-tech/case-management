@@ -10,6 +10,7 @@ from .case_validation_confiscation_amount import validate_confiscation_amount_ru
 from .case_validation_confiscation_of_property_amount import validate_confiscation_of_property_amount_rules
 from .case_validation_compensation_amount import validate_compensation_amount_rules
 from .case_validation_trial_closing_time import validate_trial_closing_time_rules
+from .case_validation_trial_authority import validate_trial_authority_rules
 from .case_validation_trial_report import validate_trial_report_rules
 from .case_validation_disciplinary_decision import validate_disciplinary_decision_rules
 
@@ -274,6 +275,16 @@ def generate_investigatee_number_file(df, original_filename, upload_dir, app_con
                 validate_compensation_amount_rules(
                     row, index, excel_case_code, excel_person_code, issues_list, compensation_amount_highlight_indices,
                     excel_compensation_amount, excel_trial_report, app_config
+                )
+                
+                # 执行审理机关验证规则
+                excel_trial_authority = str(row.get(app_config['COLUMN_MAPPINGS']['trial_authority'], '')).strip()
+                excel_reporting_agency = str(row.get(app_config['COLUMN_MAPPINGS']['reporting_agency'], '')).strip()
+                trial_authority_mismatch_indices = set()
+                sl_authority_agency_mappings = get_authority_agency_dict('SL')
+                validate_trial_authority_rules(
+                    row, index, excel_case_code, excel_person_code, issues_list, trial_authority_mismatch_indices,
+                    excel_trial_authority, excel_reporting_agency, sl_authority_agency_mappings, app_config
                 )
                 
                 # 执行审结时间验证规则
