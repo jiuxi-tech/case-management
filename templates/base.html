@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% endblock %} - 案管系统</title>
+
     <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.min.css') }}" />
     <script src="{{ url_for('static', filename='js/sweetalert2.js') }}"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='fontawesome/css/all.min.css') }}" />
@@ -135,21 +136,24 @@
                     <script>
                         document.addEventListener('DOMContentLoaded', function() {
                             {% for category, message in messages %}
-                                Swal.fire({
-                                    icon: '{{ category }}',
-                                    title: '{{ '成功' if category == "success" else '错误' }}',
-                                    text: '{{ message }}',
-                                    timer: 3000,
-                                    timerProgressBar: true,
-                                    showConfirmButton: false,
-                                    position: 'top-end',
-                                    toast: true,
-                                    background: '{{ '#d1fae5' if category == "success" else '#fee2e2' }}',
-                                    iconColor: '{{ '#10b981' if category == "success" else '#ef4444' }}',
-                                    customClass: {
-                                        popup: 'swal2-custom'
-                                    }
-                                });
+                                {# 过滤掉404相关的错误消息 #}
+                                {% if '404' not in message and 'Not Found' not in message and 'not found on the server' not in message|lower and 'requested URL was not found' not in message %}
+                                    Swal.fire({
+                                        icon: '{{ category }}',
+                                        title: '{{ '成功' if category == "success" else '错误' }}',
+                                        text: '{{ message }}',
+                                        timer: 3000,
+                                        timerProgressBar: true,
+                                        showConfirmButton: false,
+                                        position: 'top-end',
+                                        toast: true,
+                                        background: '{{ '#d1fae5' if category == "success" else '#fee2e2' }}',
+                                        iconColor: '{{ '#10b981' if category == "success" else '#ef4444' }}',
+                                        customClass: {
+                                            popup: 'swal2-custom'
+                                        }
+                                    });
+                                {% endif %}
                             {% endfor %}
                         });
                     </script>

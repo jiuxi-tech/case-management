@@ -63,7 +63,13 @@ def create_app():
     创建并配置 Flask 应用实例。
     加载配置、确保必要目录存在并绑定路由。
     """
-    app = Flask(__name__)
+    base_path = _get_base_path()
+    static_folder = os.path.join(base_path, 'static')
+    template_folder = os.path.join(base_path, 'templates')
+    
+    app = Flask(__name__, 
+                static_folder=static_folder,
+                template_folder=template_folder)
     app.config.from_object(Config)
     _ensure_directories(app.config)
 
@@ -188,10 +194,17 @@ def run_app():
     def handle_exception(e):
         """
         捕获应用中的所有未处理异常。
-        记录错误日志、闪现错误消息并重定向到上传页面。
+        记录错误日志但不显示 flash 消息，避免干扰用户体验。
         """
+        # 导入 HTTPException 来检查是否为 HTTP 异常
+        from werkzeug.exceptions import HTTPException
+        
+        # 如果是 HTTP 异常（如 404、500 等），不处理，让其他错误处理器处理
+        if isinstance(e, HTTPException):
+            return e
+        
+        # 只记录日志，不显示 flash 消息
         app.logger.error(f"发生异常: {str(e)}", exc_info=True)  # 记录完整堆栈信息
-        flash(f'发生错误: {str(e)}', 'error')
         return redirect(url_for('upload_case')), 500  # 返回 500 状态码
 
     # 自动打开浏览器，仅在应用首次启动时执行一次
