@@ -9,6 +9,7 @@ from .case_validation_administrative_sanction import validate_administrative_san
 from .case_validation_confiscation_amount import validate_confiscation_amount_rules
 from .case_validation_confiscation_of_property_amount import validate_confiscation_of_property_amount_rules
 from .case_validation_compensation_amount import validate_compensation_amount_rules
+from .case_validation_trial_closing_time import validate_trial_closing_time_rules
 from .case_validation_trial_report import validate_trial_report_rules
 from .case_validation_disciplinary_decision import validate_disciplinary_decision_rules
 
@@ -273,6 +274,14 @@ def generate_investigatee_number_file(df, original_filename, upload_dir, app_con
                 validate_compensation_amount_rules(
                     row, index, excel_case_code, excel_person_code, issues_list, compensation_amount_highlight_indices,
                     excel_compensation_amount, excel_trial_report, app_config
+                )
+                
+                # 执行审结时间验证规则
+                excel_trial_closing_time = row.get(app_config['COLUMN_MAPPINGS']['trial_closing_time'])
+                trial_closing_time_mismatch_indices = set()
+                validate_trial_closing_time_rules(
+                    row, index, excel_case_code, excel_person_code, issues_list, trial_closing_time_mismatch_indices,
+                    excel_trial_closing_time, excel_trial_report, app_config
                 )
                 
                 # 执行处分决定验证规则
