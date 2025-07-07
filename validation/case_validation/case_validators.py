@@ -56,6 +56,8 @@ from .case_document_validators import (
 from .case_validation_confiscation_amount import validate_confiscation_amount_rules
 from .case_validation_confiscation_of_property_amount import validate_confiscation_of_property_amount_rules
 from .case_validation_compensation_amount import validate_compensation_amount_rules
+from .case_validation_trial_report import validate_trial_report_rules
+from .case_validation_disciplinary_decision import validate_disciplinary_decision_rules
 from .case_validation_administrative_sanction import validate_administrative_sanction_rules
 
 logger = logging.getLogger(__name__)
@@ -289,6 +291,12 @@ def validate_case_relationships(df, app_config, issues_list):
                                        trial_report_detention_mismatch_indices, 
                                        compensation_amount_highlight_indices, app_config)
         
+        # 处分决定验证规则
+        excel_disciplinary_decision = str(row.get(app_config['COLUMN_MAPPINGS']['disciplinary_decision'], '')).strip()
+        disciplinary_decision_mismatch_indices = set()
+        validate_disciplinary_decision_rules(row, index, excel_case_code, excel_person_code, issues_list, disciplinary_decision_mismatch_indices,
+                                            excel_disciplinary_decision, app_config)
+        
         # 收缴金额验证规则
         excel_confiscation_amount = str(row.get(app_config['COLUMN_MAPPINGS']['confiscation_amount'], '')).strip()
         validate_confiscation_amount_rules(row, index, excel_case_code, excel_person_code, issues_list, confiscation_amount_indices,
@@ -300,6 +308,11 @@ def validate_case_relationships(df, app_config, issues_list):
                                                       excel_confiscation_of_property_amount, trial_text_raw, app_config)
         
         # 责令退赔金额验证规则（已在 validate_trial_report_keywords 中处理，这里不重复调用）
+        
+        # 审理报告验证规则
+        trial_report_mismatch_indices = set()
+        validate_trial_report_rules(row, index, excel_case_code, excel_person_code, issues_list, trial_report_mismatch_indices,
+                                   trial_text_raw, app_config)
         
         # 登记上交金额验证规则
         validate_registered_handover_amount_single_row(row, index, excel_case_code, excel_person_code, issues_list, registered_handover_amount_indices, app_config)
