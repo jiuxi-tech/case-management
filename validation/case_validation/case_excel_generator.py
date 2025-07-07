@@ -339,7 +339,7 @@ def generate_investigatee_number_file(df, original_filename, upload_dir, app_con
                 continue
         
         # 生成立案编号表文件
-        case_num_filename = f"立案编号表_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        case_num_filename = f"立案编号表_{datetime.now().strftime('%Y%m%d')}.xlsx"
         case_num_path = os.path.join(case_dir, case_num_filename)
         
         # 准备数据
