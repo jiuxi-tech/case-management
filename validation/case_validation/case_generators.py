@@ -34,9 +34,8 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
                         administrative_sanction_mismatch_indices # <-- 【新增】在这里添加这个参数
                         ):
     """
-    根据分析结果生成副本和立案编号Excel文件。
+    根据分析结果生成副本Excel文件。
     该函数将原始DataFrame写入一个副本文件，对不匹配的单元格进行标红。
-    同时，它会生成一个立案编号文件，其中包含所有发现的问题列表。
 
     参数:
     df (pd.DataFrame): 原始Excel数据的DataFrame。
@@ -77,7 +76,7 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
     administrative_sanction_mismatch_indices (set): 政务处分不匹配的行索引集合。 # <-- 【新增】在这里添加这个参数的文档
     
     返回:
-    tuple: (copy_path, case_num_path) 生成的副本文件路径和立案编号文件路径。
+    tuple: (copy_path, None) 生成的副本文件路径。
             如果生成失败，返回 (None, None)。
     """
     # 将 case_dir 从 Config 更改为使用传入的 upload_dir 参数
@@ -130,56 +129,4 @@ def generate_case_files(df, original_filename, upload_dir, mismatch_indices, gen
         logger.error(f"生成高亮副本文件失败: {e}", exc_info=True)
         return None, None
 
-    case_num_filename = f"立案编号{datetime.now().strftime('%Y%m%d')}.xlsx" 
-    case_num_path = os.path.join(case_dir, case_num_filename)
-    
-    data = []
-    for i, issue_item in enumerate(issues_list):
-        # 确保字典中存在这些键，即使值为空，也用空字符串填充
-        case_code = issue_item.get('案件编码', '')
-        person_code = issue_item.get('涉案人员编码', '')
-        # 如果是线索表，可能没有案件编码和涉案人员编码，而是受理线索编码
-        if not case_code and not person_code:
-            case_code = issue_item.get('受理线索编码', '') # 尝试获取线索编码
-
-        issue_description = issue_item.get('问题描述', '')
-        data.append({'序号': i + 1, '案件编码': case_code, '涉案人员编码': person_code, '问题': issue_description})
-    
-    issues_df = pd.DataFrame(data)
-
-    try:
-        with pd.ExcelWriter(case_num_path, engine='xlsxwriter') as writer:
-            issues_df.to_excel(writer, sheet_name='Sheet1', index=False)
-            workbook = writer.book
-            worksheet = writer.sheets['Sheet1']
-
-            # 定义通用的左对齐和文本格式
-            # 这里的关键是 'num_format': '@'，它强制将单元格内容视为文本
-            left_align_text_format = workbook.add_format({
-                'align': 'left', 
-                'valign': 'vcenter',
-                'num_format': '@' # 强制文本格式
-            })
-
-            # 设置所有相关列的对齐方式和文本格式
-            # 对于“序号”列，通常希望居中或右对齐，但为了统一，这里也设置为左对齐文本
-            columns_to_format = ['序号', '案件编码', '涉案人员编码', '问题'] 
-            
-            for col_name in columns_to_format:
-                if col_name in issues_df.columns:
-                    col_idx = issues_df.columns.get_loc(col_name)
-                    worksheet.set_column(col_idx, col_idx, None, left_align_text_format)
-            
-            # 自动调整列宽以适应内容
-            for i, col in enumerate(issues_df.columns):
-                # 考虑列名和实际数据中最大长度来设置列宽
-                # astype(str) 确保所有内容都被视为字符串来计算长度
-                max_len = max(issues_df[col].astype(str).map(len).max(), len(col)) + 2 # 加2是为了留出一点边距
-                worksheet.set_column(i, i, max_len)
-
-        logger.info(f"Generated case number file: {case_num_path}")
-    except Exception as e:
-        logger.error(f"生成立案编号文件失败: {e}", exc_info=True)
-        return copy_path, None 
-
-    return copy_path, case_num_path
+    return copy_path, None

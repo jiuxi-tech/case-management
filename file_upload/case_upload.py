@@ -146,8 +146,8 @@ def process_case_upload(request, app):
                 logger.warning(f"issues_list 中发现未知类型项: {type(issue_dict_or_tuple)}. 跳过去重。")
         issues_list = issues_list_unique
 
-        # 生成案件文件和问题报告
-        copy_path, case_num_path = generate_case_files(
+        # 生成案件副本文件
+        copy_path, _ = generate_case_files(
             df,
             original_filename,
             app.config['CASE_FOLDER'], # 直接使用 app.config
